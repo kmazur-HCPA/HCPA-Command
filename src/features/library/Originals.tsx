@@ -7,14 +7,15 @@ import {draftStore} from '../../platform/drafts'
 import {useDraftGuard} from '../work/useDraftGuard'
 export function Originals({client,item}:{client:AppClient;item:WorkItem}){
  const key=`upload:${item.id}`
- const [initial]=useState(()=>{try{const stored=draftStore(localStorage,item.user_id).read(key);return stored?JSON.parse(stored.text) as {id:string;filename:string}:null}catch{return null}})
- const [attempt,setAttempt]=useState(initial),[file,setFile]=useState<File|null>(null),[rows,setRows]=useState<LibraryVersion[]>([]),[error,setError]=useState(''),[message,setMessage]=useState(''),[progress,setProgress]=useState(0),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0),[offset,setOffset]=useState(0),[more,setMore]=useState(false)
+ const [initial]=useState(()=>{try{const stored=draftStore(localStorage,item.user_id).read(key);return {attempt:stored?JSON.parse(stored.text) as {id:string;filename:string}:null,error:''}}catch{return {attempt:null,error:'Upload retry information is unreadable. Export or discard it in Settings, then reopen this record.'}}})
+ const [attempt,setAttempt]=useState(initial.attempt),[file,setFile]=useState<File|null>(null),[rows,setRows]=useState<LibraryVersion[]>([]),[error,setError]=useState(initial.error),[message,setMessage]=useState(''),[progress,setProgress]=useState(0),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0),[offset,setOffset]=useState(0),[more,setMore]=useState(false)
  const controller=useRef<AbortController|null>(null)
  useDraftGuard(busy)
  useEffect(()=>()=>controller.current?.abort(),[])
  useEffect(()=>{let alive=true;listVersions(client,item.id,offset).then(data=>{if(alive){setRows(old=>offset?[...old,...data]:data);setMore(data.length===20)}}).catch(caught=>{if(alive)setError((caught as Error).message)});return()=>{alive=false}},[client,item.id,offset,revision])
  async function upload(){
   if(!file||busy)return
+  if(initial.error){setError(initial.error);return}
   if(file.size>5*1024*1024||!file.size){setError('Choose a nonempty file of at most 5 MiB.');return}
   if(attempt&&file.name!==attempt.filename){setError(`Select ${attempt.filename} to retry, or start another version.`);return}
   const next=attempt??{id:crypto.randomUUID(),filename:file.name}

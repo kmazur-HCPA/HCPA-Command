@@ -29,6 +29,10 @@ export async function getWork(client:AppClient,id:string) {
 export function matchesWorkFields(row:Partial<WorkItem>,input:Partial<WorkInput>) {
  return Object.entries(input).every(([key,value])=>{
   const saved=row[key as keyof WorkItem]
+  if(key==='details'&&saved&&value&&typeof saved==='object'&&typeof value==='object'){
+   const normalize=(object:object)=>JSON.stringify(Object.entries(object).sort(([a],[b])=>a.localeCompare(b)))
+   return normalize(saved)===normalize(value)
+  }
   if((key==='remind_at'||key==='snoozed_until')&&typeof saved==='string'&&typeof value==='string')return Date.parse(saved)===Date.parse(value)
   return JSON.stringify(saved)===JSON.stringify(value)
  })

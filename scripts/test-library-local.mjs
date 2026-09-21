@@ -9,7 +9,7 @@ export async function testLibrary({admin,owner,outsider,users,url,anonKey}){
  const invoke=(body,accessToken=token)=>fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${accessToken}`,apikey:anonKey,...(typeof body==='string'?{'Content-Type':'application/json'}:{})},body})
  const documentId=randomUUID(),projectId=randomUUID(),learningId=randomUUID()
  const create=await owner.from('work_items').insert([
-  {id:projectId,user_id:users[0],kind:'project',title:'Synthetic restoration project',status:'Active'},
+  {id:projectId,user_id:users[0],kind:'project',title:'Synthetic restoration project',status:'Active',details:{}},
   {id:learningId,user_id:users[0],kind:'learning',title:'Synthetic course',status:'Complete',details:{progress:'100',takeaways:'Validate originals'}},
  ])
  assert.equal(create.error,null)
