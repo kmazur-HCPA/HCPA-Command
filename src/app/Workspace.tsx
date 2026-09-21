@@ -18,10 +18,11 @@ import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
 
 const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
+const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
   const [page, setPage] = useState<"workspace" | "settings" | "lab" | Kind>(
-    "workspace",
+    new URLSearchParams(location.search).get("page") === "settings" ? "settings" : "workspace",
   );
   const [coraDirty,setCoraDirty]=useState(false);
   const [cora,setCora]=useState(false),[coraLoaded,setCoraLoaded]=useState(false),[coraPrompt,setCoraPrompt]=useState('');
@@ -400,6 +401,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                     {message}
                   </p>
                 </section>
+                <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />
                 <section className="settings-panel">

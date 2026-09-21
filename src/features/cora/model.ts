@@ -5,7 +5,7 @@ export type TaskProposal = {
   priority: "Critical" | "High" | "Normal" | "Low";
   project_id: string | null;
 };
-export type CoraSource = { id: string; title: string; kind: string };
+export type CoraSource = { id: string; title: string; kind: string; url?: string };
 export type CoraTurn = {
   id: string;
   user_id: string;

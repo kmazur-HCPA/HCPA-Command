@@ -6,6 +6,7 @@ for (const name of files) {
   const contents = await readFile(`dist/assets/${name}`)
   gzipBytes += gzipSync(contents).byteLength
   if (/sb_secret_[A-Za-z0-9_-]+|"role"\s*:\s*"service_role"|SUPABASE_SERVICE_ROLE_KEY/.test(contents.toString())) throw new Error(`Privileged key marker found in ${name}`)
+  if (/MICROSOFT_CLIENT_SECRET|MICROSOFT_TOKEN_ENCRYPTION_KEY|ConfidentialClientApplication/.test(contents.toString())) throw new Error(`Server-only Microsoft code found in ${name}`)
   for (const candidate of contents.toString().matchAll(/eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g)) {
     try { if (JSON.parse(Buffer.from(candidate[1], 'base64url').toString()).role === 'service_role') throw new Error('Privileged JWT detected') }
     catch (error) { if (error.message === 'Privileged JWT detected') throw error }

@@ -21,6 +21,7 @@ async function mockBackend(
     revoked?: boolean;
   } = {},
 ) {
+  await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   let preferences = {
     user_id: userId,
     theme: "dark",
@@ -87,6 +88,46 @@ async function login(page: Page) {
     .fill("Synthetic-password-for-test");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
+test("Microsoft connection settings, callback, source prompts and disconnect", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockBackend(page);
+  let connected = true;
+  await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: true, connected, email: user.email } }));
+  await page.route("**/api/microsoft/disconnect", route => { connected = false; return route.fulfill({ json: { connected: false } }); });
+  await page.route("**/api/cora/history*", route => route.fulfill({ json: { conversations: [] } }));
+  await login(page);
+  await expect(page.getByRole("heading", { name: "Work Day", exact: true })).toBeVisible();
+  await page.goto("/?page=settings&microsoft=connected");
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  const panel = page.getByRole("region", { name: "Microsoft 365" });
+  await expect(panel).toContainText("Connected as owner@example.test");
+  await expect(page).not.toHaveURL(/microsoft=/);
+  for (const theme of ["dark", "light"]) {
+    await page.getByRole("combobox", { name: "Appearance" }).selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect((await new AxeBuilder({ page }).include(".microsoft-panel").analyze()).violations).toEqual([]);
+    await panel.screenshot({ path: `test-results/microsoft-${theme}.png` });
+  }
+  await panel.getByRole("button", { name: "Help me prepare for my next meeting." }).click();
+  await expect(page.getByRole("textbox", { name: "Ask Cora" })).toHaveValue("Help me prepare for my next meeting.");
+  await page.getByRole("button", { name: "Close Cora" }).click();
+  await panel.getByRole("button", { name: "Disconnect", exact: true }).click();
+  await expect(panel).toContainText("stored Microsoft credentials have been removed");
+  await expect(panel.getByRole("button", { name: "Connect Microsoft 365", exact: true })).toBeEnabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await panel.screenshot({ path: "test-results/microsoft-mobile.png" });
+});
+test("Microsoft outages do not prevent settings or ordinary workspace access", async ({ page }) => {
+  await mockBackend(page);
+  await page.route("**/api/microsoft/status", route => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await login(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Microsoft 365" })).toContainText("status is unavailable");
+  await page.getByRole("combobox", { name: "Appearance" }).selectOption("light");
+  await page.getByRole("button", { name: "Work Day", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Work Day", exact: true })).toBeVisible();
+});
 test("sign in, save preference, reload, and sign out", async ({ page }) => {
   await mockBackend(page);
   await login(page);
@@ -263,7 +304,7 @@ test('Cora streams, preserves page context, and creates a task only through its 
  let actions=0;let turn:Record<string,unknown>={}
  await page.route('**/api/cora/chat',async route=>{
   const request=route.request().postDataJSON();expect(request.context.page).toBe('project');expect(request).not.toHaveProperty('userId')
-  turn={id:request.requestId,user_id:userId,conversation_id:request.conversationId,message:request.message,context:request.context,response:'Ready to add. Review the task below, then choose Add task.',sources:[],proposal:{title:'Follow up with Erik',due_date:'2026-09-22',priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}
+  turn={id:request.requestId,user_id:userId,conversation_id:request.conversationId,message:request.message,context:request.context,response:'Ready to add. Review the task below, then choose Add task.',sources:[{id:'outlook:fixture',title:'Vendor message',kind:'outlook_mail',url:'https://outlook.office.com/mail/id/fixture'},{id:'outlook:unsafe',title:'Unsafe source',kind:'outlook_mail',url:'javascript:alert(1)'}],proposal:{title:'Follow up with Erik',due_date:'2026-09-22',priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}
   await route.fulfill({contentType:'application/x-ndjson',body:[{type:'status',message:'Thinking it through…'},{type:'delta',text:'Ready to add.'},{type:'complete',turn}].map(e=>JSON.stringify(e)).join('\n')+'\n'})
  })
  await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:turn.id});return r.fulfill(actions===1?{status:409,json:{message:'Task creation was not confirmed. Retry this same card.'}}:{json:{taskId:turn.task_id,created:true}})})
@@ -271,10 +312,15 @@ test('Cora streams, preserves page context, and creates a task only through its 
  await page.getByRole('button',{name:'Projects',exact:true}).click()
  await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Add a task for tomorrow to follow up with Erik.')
  await panel.getByRole('button',{name:'Send to Cora'}).click();await expect(panel.getByRole('heading',{name:'Follow up with Erik'})).toBeVisible();expect(actions).toBe(0)
+ await panel.locator('summary').filter({hasText:'Sources'}).click()
+ await expect(panel.getByRole('link',{name:'Vendor message'})).toHaveAttribute('href','https://outlook.office.com/mail/id/fixture')
+ await expect(panel.getByRole('link',{name:'Vendor message'})).toHaveAttribute('rel','noopener noreferrer')
+ await expect(panel.getByText('Unsafe source')).toHaveCount(0)
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('not confirmed');await expect(panel.getByText('Task created',{exact:true})).toHaveCount(0)
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(2)
  for(const theme of ['dark','light']){
   if(theme==='light')await page.getByRole('button',{name:'Switch color theme'}).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme',theme)
   await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))))
   expect((await new AxeBuilder({page}).include('.cora-panel').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
   await page.screenshot({path:`test-results/cora-${theme}.png`})

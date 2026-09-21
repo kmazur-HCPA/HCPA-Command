@@ -1779,3 +1779,12 @@ summary {
 .mobile-capture .command-mark{width:34px;height:30px}
 @media(max-width:900px){.cora-entry{display:none}}
 @media(min-width:1150px){.cora-open .day-grid,.cora-open .day-stats{grid-template-columns:1fr}.cora-open .day-heading{flex-wrap:wrap}}
+.microsoft-panel .panel-heading{flex-wrap:wrap;gap:.8rem}
+.microsoft-panel .panel-heading h2{display:flex;align-items:center;gap:.6rem}
+.microsoft-capabilities{display:flex;flex-wrap:wrap;gap:1rem;margin:1.25rem 0}
+.microsoft-capabilities span{display:flex;align-items:center;gap:.45rem;font-size:.85rem}
+.microsoft-capabilities svg{width:18px;height:18px;color:var(--orange)}
+.microsoft-actions{display:flex;flex-wrap:wrap;gap:.65rem}
+.microsoft-prompts{margin-top:1.5rem;display:grid;gap:.6rem}
+.microsoft-prompts button{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:.8rem}
+.cora-panel details a{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.6rem;color:inherit;text-decoration:underline}

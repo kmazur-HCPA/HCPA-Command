@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import type { CoraContext, CoraTurn, CoraConversation } from "./model";
+import { outlookLink } from "../microsoft/model";
 import { chat, history, createTask } from "./service";
 import { Mark, Icon } from "../../ui/Icon";
 import { useDraftGuard } from "../work/useDraftGuard";
@@ -333,7 +334,7 @@ export function CoraPanel({
                 <details className="cora-sources">
                   <summary>Command sources · {turn.sources.length}</summary>
                   {turn.sources.map((source) => (
-                    <button
+                    source.kind.startsWith("outlook_") ? (outlookLink(source.url) ? <a key={source.id} href={outlookLink(source.url)} target="_blank" rel="noopener noreferrer">{source.title}<Icon name="arrow" /></a> : null) : <button
                       key={source.id}
                       onClick={() => {
                         onOpen(source);

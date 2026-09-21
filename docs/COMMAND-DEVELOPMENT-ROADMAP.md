@@ -353,3 +353,8 @@ The product vision and feature requirements remain in the master brief. This doc
 ## Cora v0.1 scope decision — September 21, 2026
 
 Kevin’s Cora implementation brief authorizes the narrow first milestone across conversational access, live read tools, page context and controlled task creation. [Cora delivery notes](CORA-DELIVERY.md) define this slice. Task-card review is the initial write boundary. Broader Phase 9 reminder/completion/snooze actions and Phase 10 automatic AI briefs remain later work; this slice does not mark those entire roadmap phases accepted.
+
+
+## Microsoft 365 sequencing decision — September 21, 2026
+
+Kevin authorized bringing read-only Microsoft connection management, Calendar and Outlook context forward after Cora v0.1. Use a new HCPA single-tenant **Command — Microsoft 365** Entra registration. [Setup and operational notes](MICROSOFT-365-SETUP.md) define the bounded delivery and tenant activation checks. Teams remains a separate follow-on scope; the ChatGPT/MCP interface follows the shared backend integration. This does not close all of Phases 13–14: full Meeting Mode, selected Teams access and pilot acceptance remain outstanding.

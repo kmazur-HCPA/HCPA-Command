@@ -1,5 +1,6 @@
 import type { Config, Context } from "@netlify/functions";
 import { handleCora } from "./_shared/cora/handler";
+import { microsoftConfig } from "./_shared/microsoft/config";
 export default async (request: Request, context: Context) => {
   const env = (name: string) => Netlify.env.get(name);
   const url = env("SUPABASE_URL"),
@@ -30,6 +31,7 @@ export default async (request: Request, context: Context) => {
       apiKey,
       baseURL: env("OPENAI_BASE_URL"),
       model: env("CORA_MODEL"),
+      microsoft: microsoftConfig(env),
     },
     context.requestId,
   );

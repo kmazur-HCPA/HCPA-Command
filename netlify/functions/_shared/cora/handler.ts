@@ -10,6 +10,7 @@ import { saveWork } from "../../../../src/services/work";
 import { identity } from "./identity";
 import { uuid, validateProposal } from "./tools";
 import { runCora } from "./engine";
+import type { MicrosoftConfig } from "../microsoft/config";
 export type CoraConfig = {
   url: string;
   key: string;
@@ -17,6 +18,7 @@ export type CoraConfig = {
   apiKey: string;
   baseURL?: string;
   model?: string;
+  microsoft?: MicrosoftConfig;
 };
 const headers = {
   "Cache-Control": "no-store",
@@ -321,6 +323,7 @@ export async function handleCora(
               model: settings.model ?? identity.model,
               signal,
               emit,
+              microsoft: settings.microsoft,
             });
         } catch {
           await store

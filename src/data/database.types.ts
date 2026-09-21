@@ -2,10 +2,12 @@ import type {CoraTurn,CoraConversation,CoraActivity,CoraContext} from '../featur
 import type {SearchResult} from '../services/search'
 import type {LibraryVersion} from '../services/library'
 import type { WorkItem, WorkInput } from '../features/work/model'
+import type { MicrosoftConnection } from '../features/microsoft/model'
 // Foundation schema. Regenerate against the project when schema migrations change.
 export type Database = {
   public: {
     Tables: {
+      microsoft_connections:{Row:MicrosoftConnection;Insert:MicrosoftConnection;Update:Partial<MicrosoftConnection>;Relationships:[]}
       cora_conversations:{Row:CoraConversation;Insert:CoraConversation;Update:Partial<CoraConversation>;Relationships:[]}
       cora_turns:{Row:CoraTurn;Insert:CoraTurn;Update:Partial<CoraTurn>;Relationships:[]}
       cora_activity:{Row:CoraActivity;Insert:Omit<CoraActivity,"id"|"created_at">;Update:never;Relationships:[]}

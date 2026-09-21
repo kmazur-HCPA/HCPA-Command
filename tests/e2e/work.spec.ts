@@ -14,6 +14,7 @@ const user = {
 };
 const jwt = `${Buffer.from('{"alg":"HS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub: uid, role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test`;
 async function setup(page: Page) {
+  await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   const rows: WorkItem[] = [],
     history: {
       id: string;

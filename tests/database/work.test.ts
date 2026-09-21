@@ -32,6 +32,20 @@ describe('Work record integrity and authorization', () => {
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
 
+  it('keeps Microsoft credential ciphertext inaccessible to every browser role', async()=>{
+    await db.query("insert into public.microsoft_connections(user_id,generation,token_cache) values ($1,$2,'encrypted')",[owner,other])
+    const grants=await db.query<{role:string;allowed:boolean}>("select role, has_table_privilege(role,'public.microsoft_connections','SELECT') as allowed from (values ('anon'),('authenticated'),('service_role')) r(role)")
+    expect(grants.rows).toEqual([{role:'anon',allowed:false},{role:'authenticated',allowed:false},{role:'service_role',allowed:true}])
+    await authenticate(owner)
+    await expect(db.query('select token_cache from public.microsoft_connections')).rejects.toThrow(/permission denied/)
+  })
+  it('deletes Microsoft credentials and pending callbacks when membership is revoked', async()=>{
+    await db.query("insert into public.microsoft_connections(user_id,generation,token_cache,auth_state) values ($1,$2,'encrypted','pending')",[owner,other])
+    await db.query('update public.app_memberships set active=false where user_id=$1',[owner])
+    expect((await db.query('select * from public.microsoft_connections')).rows).toHaveLength(0)
+    await expect(db.query("insert into public.microsoft_connections(user_id,generation,token_cache) values ($1,$2,'encrypted')",[owner,other])).rejects.toThrow(/Command access unavailable/)
+  })
+
   it('denies cross-owner inserts and unapproved reads',async()=>{
     await authenticate(owner)
     await expect(db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Private','Inbox')",[other])).rejects.toThrow(/row-level security/)

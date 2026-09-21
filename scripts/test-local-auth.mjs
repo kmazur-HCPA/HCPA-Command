@@ -1,4 +1,5 @@
 import {testCora} from './test-cora-local.mjs'
+import {testMicrosoft} from './test-microsoft-local.mjs'
 import {testPhase8} from './test-phase8-local.mjs'
 import {testLibrary} from './test-library-local.mjs'
 import assert from 'node:assert/strict'
@@ -65,6 +66,7 @@ try {
   console.log('PASS: tasks, waiting/person/project links, immutable journal revisions, retry-safe conversion and insert, priority slot, and RLS through real local APIs.')
   await testLibrary({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
   await testCora({admin,owner,outsider,users,url,anonKey:values.ANON_KEY,secret:values.SERVICE_ROLE_KEY})
+  await testMicrosoft({admin,owner,outsider,users,url,anonKey:values.ANON_KEY,secret:values.SERVICE_ROLE_KEY})
   await testPhase8({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
   // Test the administrator-assisted recovery path selected for this pilot.
   const newPassword=randomBytes(32).toString('base64url')
