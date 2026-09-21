@@ -13,6 +13,7 @@ async function mockBackend(page: Page, options: { approved?: boolean; wrongPassw
     }
     if(url.pathname === '/auth/v1/user') return route.fulfill({ json: user })
     if(url.pathname === '/rest/v1/app_memberships') return route.fulfill({ json: options.approved === false || options.revoked ? null : { user_id: userId, active: true } })
+    if(url.pathname === '/rest/v1/work_items') return route.fulfill({json:[]})
     if(url.pathname === '/rest/v1/user_preferences') {
       if(route.request().method() === 'PATCH') preferences = { ...preferences, ...route.request().postDataJSON(), version: preferences.version + 1 }
       return route.fulfill({ json: preferences })
@@ -29,7 +30,7 @@ async function login(page: Page) {
 }
 test('sign in, save preference, reload, and sign out', async ({ page }) => {
   await mockBackend(page); await login(page)
-  await expect(page.getByRole('heading', { name: 'Your workspace is ready.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Work Day' })).toBeVisible()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('combobox', { name: 'Appearance' }).selectOption('light')
   await expect(page.getByRole('status')).toHaveText('Appearance saved.')
@@ -58,7 +59,7 @@ test('email recovery is deferred and administrator help is shown', async ({ page
 test('lost authorization on reload removes private UI', async ({ page }) => {
   const options = { approved: true, revoked: false }
   await mockBackend(page, options); await login(page)
-  await expect(page.getByRole('heading', { name: 'Your workspace is ready.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Work Day' })).toBeVisible()
   options.revoked = true; await page.reload()
   await expect(page.getByRole('heading', { name: 'Access is not enabled.' })).toBeVisible()
 })
@@ -78,8 +79,8 @@ for (const [width,height] of [[744,1133],[1133,744],[390,844],[1440,900]]) {
     await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeFocused()
     await expect(page.getByRole('combobox', { name: 'Appearance' })).toBeVisible()
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true)
-    await page.getByRole('button',{name:'Workspace',exact:true}).click()
-    await expect(page.getByRole('heading',{name:'Your workspace is ready.'})).toBeVisible()
+    await page.getByRole('button',{name:'Work Day',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Work Day'})).toBeVisible()
   })
 }
 test('connection loss is visible and reduced motion disables transitions', async ({page,context}) => {

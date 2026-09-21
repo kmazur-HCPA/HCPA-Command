@@ -26,10 +26,10 @@ export function UpdateNotice() {
     return () => { alive = false; registration?.removeEventListener('updatefound', found) }
   }, [])
   function update() {
-    // The future draft editor must block this action while its draft write is unacknowledged.
+    if(!window.dispatchEvent(new Event('command:before-update',{cancelable:true}))){setError('Save, export or discard your local drafts before updating.');return}
     navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), { once: true })
     waiting?.postMessage({ type: 'ACTIVATE_UPDATE' })
   }
-  if (error) return <p className="connection-banner" role="status">{error}</p>
+  if (error) return <aside className="update-notice" role="status"><p>{error}</p>{waiting&&<button onClick={()=>{setError('');update()}}>Retry update</button>}</aside>
   return waiting && <aside className="update-notice" aria-label="Application update"><p>A new version of Command is ready.</p><button onClick={update}>Update and reload</button></aside>
 }

@@ -1,0 +1,112 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { PGlite } from '@electric-sql/pglite'
+import { readFile,readdir } from 'node:fs/promises'
+
+const owner = '11111111-1111-4111-8111-111111111111'
+const other = '22222222-2222-4222-8222-222222222222'
+const unapproved = '33333333-3333-4333-8333-333333333333'
+let db: PGlite
+async function authenticate(id: string, anonymous = false) {
+  await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', is_anonymous: anonymous })])
+  await db.exec('set local role authenticated')
+}
+
+describe('Work record integrity and authorization', () => {
+  beforeAll(async () => {
+    db = new PGlite()
+    await db.exec(`
+      create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+      create schema auth; create table auth.users (id uuid primary key);
+      create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
+      create function auth.uid() returns uuid language sql stable as $$ select (auth.jwt()->>'sub')::uuid $$;
+      grant usage on schema auth to anon, authenticated, service_role;
+      grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
+    `)
+    await db.exec(await readFile('supabase/migrations/20260921115103_foundation.sql', 'utf8'))
+    for(const file of (await readdir('supabase/migrations')).filter(name=>!name.includes('foundation')).sort()) await db.exec(await readFile(`supabase/migrations/${file}`,'utf8'))
+    await db.query('insert into auth.users(id) values ($1),($2),($3)', [owner, other, unapproved])
+    await db.query('insert into public.app_memberships(user_id) values ($1),($2)', [owner, other])
+  })
+  beforeEach(async () => { await db.exec('begin') })
+  afterEach(async () => { await db.exec('rollback') })
+  afterAll(async () => { await db.close() })
+
+  it('denies cross-owner inserts and unapproved reads',async()=>{
+    await authenticate(owner)
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Private','Inbox')",[other])).rejects.toThrow(/row-level security/)
+  })
+  it('keeps active overdue reminders and converts them exactly once',async()=>{
+    await authenticate(owner)
+    const r=await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,body,status,remind_at) values ($1,'reminder','Follow up','Original context','Active','2020-01-01Z') returning id",[owner])
+    const id=r.rows[0]!.id
+    expect((await db.query("select status from public.work_items where id=$1",[id])).rows[0]).toEqual({status:'Active'})
+    const first=await db.query("select public.convert_reminder($1,1) as id",[id]); const retry=await db.query("select public.convert_reminder($1,1) as id",[id])
+    expect(retry.rows).toEqual(first.rows)
+    expect((await db.query("select * from public.work_items where kind='task'")).rows).toHaveLength(1)
+  })
+  it('rejects stale conversion and direct deletion',async()=>{
+    await authenticate(owner)
+    const row=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status) values ($1,'reminder','Reminder','Active') returning id",[owner])).rows[0]!
+    await expect(db.query('select public.convert_reminder($1,9)',[row.id])).rejects.toThrow(/Reload/)
+  })
+  it('uses optimistic versions and preserves original text',async()=>{
+    await authenticate(owner)
+    const row=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,body,status) values ($1,'task','Task','original','Inbox') returning id",[owner])).rows[0]!
+    await db.query("update public.work_items set body='edited',original_body='forged' where id=$1 and version=1",[row.id])
+    expect((await db.query('select body,original_body,version from public.work_items where id=$1',[row.id])).rows[0]).toEqual({body:'edited',original_body:'original',version:2})
+    expect((await db.query("update public.work_items set body='stale' where id=$1 and version=1 returning id",[row.id])).rows).toHaveLength(0)
+  })
+  it('blocks forged task links to another owner',async()=>{
+    const row=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Other','Inbox') returning id",[other])).rows[0]!
+    await authenticate(owner)
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status,converted_task_id) values ($1,'reminder','Mine','Active',$2)",[owner,row.id])).rejects.toThrow(/Invalid task link/)
+  })
+  it('revocation hides records and clients cannot delete',async()=>{
+    await db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Task','Inbox')",[owner])
+    await db.query('update public.app_memberships set active=false where user_id=$1',[owner]);await authenticate(owner)
+    expect((await db.query('select * from public.work_items')).rows).toHaveLength(0)
+    await expect(db.exec('delete from public.work_items')).rejects.toThrow(/permission denied/)
+  })
+  it('preserves journal originals, revisions, and archived project links',async()=>{
+    await authenticate(owner)
+    const project=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status) values ($1,'project','Program','Active') returning id",[owner])).rows[0]!
+    const entry=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,body,status,entry_type,project_id) values ($1,'journal','Decision','First reasoning','Recorded','Decision',$2) returning id",[owner,project.id])).rows[0]!
+    await db.query("update public.work_items set body='Revised reasoning' where id=$1",[entry.id])
+    await db.query('update public.work_items set archived=true where id=$1',[project.id])
+    expect((await db.query('select original_body,project_id from public.work_items where id=$1',[entry.id])).rows[0]).toEqual({original_body:'First reasoning',project_id:project.id})
+    expect((await db.query('select * from public.journal_revisions where item_id=$1',[entry.id])).rows).toHaveLength(2)
+    await expect(db.exec('delete from public.journal_revisions')).rejects.toThrow(/permission denied/)
+  })
+  it('rejects references with the wrong owner or kind',async()=>{
+    await authenticate(owner)
+    const person=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status) values ($1,'person','Person','Active') returning id",[owner])).rows[0]!
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status,project_id) values ($1,'task','Task','Inbox',$2)",[owner,person.id])).rejects.toThrow(/Invalid context link/)
+  })
+
+  it('enforces exactly three available priority slots and releases completed slots',async()=>{
+    await authenticate(owner)
+    await db.query("insert into public.work_items(user_id,kind,title,status,focus_slot) select $1::uuid,'task','Priority '||n,'Next',n from generate_series(1,3) n",[owner])
+    await db.exec("update public.work_items set status='Complete' where focus_slot=1")
+    await db.query("insert into public.work_items(user_id,kind,title,status,focus_slot) values ($1,'task','Replacement','Next',1)",[owner])
+    expect((await db.query("select * from public.work_items where focus_slot is not null and status<>'Complete'")).rows).toHaveLength(3)
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status,focus_slot) values ($1,'task','Fourth','Next',2)",[owner])).rejects.toThrow(/duplicate key/)
+  })
+
+  it('reports database latency on the agreed synthetic pilot dataset',async()=>{
+    await authenticate(owner)
+    for(const [kind,count,status] of [['task',1000,'Next'],['reminder',250,'Active'],['journal',2000,'Recorded'],['waiting',100,'Active']] as const){
+      await db.query("insert into public.work_items(user_id,kind,title,body,status,due_date) select $1::uuid,$2,'Synthetic '||$2||' '||n,repeat('Synthetic planning content. ',20),$3,'2026-09-21'::date from generate_series(1,$4::integer) n",[owner,kind,status,count])
+    }
+    const times:number[]=[]
+    for(let i=0;i<30;i++){
+      const started=performance.now()
+      await db.query("select id,title,status,due_date from public.work_items where user_id=$1 and kind='task' and not archived and due_date<='2026-09-21' and status not in ('Complete','Cancelled') order by due_date limit 30",[owner])
+      await db.query("select id,title from public.work_items where user_id=$1 and search_vector @@ websearch_to_tsquery('english','planning') order by created_at desc limit 50",[owner])
+      times.push(performance.now()-started)
+    }
+    times.sort((a,b)=>a-b)
+    console.info(JSON.stringify({event:'synthetic_database_benchmark',records:3350,samples:30,p50_ms:Math.round(times[14]!),p95_ms:Math.round(times[28]!),scope:'PGlite due-work plus search; excludes device/network'}))
+    expect((await db.query('select count(*)::integer as n from public.work_items')).rows[0]).toEqual({n:3350})
+  },15000)
+
+})

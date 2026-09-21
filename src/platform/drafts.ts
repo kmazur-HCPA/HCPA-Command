@@ -30,3 +30,10 @@ export function draftStore(storage: Storage, owner: string) {
     },
   }
 }
+
+export function listDrafts(storage:Storage,owner:string) {
+ const prefix=`command:draft:v1:${encodeURIComponent(owner)}:`
+ const result:{key:string;text:string}[]=[]
+ for(let i=0;i<storage.length;i++){const key=storage.key(i);if(key?.startsWith(prefix))result.push({key,text:storage.getItem(key)??''})}
+ return result
+}

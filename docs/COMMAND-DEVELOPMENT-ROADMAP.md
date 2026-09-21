@@ -2,7 +2,7 @@
 
 **Owner:** Kevin Mazur · HCPA Enterprise Technology  
 **Version:** 1.0 · September 21, 2026  
-**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phase 2 authorized and implemented; physical-device acceptance pending. See the [Phase 2 delivery record](PHASE-2-STATUS.md). See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
+**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phases 3, 5 and 4 implemented in Kevin’s requested order; integration/release and pilot acceptance tracked in the [delivery record](PHASES-3-5-4-DELIVERY.md). See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
 **Source:** [Command master brief](COMMAND-MASTER-BRIEF.md)
 
 ## Recommended development path
@@ -158,7 +158,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 **Gate:** Kevin can trace a decision or idea to a project and resulting task, review an entry's original text, and retrieve waiting items by person. Deleting/archiving linked items follows a documented preservation rule.
 
-**Dependency:** Phase 4. **Defer:** Automatic classification and inferred relationships.
+**Dependency amendment:** Kevin authorized Phase 5 before Phase 4. Implement the shared Journal/Waiting On structures here, then assemble Quick Capture and Work Day in Phase 4. **Defer:** Automatic classification and inferred relationships.
 
 ## Phase 6 — Add Learning and the AI Lab
 
@@ -334,7 +334,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 A phase closes when its deliverables are usable, its gate and applicable shared requirements pass, documentation/export coverage is updated, and Kevin accepts the demonstration. Record any limitation explicitly; do not describe planned controls as implemented security or measured performance.
 
-**Next action:** Complete the physical-device checks in the [Phase 2 delivery record](PHASE-2-STATUS.md), then begin Tasks and persistent Reminders in Phase 3. Carry forward the remaining Phase 1 operational checks.
+**Next action:** Validate the delivered Phases 3 → 5 → 4 on Kevin’s devices, close the operational readiness checks, and complete the five-workday pilot before expanding scope.
 
 ## Traceability to the master brief
 

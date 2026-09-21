@@ -1,7 +1,8 @@
 # Command
 
-Private work planning for HCPA. Phase 0 is accepted; Phase 1 provides the authenticated foundation; Phase 2 adds the responsive, installable shell. Tasks, Work Day, capture, AI and the installed PWA follow in later phases.
+Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. AI remains a later phase.
 
+- [Phases 3 → 5 → 4 delivery and pilot checks](docs/PHASES-3-5-4-DELIVERY.md)
 - [Development roadmap](docs/COMMAND-DEVELOPMENT-ROADMAP.md)
 - [Phase 2 delivery and device checks](docs/PHASE-2-STATUS.md)
 - [Phase 1 delivery and remaining checks](docs/PHASE-1-STATUS.md)

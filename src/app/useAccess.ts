@@ -23,7 +23,10 @@ export function useAccess(client: AppClient, attempt: number) {
         const { data: { session }, error } = await client.auth.getSession()
         if (error) throw new Error('Your sign-in link or session is unavailable. Please sign in again.')
         if (alive && ticket === generation && (window.location.search || window.location.hash)) {
-          window.history.replaceState(null, '', window.location.pathname)
+          const url=new URL(window.location.href)
+          for(const name of ['code','error','error_code','error_description','token_hash','type'])url.searchParams.delete(name)
+          url.hash=''
+          window.history.replaceState(null, '', url.pathname+url.search)
         }
         if (!session) {
           if (alive && ticket === generation) setState({ kind: 'signed-out' })
