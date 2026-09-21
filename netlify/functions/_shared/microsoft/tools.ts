@@ -138,6 +138,7 @@ export function createMicrosoftReader(
   config: MicrosoftConfig,
   signal: AbortSignal,
   sources: Map<string, CoraSource>,
+  discovery?: { issue: (id: string) => string; resolve: (reference: string) => string },
 ) {
   let token: Awaited<ReturnType<typeof microsoftToken>> | undefined;
   const memo = new Map<string, unknown>(),
@@ -164,6 +165,11 @@ export function createMicrosoftReader(
       });
   }
   return async (name: string, args: Record<string, unknown>) => {
+    if (name === "read_outlook_message" && discovery && typeof args.id === "string") {
+      const id = discovery.resolve(args.id);
+      args = { ...args, id };
+      messageIds.add(id);
+    }
     const resource =
       name === "get_outlook_calendar" ? "calendarView" : "messages";
     let url: URL;
@@ -268,7 +274,7 @@ export function createMicrosoftReader(
         const item = summarizeMail(row);
         if (item.id) messageIds.add(item.id);
         add(item, "outlook_mail");
-        return item;
+        return discovery && item.id ? { ...item, id: discovery.issue(item.id) } : item;
       });
       result = {
         source: "Microsoft Outlook",

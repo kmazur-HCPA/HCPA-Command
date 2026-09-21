@@ -18,14 +18,19 @@ import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
 
 const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
+const ChatGPTConnection=lazy(()=>import("../features/mcp/ChatGPTConnection").then(m=>({default:m.ChatGPTConnection})))
 const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
   const [page, setPage] = useState<"workspace" | "settings" | "lab" | Kind>(
     new URLSearchParams(location.search).get("page") === "settings" ? "settings" : "workspace",
   );
+  const [initialConversation] = useState(() => {
+    const value = new URLSearchParams(location.search).get('coraConversation');
+    return value && /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value) ? value : undefined;
+  });
   const [coraDirty,setCoraDirty]=useState(false);
-  const [cora,setCora]=useState(false),[coraLoaded,setCoraLoaded]=useState(false),[coraPrompt,setCoraPrompt]=useState('');
+  const [cora,setCora]=useState(!!initialConversation),[coraLoaded,setCoraLoaded]=useState(!!initialConversation),[coraPrompt,setCoraPrompt]=useState('');
   const openCora=(prompt='')=>{setCoraLoaded(true);setCora(true);if(prompt)setCoraPrompt(prompt)};
   const [capture, setCapture] = useState(false);
   const [palette, setPalette] = useState(false),
@@ -402,6 +407,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                   </p>
                 </section>
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
+                <Suspense fallback={<p role="status">Loading ChatGPT connection…</p>}><ChatGPTConnection client={client}/></Suspense>
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />
                 <section className="settings-panel">
@@ -431,7 +437,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           </div>
         )}
       </main>
-      {coraLoaded&&<Suspense fallback={null}><CoraPanel client={client} open={cora} onDirty={setCoraDirty} context={{page,recordId}} prompt={coraPrompt} onClose={()=>setCora(false)} onOpen={openRecord} onCreated={()=>setWorkRevision(v=>v+1)}/></Suspense>}
+      {coraLoaded&&<Suspense fallback={null}><CoraPanel initialConversation={initialConversation} client={client} open={cora} onDirty={setCoraDirty} context={{page,recordId}} prompt={coraPrompt} onClose={()=>setCora(false)} onOpen={openRecord} onCreated={()=>setWorkRevision(v=>v+1)}/></Suspense>}
       {palette && (
         <Palette
           client={client}

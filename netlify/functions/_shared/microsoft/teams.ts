@@ -179,12 +179,14 @@ function summarize(row: Record<string, unknown>, limit = 4000) {
     has_attachments: list(row.attachments).length > 0,
   };
 }
+export type TeamsReference = { path: string; kind: "chat" | "message"; url?: string; chatId?: string };
 export function createTeamsReader(
   store: AppClient,
   userId: string,
   config: MicrosoftConfig,
   signal: AbortSignal,
   sources: Map<string, CoraSource>,
+  discovery?: { issue: (value: TeamsReference) => string; resolve: (reference: string) => TeamsReference },
 ) {
   let token: Awaited<ReturnType<typeof microsoftToken>> | undefined;
   let nextReference = 0;
@@ -193,6 +195,12 @@ export function createTeamsReader(
     { path: string; kind: "chat" | "message"; url?: string; chatId?: string }
   >();
   const memo = new Map<string, unknown>();
+  const getRef = (reference: string) => refs.get(reference) ?? discovery?.resolve(reference);
+  const saveRef = (reference: string, value: TeamsReference) => {
+    const key = discovery ? discovery.issue(value) : reference;
+    refs.set(key, value);
+    return key;
+  };
   async function authorized() {
     const row = await connection(store, userId);
     if (!row?.token_cache || (token && row.generation !== token.generation))
@@ -216,10 +224,10 @@ export function createTeamsReader(
       });
   }
   function discover(row: Record<string, unknown>) {
-    const reference = `teams:message:${++nextReference}`,
-      path = messagePath(row),
+    let reference = `teams:message:${++nextReference}`;
+    const path = messagePath(row),
       url = sourceUrl(row);
-    if (path) refs.set(reference, { path, kind: "message", url });
+    if (path) reference = saveRef(reference, { path, kind: "message", url });
     // Search records without a usable identity still remain useful excerpts.
     addSource(reference, teamsText(row.subject, 150) || "Teams message", url);
     return { reference: path ? reference : null, url };
@@ -240,7 +248,7 @@ export function createTeamsReader(
       )
         throw new Error("Use a Teams reference discovered in this turn.");
       reference = args.reference;
-      const ref = refs.get(reference);
+      const ref = getRef(reference);
       if (
         !ref ||
         ref.kind !== (name === "read_teams_chat" ? "chat" : "message")
@@ -321,7 +329,7 @@ export function createTeamsReader(
         accessToken,
         signal,
       );
-      const ref = refs.get(reference)!;
+      const ref = getRef(reference)!;
       const url = sourceUrl(row) ?? ref.url;
       addSource(reference, teamsText(row.subject, 150) || "Teams message", url);
       result = { ...summarize(row, 12000), url, single_message_only: true };
@@ -344,10 +352,10 @@ export function createTeamsReader(
         limit = name === "list_teams_chats" ? 25 : 30;
       const records = all.slice(0, limit).map((row) => {
         if (name === "list_teams_chats") {
-          const id = segment(row.id),
-            reference = `teams:chat:${++nextReference}`;
+          const id = segment(row.id);
+          let reference = `teams:chat:${++nextReference}`;
           if (id)
-            refs.set(reference, {
+            reference = saveRef(reference, {
               kind: "chat",
               path: `/v1.0/chats/${id}/messages`,
               chatId: text(row.id, 1500),
@@ -367,7 +375,7 @@ export function createTeamsReader(
             url: teamsLink(row.webUrl),
           };
         }
-        const url = sourceUrl(row, refs.get(reference)?.chatId);
+        const url = sourceUrl(row, getRef(reference)?.chatId);
         addSource(
           `teams:chat-message:${reference}:${text(row.id, 1500)}`,
           teamsText(row.subject, 150) || "Teams chat message",

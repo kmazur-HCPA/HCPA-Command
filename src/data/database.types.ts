@@ -7,6 +7,9 @@ import type { MicrosoftConnection } from '../features/microsoft/model'
 export type Database = {
   public: {
     Tables: {
+      cora_mcp_connections: {Row:{user_id:string;id:string;token_hash:string;created_at:string;expires_at:string;last_used_at:string|null};Insert:{user_id:string;id:string;token_hash:string;created_at:string;expires_at:string;last_used_at?:string|null};Update:{last_used_at?:string};Relationships:[]}
+      cora_mcp_activity: {Row:{id:string;user_id:string;connection_id:string;tool:string;success:boolean;created_at:string};Insert:never;Update:{success:boolean};Relationships:[]}
+
       microsoft_connections:{Row:MicrosoftConnection;Insert:MicrosoftConnection;Update:Partial<MicrosoftConnection>;Relationships:[]}
       cora_conversations:{Row:CoraConversation;Insert:CoraConversation;Update:Partial<CoraConversation>;Relationships:[]}
       cora_turns:{Row:CoraTurn;Insert:CoraTurn;Update:Partial<CoraTurn>;Relationships:[]}
@@ -34,7 +37,7 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: { cora_begin:{Args:{p_user:string;p_conversation:string;p_request:string;p_message:string;p_context:CoraContext};Returns:{turn:CoraTurn;started:boolean}}; search_work:{Args:{query_text:string;module_filter?:string;status_filter?:string;archive_filter?:string;tag_filter?:string;page_offset?:number};Returns:SearchResult[]}; export_workspace:{Args:Record<string,never>;Returns:unknown}; convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
+    Functions: { cora_mcp_reserve:{Args:{p_hash:string;p_tool:string};Returns:string}; cora_begin:{Args:{p_user:string;p_conversation:string;p_request:string;p_message:string;p_context:CoraContext};Returns:{turn:CoraTurn;started:boolean}}; search_work:{Args:{query_text:string;module_filter?:string;status_filter?:string;archive_filter?:string;tag_filter?:string;page_offset?:number};Returns:SearchResult[]}; export_workspace:{Args:Record<string,never>;Returns:unknown}; convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

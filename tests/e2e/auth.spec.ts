@@ -21,6 +21,7 @@ async function mockBackend(
     revoked?: boolean;
   } = {},
 ) {
+  await page.route("**/api/cora/connection/status", route => route.fulfill({json:{connection:null}}));
   await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   let preferences = {
     user_id: userId,
@@ -136,7 +137,7 @@ test("sign in, save preference, reload, and sign out", async ({ page }) => {
   await page
     .getByRole("combobox", { name: "Appearance" })
     .selectOption("light");
-  await expect(page.getByRole("status")).toHaveText("Appearance saved.");
+  await expect(page.locator('[aria-labelledby="appearance-title"]').getByRole("status")).toHaveText("Appearance saved.");
   await page.reload();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Appearance" })).toHaveValue(
@@ -334,3 +335,30 @@ test('Cora streams, preserves page context, and creates a task only through its 
  await page.screenshot({path:'test-results/cora-mobile.png'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('button',{name:'Ask Cora',exact:true})).toBeFocused()
 })
+
+test('ChatGPT connection shows a one-time token and revokes access',async({page})=>{
+ await mockBackend(page);
+ let connection:Record<string,unknown>|null=null;
+ await page.route('**/api/cora/connection/status',r=>r.fulfill({json:{connection}}));
+ await page.route('**/api/cora/connection/create',r=>{connection={created_at:new Date().toISOString(),expires_at:'2099-01-01T00:00:00Z',last_used_at:null};return r.fulfill({json:{token:'cmd_mcp_'+'a'.repeat(43),expires_at:connection.expires_at}})});
+ await page.route('**/api/cora/connection/revoke',r=>{connection=null;return r.fulfill({json:{revoked:true}})});
+ await login(page);await expect(page.getByRole('heading',{name:'Work Day',exact:true})).toBeVisible();
+ await page.goto('/?page=settings');
+ await page.getByRole('button',{name:'Create ChatGPT token',exact:true}).click();
+ const field=page.getByLabel('ChatGPT connection token');await expect(field).toHaveAttribute('type','password');await expect(field).toHaveValue('cmd_mcp_'+'a'.repeat(43));
+ await page.getByRole('button',{name:'Hide token',exact:true}).click();await expect(field).toHaveCount(0);
+ await page.getByRole('button',{name:'Revoke ChatGPT access',exact:true}).click();await expect(page.getByText('ChatGPT access revoked. Existing conversations remain.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Create ChatGPT token',exact:true})).toBeVisible();
+ expect((await new AxeBuilder({page}).include('[aria-labelledby="chatgpt-title"]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+});
+test('ChatGPT proposal link opens a review card and never automatically creates a task',async({page})=>{
+ await mockBackend(page);let actions=0;
+ const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const turn={id,user_id:userId,conversation_id:id,message:'ChatGPT task proposal: Review integration',context:{page:'chatgpt',recordId:null},response:'Ready to add.',sources:[],proposal:{title:'Review integration',due_date:null,priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()};
+ await page.route('**/api/cora/history*',r=>r.fulfill({json:new URL(r.request().url()).searchParams.has('conversationId')?{turns:[turn]}:{conversations:[{id,title:turn.message}]}}));
+ await page.route('**/api/cora/action',r=>{actions++;return r.fulfill({json:{taskId:turn.task_id,created:true}})});
+ await login(page);await expect(page.getByRole('heading',{name:'Work Day',exact:true})).toBeVisible();
+ await page.goto('/?coraConversation='+id);
+ const panel=page.getByRole('dialog',{name:'Cora',exact:true});await expect(panel.getByRole('heading',{name:'Review integration',exact:true})).toBeVisible();expect(actions).toBe(0);
+ await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(1);
+});

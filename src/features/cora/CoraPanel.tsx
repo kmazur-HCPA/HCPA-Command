@@ -14,6 +14,7 @@ export function CoraPanel({
   onCreated,
   onDirty,
   prompt,
+  initialConversation,
 }: {
   client: AppClient;
   open: boolean;
@@ -23,19 +24,20 @@ export function CoraPanel({
   onCreated: () => void;
   onDirty: (dirty: boolean) => void;
   prompt?: string;
+  initialConversation?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
     input = useRef<HTMLTextAreaElement>(null),
     scroller = useRef<HTMLDivElement>(null),
     abort = useRef<AbortController | null>(null);
   const [conversation, setConversation] = useState(
-      () => crypto.randomUUID() as string,
+      () => initialConversation ?? crypto.randomUUID() as string,
     ),
     [turns, setTurns] = useState<CoraTurn[]>([]),
     [conversations, setConversations] = useState<CoraConversation[]>([]);
   const [draft, setDraft] = useState(prompt ?? ""),
     [busy, setBusy] = useState(false),
-    [loading, setLoading] = useState(false),
+    [loading, setLoading] = useState(!!initialConversation),
     [status, setStatus] = useState(""),
     [partial, setPartial] = useState(""),
     [pending, setPending] = useState(""),
@@ -45,6 +47,14 @@ export function CoraPanel({
     [listMore, setListMore] = useState(false);
   useDraftGuard(busy || !!action || !!draft.trim());
   useEffect(() => () => abort.current?.abort(), []);
+  useEffect(() => {
+    if (!initialConversation) return;
+    let active = true;
+    void history(client, initialConversation).then(data => {
+      if (active) { setTurns((data.turns ?? []).reverse()); setOlder(data.turns?.length === 20); }
+    }).catch(() => { if(active) setError('This proposal could not be loaded. Use Reload history to retry.'); }).finally(() => { if(active) setLoading(false); });
+    return () => { active = false; };
+  }, [client, initialConversation]);
   const [lastPrompt, setLastPrompt] = useState(prompt);
   if (prompt !== lastPrompt) {
     setLastPrompt(prompt);

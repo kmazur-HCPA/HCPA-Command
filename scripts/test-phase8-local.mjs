@@ -43,7 +43,7 @@ export async function testPhase8({
     "user_preferences",
     "activity_log",
     "app_memberships",
-    "cora_conversations", "cora_turns", "cora_activity",
+    "cora_conversations", "cora_turns", "cora_activity", "cora_mcp_activity",
   ]) {
     assert.equal(backup.counts[table], backup[table].length);
     const source = await owner
@@ -104,10 +104,10 @@ export async function testPhase8({
  set local session_replication_role=replica;
  create temporary table recovery_payload as select convert_from(decode('${encoded}','base64'),'UTF8')::jsonb value;
  do $$ declare table_name text; cols text; begin
- foreach table_name in array array['cora_activity','cora_turns','cora_conversations','library_versions','journal_revisions','work_items','activity_log','user_preferences','app_memberships'] loop
+ foreach table_name in array array['cora_mcp_activity','cora_activity','cora_turns','cora_conversations','library_versions','journal_revisions','work_items','activity_log','user_preferences','app_memberships'] loop
  execute format('delete from public.%I where user_id=$1',table_name) using '${ownerId}'::uuid;
  end loop;
- foreach table_name in array array['app_memberships','user_preferences','work_items','journal_revisions','library_versions','activity_log','cora_conversations','cora_turns','cora_activity'] loop
+ foreach table_name in array array['app_memberships','user_preferences','work_items','journal_revisions','library_versions','activity_log','cora_conversations','cora_turns','cora_activity','cora_mcp_activity'] loop
  select string_agg(quote_ident(attname),',' order by attnum) into cols from pg_attribute where attrelid=format('public.%I',table_name)::regclass and attnum>0 and not attisdropped and attgenerated='';
  execute format('insert into public.%I (%s) select %s from jsonb_populate_recordset(null::public.%I,(select value->$1 from recovery_payload))',table_name,cols,cols,table_name) using table_name;
  end loop;

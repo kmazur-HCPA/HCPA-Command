@@ -32,6 +32,30 @@ describe('Work record integrity and authorization', () => {
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
 
+  it('keeps MCP credentials server-only, enforces quota and revokes on membership changes',async()=>{
+    await db.query("insert into public.cora_mcp_connections(user_id,token_hash,expires_at) values ($1,$2,now()+interval '90 days')",[owner,'a'.repeat(43)])
+    const grants=await db.query<{role:string;allowed:boolean}>("select role, has_table_privilege(role,'public.cora_mcp_connections','SELECT') allowed from (values ('anon'),('authenticated'),('service_role')) r(role)")
+    expect(grants.rows.map(r=>r.allowed)).toEqual([false,false,true])
+    for(let i=0;i<30;i++) await db.query("select public.cora_mcp_reserve($1,'get_my_tasks')",['a'.repeat(43)])
+    await db.exec('savepoint limit_test')
+    await expect(db.query("select public.cora_mcp_reserve($1,'get_my_tasks')",['a'.repeat(43)])).rejects.toThrow(/limit/)
+    await db.exec('rollback to savepoint limit_test')
+    await db.query('update public.app_memberships set active=false where user_id=$1',[owner])
+    expect((await db.query('select * from public.cora_mcp_connections')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.cora_mcp_activity')).rows).toHaveLength(30)
+  })
+  it('does not export MCP credentials and isolates connection audit records',async()=>{
+    await db.query("insert into public.cora_mcp_connections(user_id,token_hash,expires_at) values ($1,$2,now()+interval '90 days')",[owner,'b'.repeat(43)])
+    await db.query("select public.cora_mcp_reserve($1,'get_my_tasks')",['b'.repeat(43)])
+    await authenticate(other)
+    expect((await db.query('select * from public.cora_mcp_activity')).rows).toHaveLength(0)
+    await db.exec('reset role')
+    await authenticate(owner)
+    const exported=(await db.query<{value:Record<string,unknown>}>('select public.export_workspace() value')).rows[0]!.value
+    expect(exported.cora_mcp_activity).toHaveLength(1)
+    expect(JSON.stringify(exported)).not.toContain('token_hash')
+  })
+
   it('keeps Microsoft credential ciphertext inaccessible to every browser role', async()=>{
     await db.query("insert into public.microsoft_connections(user_id,generation,token_cache) values ($1,$2,'encrypted')",[owner,other])
     const grants=await db.query<{role:string;allowed:boolean}>("select role, has_table_privilege(role,'public.microsoft_connections','SELECT') as allowed from (values ('anon'),('authenticated'),('service_role')) r(role)")

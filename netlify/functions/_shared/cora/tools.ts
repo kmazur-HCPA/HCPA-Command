@@ -124,6 +124,7 @@ export async function readTool(
   name: string,
   args: Record<string, unknown>,
   sources: Map<string, CoraSource>,
+  ownerId?: string,
 ) {
   const offset = args.offset;
   if (
@@ -137,11 +138,13 @@ export async function readTool(
     name === "get_project_details" ? ["offset", "project_id"] : ["offset"];
   if (Object.keys(args).some((key) => !allowed.includes(key)))
     throw new Error("Unsupported tool argument.");
-  const query = () =>
-    client
+  const query = () => {
+    const q = client
       .from("work_items")
       .select(columns, { count: "exact" })
       .eq("archived", false);
+    return ownerId ? q.eq("user_id", ownerId) : q;
+  };
   const add = (rows: { id: string; title: string; kind: string }[]) =>
     rows.forEach((row) =>
       sources.set(row.id, { id: row.id, title: row.title, kind: row.kind }),
@@ -211,13 +214,9 @@ export async function readTool(
         .filter((id): id is string => !!id),
     ),
   ];
-  const links = ids.length
-    ? await client
-        .from("work_items")
-        .select("id,title,kind,status")
-        .in("id", ids)
-        .limit(75)
-    : { data: [], error: null };
+  let linked = client.from("work_items").select("id,title,kind,status").in("id", ids).limit(75);
+  if (ownerId) linked = linked.eq("user_id", ownerId);
+  const links = ids.length ? await linked : { data: [], error: null };
   if (links.error) throw new Error("Related context could not be loaded.");
   add(links.data ?? []);
   return {
