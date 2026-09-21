@@ -25,7 +25,13 @@ export async function getWork(client:AppClient,id:string) {
  const {data,error}=await client.from('work_items').select('*').eq('id',id).single()
  if(error)throw new Error('This record is unavailable.');return data
 }
-function matches(row:WorkItem,input:WorkInput) {return Object.entries(input).every(([key,value])=>JSON.stringify(row[key as keyof WorkItem])===JSON.stringify(value))}
+export function matchesWorkFields(row:Partial<WorkItem>,input:Partial<WorkInput>) {
+ return Object.entries(input).every(([key,value])=>{
+  const saved=row[key as keyof WorkItem]
+  if((key==='remind_at'||key==='snoozed_until')&&typeof saved==='string'&&typeof value==='string')return Date.parse(saved)===Date.parse(value)
+  return JSON.stringify(saved)===JSON.stringify(value)
+ })
+}
 export async function saveWork(client:AppClient,input:WorkInput,version?:number) {
  return measured('work.write',async()=>{
   if(!input.title.trim())throw new Error('Add a title before saving.')
@@ -36,7 +42,7 @@ export async function saveWork(client:AppClient,input:WorkInput,version?:number)
   if(result.error?.code==='23505')throw new Error('That Work Day priority slot is already in use. Clear it on the other task first.')
   // Reconcile a lost acknowledgement without overwriting a concurrent edit.
   const current=await getWork(client,input.id).catch(()=>null)
-  if(current && matches(current,input))return current
+  if(current && matchesWorkFields(current,input))return current
   if(current)throw new Error('This record changed elsewhere. Your draft is preserved. Compare the latest record before saving again.')
   throw new Error('Not saved. Your draft is preserved; reconnect and retry.')
  })
@@ -80,7 +86,7 @@ export async function patchWork(client:AppClient,item:Pick<WorkItem,'id'|'versio
   if(data)return data
   if(error?.code==='23505')throw new Error('That priority slot is already in use.')
   const current=await getWork(client,item.id).catch(()=>null)
-  if(current&&Object.entries(patch).every(([key,value])=>JSON.stringify(current[key as keyof WorkItem])===JSON.stringify(value)))return current
+  if(current&&matchesWorkFields(current,patch))return current
   throw new Error('The change was not saved or this record changed elsewhere. Reload before retrying.')
  })
 }
