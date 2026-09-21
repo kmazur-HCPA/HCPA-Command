@@ -1,3 +1,5 @@
+import { fields as detailFields } from "../../../../src/features/lab/fields";
+import { kinds } from "./actions";
 import type OpenAI from "openai";
 import type { AppClient } from "../../../../src/platform/supabase";
 import type {
@@ -42,6 +44,33 @@ const page = {
   },
 };
 export const tools = [
+  definition(
+    "get_records",
+    "Search or list any Command record type, including reminders. Returns versions for editing. Null kind searches all types; search uses indexed full text. Set archived=true to find archived records.",
+    {
+      kind: { type: ["string", "null"], enum: [...kinds, null] },
+      search: { type: ["string", "null"] },
+      archived: { type: "boolean" },
+      ...page,
+    },
+  ),
+  definition(
+    "get_record",
+    "Read one owned Command record and its current version before editing.",
+    { record_id: { type: "string" }, ...page },
+  ),
+  definition(
+    "prepare_record",
+    'Prepare a reviewed create/update/convert action for any Command record. No write occurs until confirmed. Update only requested fields. For convert, kind=reminder and fields_json="{}". For create use null record_id and expected_version. Read current record before update. fields_json is a JSON object with editable fields: title, body, status, priority, due_date (YYYY-MM-DD or null), remind_at and snoozed_until (ISO timestamp WITH timezone or null), archived, focus_slot (task 1-3 or null), tags (string array), entry_type, goals, current_state, next_milestone, organization, person_role, details (string-valued object), project_id, initiative_id, person_id, task_id, source_entry_id, learning_id, program_id, use_case_id, experiment_id, decision_id (UUID or null). For reminder snooze set status=Snoozed and snoozed_until; dismiss=Dismissed, complete=Complete. Tomorrow without a time means due_date only; do not invent a time. Preserve all existing details when editing details. Detail field definitions: ' +
+      JSON.stringify(detailFields),
+    {
+      operation: { type: "string", enum: ["create", "update", "convert"] },
+      kind: { type: "string", enum: kinds },
+      record_id: { type: ["string", "null"] },
+      expected_version: { type: ["integer", "null"] },
+      fields_json: { type: "string" },
+    },
+  ),
   definition(
     "get_my_tasks",
     "Read open, unarchived tasks, earliest due first; includes exact total.",
@@ -118,7 +147,7 @@ export function validateProposal(value: unknown): TaskProposal {
   };
 }
 const columns =
-  "id,title,kind,status,priority,due_date,project_id,person_id,task_id,current_state,next_milestone,goals,body,updated_at" as const;
+  "id,title,kind,status,priority,due_date,remind_at,snoozed_until,version,archived,details,tags,entry_type,focus_slot,initiative_id,learning_id,program_id,use_case_id,experiment_id,decision_id,source_entry_id,organization,person_role,project_id,person_id,task_id,current_state,next_milestone,goals,body,updated_at" as const;
 export async function readTool(
   client: AppClient,
   name: string,
@@ -135,14 +164,20 @@ export async function readTool(
   )
     throw new Error("Invalid result page. Narrow the question.");
   const allowed =
-    name === "get_project_details" ? ["offset", "project_id"] : ["offset"];
+    name === "get_records"
+      ? ["offset", "kind", "search", "archived"]
+      : name === "get_record"
+        ? ["offset", "record_id"]
+        : name === "get_project_details"
+          ? ["offset", "project_id"]
+          : ["offset"];
   if (Object.keys(args).some((key) => !allowed.includes(key)))
     throw new Error("Unsupported tool argument.");
   const query = () => {
     const q = client
       .from("work_items")
       .select(columns, { count: "exact" })
-      .eq("archived", false);
+      .eq("archived", name === "get_records" ? args.archived === true : false);
     return ownerId ? q.eq("user_id", ownerId) : q;
   };
   const add = (rows: { id: string; title: string; kind: string }[]) =>
@@ -160,6 +195,18 @@ export async function readTool(
         ]),
       ),
     );
+  if (name === "get_record") {
+    if (typeof args.record_id !== "string" || !uuid.test(args.record_id))
+      throw new Error("Invalid record reference.");
+    let q = client.from("work_items").select("*").eq("id", args.record_id);
+    if (ownerId) q = q.eq("user_id", ownerId);
+    const r = await q.maybeSingle();
+    if (r.error || !r.data) throw new Error("Record unavailable.");
+    add([r.data]);
+    const { search_vector, ...record } = r.data;
+    void search_vector;
+    return { record };
+  }
   if (name === "get_project_details") {
     if (typeof args.project_id !== "string" || !uuid.test(args.project_id))
       throw new Error("Invalid project reference.");
@@ -186,7 +233,26 @@ export async function readTool(
     };
   }
   let q = query();
-  if (
+  if (name === "get_records") {
+    if (
+      !(
+        args.kind === null ||
+        kinds.includes(args.kind as (typeof kinds)[number])
+      ) ||
+      !(
+        args.search === null ||
+        (typeof args.search === "string" && args.search.length <= 200)
+      ) ||
+      typeof args.archived !== "boolean"
+    )
+      throw new Error("Invalid search.");
+    if (args.kind) q = q.eq("kind", args.kind as (typeof kinds)[number]);
+    if (args.search)
+      q = q.textSearch("search_vector", args.search as string, {
+        type: "websearch",
+        config: "english",
+      });
+  } else if (
     name === "get_my_tasks" ||
     name === "get_tasks_due_today" ||
     name === "get_priority_tasks"
@@ -214,7 +280,11 @@ export async function readTool(
         .filter((id): id is string => !!id),
     ),
   ];
-  let linked = client.from("work_items").select("id,title,kind,status").in("id", ids).limit(75);
+  let linked = client
+    .from("work_items")
+    .select("id,title,kind,status")
+    .in("id", ids)
+    .limit(75);
   if (ownerId) linked = linked.eq("user_id", ownerId);
   const links = ids.length ? await linked : { data: [], error: null };
   if (links.error) throw new Error("Related context could not be loaded.");

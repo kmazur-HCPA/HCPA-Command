@@ -1,3 +1,4 @@
+import { labels } from "../work/model";
 import { useEffect, useRef, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import type { CoraContext, CoraTurn, CoraConversation } from "./model";
@@ -31,7 +32,7 @@ export function CoraPanel({
     scroller = useRef<HTMLDivElement>(null),
     abort = useRef<AbortController | null>(null);
   const [conversation, setConversation] = useState(
-      () => initialConversation ?? crypto.randomUUID() as string,
+      () => initialConversation ?? (crypto.randomUUID() as string),
     ),
     [turns, setTurns] = useState<CoraTurn[]>([]),
     [conversations, setConversations] = useState<CoraConversation[]>([]);
@@ -50,10 +51,25 @@ export function CoraPanel({
   useEffect(() => {
     if (!initialConversation) return;
     let active = true;
-    void history(client, initialConversation).then(data => {
-      if (active) { setTurns((data.turns ?? []).reverse()); setOlder(data.turns?.length === 20); }
-    }).catch(() => { if(active) setError('This proposal could not be loaded. Use Reload history to retry.'); }).finally(() => { if(active) setLoading(false); });
-    return () => { active = false; };
+    void history(client, initialConversation)
+      .then((data) => {
+        if (active) {
+          setTurns((data.turns ?? []).reverse());
+          setOlder(data.turns?.length === 20);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "This proposal could not be loaded. Use Reload history to retry.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [client, initialConversation]);
   const [lastPrompt, setLastPrompt] = useState(prompt);
   if (prompt !== lastPrompt) {
@@ -165,7 +181,7 @@ export function CoraPanel({
     } catch (e) {
       setError(
         abort.current.signal.aborted
-          ? "Stopped. Reload history to check the final response. No task was created."
+          ? "Stopped. Reload history to check the final response. No changes were made."
           : (e as Error).message,
       );
     } finally {
@@ -179,10 +195,12 @@ export function CoraPanel({
     setAction(turn.id);
     setError("");
     try {
-      await createTask(client, turn.id);
+      const receipt = await createTask(client, turn.id);
       setTurns((old) =>
         old.map((t) =>
-          t.id === turn.id ? { ...t, action_status: "created" } : t,
+          t.id === turn.id
+            ? { ...t, action_status: "created", task_id: receipt.taskId }
+            : t,
         ),
       );
       onCreated();
@@ -309,7 +327,7 @@ export function CoraPanel({
                   : "What needs my attention today?",
                 "What tasks do I have open?",
                 "What's waiting on someone else?",
-                "Add a task for tomorrow to follow up with Erik.",
+                "Remind me tomorrow to follow up on the website.",
               ].map((text) => (
                 <button
                   key={text}
@@ -343,22 +361,106 @@ export function CoraPanel({
               {turn.sources.length > 0 && (
                 <details className="cora-sources">
                   <summary>Command sources · {turn.sources.length}</summary>
-                  {turn.sources.map((source) => (
-                    (source.kind.startsWith("outlook_") || source.kind.startsWith("teams_")) ? (microsoftSourceLink(source.kind, source.url) ? <a key={source.id} href={microsoftSourceLink(source.kind, source.url)} target="_blank" rel="noopener noreferrer">{source.title}<Icon name="arrow" /></a> : null) : <button
-                      key={source.id}
-                      onClick={() => {
-                        onOpen(source);
-                        if (matchMedia("(max-width:700px)").matches) onClose();
-                      }}
-                    >
-                      {source.title}
-                      <Icon name="arrow" />
-                    </button>
-                  ))}
+                  {turn.sources.map((source) =>
+                    source.kind.startsWith("outlook_") ||
+                    source.kind.startsWith("teams_") ? (
+                      microsoftSourceLink(source.kind, source.url) ? (
+                        <a
+                          key={source.id}
+                          href={microsoftSourceLink(source.kind, source.url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {source.title}
+                          <Icon name="arrow" />
+                        </a>
+                      ) : null
+                    ) : (
+                      <button
+                        key={source.id}
+                        onClick={() => {
+                          onOpen(source);
+                          if (matchMedia("(max-width:700px)").matches)
+                            onClose();
+                        }}
+                      >
+                        {source.title}
+                        <Icon name="arrow" />
+                      </button>
+                    ),
+                  )}
                 </details>
               )}
             </div>
-            {turn.proposal && (
+            {turn.proposal && "type" in turn.proposal && (
+              <section className="cora-task-card" aria-label="Record proposal">
+                <p className="eyebrow">
+                  {turn.action_status === "created"
+                    ? "Changes saved"
+                    : "Review changes"}{" "}
+                  · {labels[turn.proposal.kind]}
+                </p>
+                <h3>{turn.proposal.title}</h3>
+                <p>
+                  {turn.proposal.operation === "create"
+                    ? "Create record"
+                    : turn.proposal.operation === "convert"
+                      ? "Convert reminder to task"
+                      : "Update record"}
+                </p>
+                <dl>
+                  {Object.entries(turn.proposal.fields).map(([key, value]) => (
+                    <div key={key}>
+                      <dt>{key.replaceAll("_", " ")}</dt>
+                      <dd
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {value === null
+                          ? "Clear"
+                          : typeof value === "object"
+                            ? JSON.stringify(value, null, 2)
+                            : typeof value === "boolean"
+                              ? value
+                                ? "Yes"
+                                : "No"
+                              : key === "remind_at" || key === "snoozed_until"
+                                ? new Date(String(value)).toLocaleString(
+                                    "en-US",
+                                    {
+                                      timeZone: "America/New_York",
+                                      timeZoneName: "short",
+                                    },
+                                  )
+                                : String(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                {turn.proposal.kind === "reminder" && (
+                  <small>
+                    Appears in Command Reminders and Work Day. No email or push
+                    notification.
+                  </small>
+                )}
+                {turn.action_status === "created" ? (
+                  <button onClick={() => onOpen({ id: turn.task_id })}>
+                    Open record
+                    <Icon name="arrow" />
+                  </button>
+                ) : (
+                  <button
+                    disabled={!!action || busy}
+                    onClick={() => void confirm(turn)}
+                  >
+                    {action === turn.id ? "Saving…" : "Confirm changes"}
+                  </button>
+                )}
+              </section>
+            )}
+            {turn.proposal && !("type" in turn.proposal) && (
               <section className="cora-task-card" aria-label="Task proposal">
                 <p className="eyebrow">
                   {turn.action_status === "created"
@@ -374,7 +476,14 @@ export function CoraPanel({
                 </p>
                 {turn.proposal.project_id && (
                   <button
-                    onClick={() => onOpen({ id: turn.proposal!.project_id! })}
+                    onClick={() =>
+                      onOpen({
+                        id:
+                          "project_id" in turn.proposal!
+                            ? turn.proposal.project_id!
+                            : "",
+                      })
+                    }
                   >
                     View linked project
                   </button>

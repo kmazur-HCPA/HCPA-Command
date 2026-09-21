@@ -362,3 +362,23 @@ test('ChatGPT proposal link opens a review card and never automatically creates 
  const panel=page.getByRole('dialog',{name:'Cora',exact:true});await expect(panel.getByRole('heading',{name:'Review integration',exact:true})).toBeVisible();expect(actions).toBe(0);
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(1);
 });
+
+test('Cora reviews a date-only reminder and saves only after explicit confirmation',async({page})=>{
+ await mockBackend(page);
+ const id='11111111-1111-4111-8111-111111111119';
+ const turn={id,user_id:id,conversation_id:id,message:'Please remind me tomorrow to send an email to Al and Nereia regarding lack of feedback on website.',context:{page:'workspace',recordId:null},response:'Review the changes below, then confirm.',sources:[],proposal:{type:'record',operation:'create',kind:'reminder',record_id:null,expected_version:null,title:'Email Al and Nereia about website feedback',fields:{title:'Email Al and Nereia about website feedback',due_date:'2026-09-22'}},task_id:id,status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()};
+ let actions=0;
+ await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
+ await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn})+'\n'}));
+ await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:id});return r.fulfill({json:{taskId:id,created:true}})});
+ await login(page);await page.getByRole('button',{name:'Ask Cora',exact:true}).click();
+ const panel=page.getByRole('dialog',{name:'Cora',exact:true});
+ await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill(turn.message);
+ await panel.getByRole('button',{name:'Send to Cora'}).click();
+ const card=panel.getByRole('region',{name:'Record proposal'});
+ await expect(card.getByRole('heading',{name:turn.proposal.title})).toBeVisible();
+ await expect(card.getByText('2026-09-22',{exact:true})).toBeVisible();expect(actions).toBe(0);
+ await card.getByRole('button',{name:'Confirm changes'}).click();
+ await expect(card.getByRole('button',{name:'Open record'})).toBeVisible();expect(actions).toBe(1);
+ expect((await new AxeBuilder({page}).include('.cora-panel').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+});

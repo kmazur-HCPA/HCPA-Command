@@ -1,3 +1,4 @@
+import { applyRecord, validateRecordProposal } from "./actions";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../../../src/data/database.types";
@@ -152,7 +153,7 @@ export async function handleCora(
         typeof body.turnId !== "string" ||
         !uuid.test(body.turnId)
       )
-        return respond(400, "Invalid task action.");
+        return respond(400, "Invalid action.");
       const r = await client
         .from("cora_turns")
         .select("*")
@@ -160,62 +161,64 @@ export async function handleCora(
         .eq("status", "complete")
         .maybeSingle();
       if (r.error || !r.data?.proposal)
-        return respond(404, "Task proposal unavailable.");
+        return respond(404, "Action proposal unavailable.");
       const turn = r.data,
-        p = validateProposal(turn.proposal);
+        p =
+          "type" in turn.proposal!
+            ? validateRecordProposal(turn.proposal)
+            : validateProposal(turn.proposal);
       if (turn.action_status === "created")
         return Response.json(
           { taskId: turn.task_id, created: true },
           { headers },
         );
-      const input = { ...newItem("task", user.id), ...p, id: turn.task_id };
+      const input =
+        "type" in p
+          ? null
+          : { ...newItem("task", user.id), ...p, id: turn.task_id };
       // RLS and existing record validation are authoritative. Stable IDs reconcile
       // retries/lost acknowledgements without creating or overwriting a second task.
       try {
-        await saveWork(client, input);
-        const audit = await store
-          .from("cora_activity")
-          .insert({
-            user_id: user.id,
-            turn_id: turn.id,
-            tool: "create_task",
-            arguments: p,
-            result: { task_id: turn.task_id },
-            success: true,
-          });
+        const recordId =
+          "type" in p
+            ? await applyRecord(client, p, user.id, turn.task_id)
+            : (await saveWork(client, input!)).id;
+        const audit = await store.from("cora_activity").insert({
+          user_id: user.id,
+          turn_id: turn.id,
+          tool: "type" in p ? p.operation + "_" + p.kind : "create_task",
+          arguments: p,
+          result: { record_id: recordId },
+          success: true,
+        });
         if (audit.error)
           throw new Error(
-            "Task may be saved, but its Cora receipt could not be recorded. Retry this same card to reconcile.",
+            "Change may be saved, but its Cora receipt could not be recorded. Retry this same card to reconcile.",
           );
         const updated = await store
           .from("cora_turns")
-          .update({ action_status: "created" })
+          .update({ action_status: "created", task_id: recordId })
           .eq("id", turn.id)
           .eq("user_id", user.id);
         if (updated.error)
           throw new Error(
-            "Task may be saved. Retry this same card to reconcile.",
+            "Change may be saved. Retry this same card to reconcile.",
           );
-        return Response.json(
-          { taskId: turn.task_id, created: true },
-          { headers },
-        );
+        return Response.json({ taskId: recordId, created: true }, { headers });
       } catch (error) {
-        await store
-          .from("cora_activity")
-          .insert({
-            user_id: user.id,
-            turn_id: turn.id,
-            tool: "create_task",
-            arguments: p,
-            result: { state: "not_confirmed" },
-            success: false,
-          });
+        await store.from("cora_activity").insert({
+          user_id: user.id,
+          turn_id: turn.id,
+          tool: "type" in p ? p.operation + "_" + p.kind : "create_task",
+          arguments: p,
+          result: { state: "not_confirmed" },
+          success: false,
+        });
         return respond(
           409,
           error instanceof Error
             ? error.message
-            : "Task creation was not confirmed. Retry this same card.",
+            : "Change was not confirmed. Retry this same card.",
         );
       }
     }
@@ -331,7 +334,7 @@ export async function handleCora(
             .update({
               status: "error",
               response:
-                "Cora could not finish this response. No task was created.",
+                "Cora could not finish this response. No changes were made.",
               finished_at: new Date().toISOString(),
             })
             .eq("id", turn.id)
@@ -340,8 +343,8 @@ export async function handleCora(
           emit({
             type: "error",
             message: signal.aborted
-              ? "Stopped. No task was created."
-              : "Cora could not finish. Your message is saved; please try again. No task was created.",
+              ? "Stopped. No changes were made."
+              : "Cora could not finish. Your message is saved; please try again. No changes were made.",
           });
         } finally {
           console.info(

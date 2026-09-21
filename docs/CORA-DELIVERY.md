@@ -57,3 +57,13 @@ For local development, `npm run dev:netlify` loads the ignored `.env.production.
 Revision `700d8f2` passed [Foundation checks run 35622134081](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35622134081): 83 unit/database tests, 23 pgTAP assertions, 27 browser workflows, two PWA tests, real local Auth/PostgREST/Storage integration, lint, type checking, build and dependency audit. The native Cora fixture verified context retrieval, streaming, private history, proposal-only model authority, concurrent retry-safe task creation, receipt forgery denial and revocation. The complete application recovery drill includes Cora history and activity as well as 11 records, four revisions and six originals. The browser build is 158 KiB gzip JS/CSS within the 190 KiB budget.
 
 The production migration was applied. All three Cora tables have RLS, no anonymous access and no authenticated insert/update permission. The reservation function uses invoker rights and grants execution only to the server role. Supabase security advisors returned no findings. The configured local server secret and the provider connection were verified without exposing credentials.
+
+## Record actions — September 21, 2026
+
+Cora now reads and proposes creation/editing for every Command record kind, including date-only/timed/undated reminders, snooze, complete, dismiss, conversion to a task, archive/restore, links, priority slots, Journal entries, Learning, AI Lab and Library metadata. The site and ChatGPT MCP use the same proposal validation. `get_records` provides indexed search and paginated lists; `get_record` provides current values and versions.
+
+Writes still require the explicit Command review card. Confirmation uses the signed-in user's existing services and RLS, immutable original text, optimistic version checks, stable creation IDs and action receipts. MCP credentials cannot directly mutate work records. Microsoft remains read-only. File transfers and account/integration controls remain in their dedicated UI; record-edit tools do not perform those operations. Reminders appear in Command; this release does not add background push/email delivery.
+
+Regression example: “Please remind me tomorrow to send an email to Al and Nereia regarding lack of feedback on website.” Cora must propose a reminder with tomorrow's America/New_York date, not a task and not an invented time. It must not claim the reminder is saved until the card is confirmed.
+
+No database migration or new credentials are required. Roll back the application commit to restore the old tools; do not confirm newer record cards through an older release. Existing records remain usable in their normal editors.

@@ -1,3 +1,4 @@
+import type { Kind, WorkInput } from "../work/model";
 export type CoraContext = { page: string; recordId: string | null };
 export type TaskProposal = {
   title: string;
@@ -5,7 +6,22 @@ export type TaskProposal = {
   priority: "Critical" | "High" | "Normal" | "Low";
   project_id: string | null;
 };
-export type CoraSource = { id: string; title: string; kind: string; url?: string };
+export type RecordProposal = {
+  type: "record";
+  kind: Kind;
+  operation: "create" | "update" | "convert";
+  record_id: string | null;
+  expected_version: number | null;
+  title: string;
+  fields: Partial<WorkInput>;
+};
+export type CoraProposal = TaskProposal | RecordProposal;
+export type CoraSource = {
+  id: string;
+  title: string;
+  kind: string;
+  url?: string;
+};
 export type CoraTurn = {
   id: string;
   user_id: string;
@@ -14,7 +30,7 @@ export type CoraTurn = {
   context: CoraContext;
   response: string;
   sources: CoraSource[];
-  proposal: TaskProposal | null;
+  proposal: CoraProposal | null;
   task_id: string;
   status: "running" | "complete" | "error";
   action_status: "none" | "proposed" | "created";

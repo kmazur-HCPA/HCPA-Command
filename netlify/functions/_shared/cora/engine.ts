@@ -1,10 +1,11 @@
+import { prepareRecord } from "./actions";
 import OpenAI from "openai";
 import type { AppClient } from "../../../../src/platform/supabase";
 import type {
   CoraEvent,
   CoraSource,
   CoraTurn,
-  TaskProposal,
+  CoraProposal,
 } from "../../../../src/features/cora/model";
 import { identity, instructions } from "./identity";
 import { readTool, tools, today, validateProposal } from "./tools";
@@ -40,7 +41,7 @@ export async function runCora({
   const readTeams = microsoft
     ? createTeamsReader(store, turn.user_id, microsoft, signal, sources)
     : undefined;
-  let proposal: TaskProposal | null = null;
+  let proposal: CoraProposal | null = null;
   const audit = async (
     tool: string,
     args: Record<string, unknown>,
@@ -109,7 +110,7 @@ export async function runCora({
         content:
           previous.response.slice(0, 3000) +
           (previous.action_status === "created"
-            ? `\nVerified Command receipt: task ${previous.task_id} was created after user confirmation.`
+            ? `\nVerified Command receipt: action on record ${previous.task_id} was saved after user confirmation.`
             : ""),
       },
     );
@@ -216,7 +217,10 @@ export async function runCora({
         throw new Error("Cora did not return an answer. Please try again.");
       // A model-produced proposal is never presented as a committed write.
       if (proposal)
-        answer = "Ready to add. Review the task below, then choose Add task.";
+        answer =
+          proposal && "type" in proposal
+            ? "Review the changes below, then choose Confirm changes to save them in Command."
+            : "Ready to add. Review the task below, then choose Add task.";
       const saved = await store
         .from("cora_turns")
         .update({
@@ -234,7 +238,7 @@ export async function runCora({
         .single();
       if (saved.error)
         throw new Error(
-          "Cora could not save this conversation. No task was created.",
+          "Cora could not save this conversation. No changes were made.",
         );
       const active = await client
         .from("app_memberships")
@@ -258,7 +262,14 @@ export async function runCora({
         args = JSON.parse(call.function.arguments) as Record<string, unknown>;
         if (!args || typeof args !== "object" || Array.isArray(args))
           throw new Error("Invalid tool arguments.");
-        if (call.function.name === "prepare_task") {
+        if (call.function.name === "prepare_record") {
+          if (proposal)
+            throw new Error(
+              "Only one action proposal per request is supported.",
+            );
+          proposal = await prepareRecord(client, args, turn.user_id);
+          result = { state: "proposed_not_saved", proposal };
+        } else if (call.function.name === "prepare_task") {
           if (proposal)
             throw new Error("Only one task proposal per request is supported.");
           proposal = validateProposal(args);
@@ -303,10 +314,9 @@ export async function runCora({
             ? { source: "microsoft", parameters_recorded: false }
             : args,
           {
-            state:
-              call.function.name === "prepare_task"
-                ? "proposed_not_saved"
-                : "read",
+            state: call.function.name.startsWith("prepare_")
+              ? "proposed_not_saved"
+              : "read",
           },
           true,
         );
@@ -332,6 +342,6 @@ export async function runCora({
     }
   }
   throw new Error(
-    "Cora reached the tool limit. Please narrow the question. No task was created.",
+    "Cora reached the tool limit. Please narrow the question. No changes were made.",
   );
 }

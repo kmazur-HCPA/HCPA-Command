@@ -139,7 +139,7 @@ describe("Private ChatGPT MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(14);
+    expect(list.result.tools).toHaveLength(17);
     expect(
       list.result.tools
         .filter(
@@ -147,7 +147,7 @@ describe("Private ChatGPT MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_task"]);
+    ).toEqual(["prepare_record", "prepare_task"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
   });
   it("reads only the token owner and audits the tool call without writing work", async () => {
@@ -270,4 +270,11 @@ describe("Private ChatGPT MCP boundary", () => {
     now += 20 * 60000;
     expect(() => codec.resolve(ref)).toThrow(/expired/);
   });
+});
+
+it('prepares a date-only reminder through MCP without writing work records', async () => {
+ const value = await result(await handleMcp(req({jsonrpc:'2.0',id:9,method:'tools/call',params:{name:'prepare_record',arguments:{operation:'create',kind:'reminder',record_id:null,expected_version:null,fields_json:JSON.stringify({title:'Email Al and Nereia about website feedback',due_date:'2026-09-22'}),request_id:owner}}}),cfg,'test'));
+ expect(value.result.isError).not.toBe(true);
+ expect(prepared).toMatchObject({type:'record',kind:'reminder',fields:{due_date:'2026-09-22'}});
+ expect(requests.some(r=>new URL(r.url).pathname.endsWith('/work_items')&&r.method!=='GET')).toBe(false);
 });
