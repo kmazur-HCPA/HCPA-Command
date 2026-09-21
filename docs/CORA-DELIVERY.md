@@ -45,3 +45,7 @@ Physical-device Safari/VoiceOver acceptance remains user-run. Automatic AI brief
 - [Netlify AI Gateway configuration and supported models](https://docs.netlify.com/build/ai-gateway/overview/)
 - [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling)
 - [Supabase changelog](https://supabase.com/changelog)
+
+## Provider evaluation — September 21, 2026
+
+Seven synthetic cases passed against `gpt-5.4-mini`: live task retrieval, a follow-up about today, Waiting On, a tomorrow-dated task proposal, selected-project context, distinguishing a reminder request and ignoring instructions embedded in a project record. Individual complete interactions took 1.073–3.216 seconds. These measurements exclude Command database access and are not a production p95 guarantee. The real provider required `reasoning_effort: none` with Chat Completions function tools; this supported configuration is used explicitly. Model changes must rerun `scripts/eval-cora-provider.mjs` before release.

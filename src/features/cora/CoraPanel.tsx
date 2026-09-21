@@ -42,14 +42,14 @@ export function CoraPanel({
     [action, setAction] = useState(""),
     [older, setOlder] = useState(false),
     [listMore, setListMore] = useState(false);
-  useDraftGuard(busy || !!draft.trim());
+  useDraftGuard(busy || !!action || !!draft.trim());
   useEffect(() => () => abort.current?.abort(), []);
   const [lastPrompt, setLastPrompt] = useState(prompt);
   if (prompt !== lastPrompt) {
     setLastPrompt(prompt);
     if (prompt && !draft) setDraft(prompt);
   }
-  useEffect(() => onDirty(busy || !!draft.trim()), [busy, draft, onDirty]);
+  useEffect(() => onDirty(busy || !!action || !!draft.trim()), [busy, action, draft, onDirty]);
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
