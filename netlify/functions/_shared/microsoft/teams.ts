@@ -23,7 +23,7 @@ export const teamsTools = [
   ),
   definition(
     "list_teams_chats",
-    "List up to 25 of the user's most recently updated Teams chats, including meeting/group chats. Does not list channel activity or prove unread status. Use returned references with read_teams_chat.",
+    "List up to 25 of the user's Teams chats with the most recent messages, including meeting/group chats. Does not list channel activity or prove unread status. Use returned references with read_teams_chat.",
     {},
   ),
   definition(
@@ -328,7 +328,7 @@ export function createTeamsReader(
     } else {
       const url = new URL(`https://graph.microsoft.com${path}`);
       url.searchParams.set("$top", name === "list_teams_chats" ? "25" : "30");
-      url.searchParams.set("$orderby", "lastUpdatedDateTime desc");
+      url.searchParams.set("$orderby", "lastMessagePreview/createdDateTime desc");
       if (name === "list_teams_chats")
         url.searchParams.set("$expand", "members");
       if (name === "read_teams_chat")
@@ -381,7 +381,7 @@ export function createTeamsReader(
         returned: records.length,
         truncated: !!data["@odata.nextLink"] || all.length > limit,
         complete_history: false,
-        order: "recently_modified_first",
+        order: name === "list_teams_chats" ? "recent_message_first" : "recently_modified_first",
         channel_activity_included: false,
       };
     }

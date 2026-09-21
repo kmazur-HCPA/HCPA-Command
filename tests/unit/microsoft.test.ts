@@ -793,6 +793,7 @@ describe("Teams consent and bounded retrieval", () => {
       participants_truncated: true,
     });
     expect(graphCalls[0]!.searchParams.get("$expand")).toBe("members");
+    expect(graphCalls[0]!.searchParams.get("$orderby")).toBe("lastMessagePreview/createdDateTime desc");
     graphResponse = {
       value: Array.from({ length: 31 }, (_, i) => ({
         id: String(i),
