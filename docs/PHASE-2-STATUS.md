@@ -36,3 +36,9 @@ Netlify now builds from the repository as configured by Kevin. The build generat
 Continue the Phase 1 recovery and custom-domain work as tracked separately. Self-service email recovery and MFA remain deferred.
 
 Implementation references: [web app manifests](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable), [service worker lifecycle](https://web.dev/learn/pwa/service-workers), and [assets and data caching](https://web.dev/learn/pwa/assets-and-data).
+
+## Repository deployment evidence
+
+The shell was committed as `54cf76a` and deployed by Netlify’s repository integration. HTTPS checks confirm the manifest and worker are served successfully, the worker revalidates, and CSP allows the required same-origin worker/manifest and exact production Supabase origin. GitHub’s application job also passed all checks, the dependency audit and both browser suites.
+
+The first CI run exposed an inherited local Auth configuration issue. In the pinned CLI, `auth.email.enable_signup` controls `GOTRUE_EXTERNAL_EMAIL_ENABLED`; it must be true for provisioned users to log in, while global `auth.enable_signup=false` continues blocking registration. The local test config was corrected and the integration recovery test now exercises administrator-assisted password replacement. Hosted settings are unchanged. [Pinned CLI mapping](https://github.com/supabase/cli/blob/v2.117.0/apps/cli/src/commands/start/services/gotrue.service.ts)

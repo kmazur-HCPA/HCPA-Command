@@ -31,12 +31,10 @@ try {
   assert.equal((await owner.from('user_preferences').select('*')).data?.length,1)
   const update=await owner.from('user_preferences').update({theme:'light'}).eq('user_id',users[0]).select('version').single();if(update.error)throw update.error;assert.equal(update.data.version,2)
   const events=await owner.from('activity_log').select('id').eq('action','UPDATE');assert.equal(events.data?.length,1)
-  const recovery=await admin.auth.admin.generateLink({type:'recovery',email});if(recovery.error)throw recovery.error
-  const recoverClient=createClient(url,values.ANON_KEY,opts)
-  const verify=await recoverClient.auth.verifyOtp({token_hash:recovery.data.properties.hashed_token,type:'recovery'});if(verify.error)throw verify.error
+  // Test the administrator-assisted recovery path selected for this pilot.
   const newPassword=randomBytes(32).toString('base64url')
-  const changed=await recoverClient.auth.updateUser({password:newPassword});if(changed.error)throw changed.error
-  await recoverClient.auth.signOut({scope:'global'})
+  const changed=await admin.auth.admin.updateUserById(users[0],{password:newPassword});if(changed.error)throw changed.error
+  const signedOut=await owner.auth.signOut({scope:'global'});if(signedOut.error)throw signedOut.error
   assert((await owner.auth.signInWithPassword({email,password})).error,'Old password must fail after reset')
   assert.equal((await owner.auth.signInWithPassword({email,password:newPassword})).error,null)
   const revoked=await admin.from('app_memberships').update({active:false}).eq('user_id',users[0]);if(revoked.error)throw revoked.error
