@@ -355,9 +355,12 @@ export async function runCora({
             ? { source: "microsoft", parameters_recorded: false }
             : args,
           {
-            state: call.function.name.startsWith("prepare_")
-              ? "proposed_not_saved"
-              : "read",
+            state:
+              call.function.name === "create_reminder"
+                ? "saved"
+                : call.function.name.startsWith("prepare_")
+                  ? "proposed_not_saved"
+                  : "read",
           },
           true,
         );

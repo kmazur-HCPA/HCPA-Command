@@ -25,3 +25,11 @@ Record suggested priorities, potential Waiting On items, replies that may resolv
 Reminder creation, provenance and work audit are one transaction. Owner consent is locked during creation; duplicates of handled source links remain suppressed even if the reminder was dismissed or archived. The function also reconciles identical title/date reminders and enforces 40 source registrations per rolling 24 hours. Semantic duplicates across differently worded sources require the agent's existing-record review; exact matching is not a semantic guarantee.
 
 No source mailbox/chat archive is created. Only reminder explanations, source hashes/links and concise review summaries persist. Exports include these tables with owner/count validation. Disable the preference and pause the five schedules before reverting the application; retain the additive tables and existing reminders.
+
+## Activation evidence — September 21, 2026
+
+Production support deployed in commit `9da9ffb`; CI passed (132 unit/database tests, 33 browser checks plus the existing PWA/native Supabase checks). Hosted migration applied successfully; the only security advisor notices remain the two intentionally server-only Microsoft/MCP credential tables.
+
+Kevin explicitly approved changing the Command Cora connector to Allow low-risk actions. All 20 tools are enabled; other work changes still require the in-Command confirmation endpoint. Five native automations were saved and read back as Monday–Friday at 6:45 AM, 9 AM, 11 AM, 1 PM and 3 PM. Each form showed Eastern Time – New York. No duplicate 8 AM schedule remains.
+
+An automation preview started a real review at 18:46:43 UTC and finished at 18:50:33 UTC without another approval prompt. It created two reminders and saved a partial review receipt: calendar retrieval succeeded, while mail and Teams listings reported truncated coverage. Database activity confirms both reminder writes and both receipt writes succeeded. The browser schedule controls and database receipt were verified independently. A partial run is not evidence of complete Microsoft coverage.
