@@ -6,6 +6,14 @@ export type MicrosoftConfig = {
   origin: string;
 };
 export const scopes = ["User.Read", "Calendars.Read", "Mail.Read"];
+export const teamsScopes = ["Chat.Read", "ChannelMessage.Read.All"];
+export const consentScopes = [...scopes, ...teamsScopes];
+export const normalizedScope = (scope: string) =>
+  scope.toLowerCase().replace(/^https:\/\/graph\.microsoft\.com\//, "");
+export const hasTeamsConsent = (granted: string[] = []) =>
+  teamsScopes.every((scope) =>
+    granted.map(normalizedScope).includes(normalizedScope(scope)),
+  );
 const guid = /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 export function microsoftConfig(
   env: (name: string) => string | undefined,

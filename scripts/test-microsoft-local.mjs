@@ -70,6 +70,10 @@ export async function testMicrosoft({
       body = await status.json();
     assert.equal(status.status, 200);
     assert.equal(body.connected, true);
+    assert.equal(body.teamsConnected, false);
+    assert.equal((await admin.from("microsoft_connections").update({granted_scopes:["Chat.Read","ChannelMessage.Read.All"]}).eq("user_id",users[0])).error,null);
+    assert.equal((await (await handleMicrosoft(request("status"),config)).json()).teamsConnected,true);
+    assert((await owner.from("microsoft_connections").update({granted_scopes:["Chat.Read"]}).eq("user_id",users[0])).error, "Browser roles must not forge Teams consent");
     assert(!JSON.stringify(body).includes("token_cache"));
     assert.equal(
       (

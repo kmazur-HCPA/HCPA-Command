@@ -23,7 +23,7 @@ async function request(client: AppClient, action: string) {
 }
 const callbackMessages: Record<string, string> = {
   connected:
-    "Microsoft 365 connected. Cora can now read your calendar and relevant email.",
+    "Microsoft 365 connected. Cora can now read your calendar, relevant email, and Teams context.",
   cancelled:
     "Microsoft connection was cancelled. You can try again when ready.",
   wrong_account:
@@ -33,8 +33,13 @@ const callbackMessages: Record<string, string> = {
 };
 export function ConnectionPanel({ client }: { client: AppClient }) {
   const [connectionError] = useState(() => {
-    const value = new URLSearchParams(location.search).get("connection_error") ?? "";
-    return /^(state|claim|membership|token_exchange|token_validation|profile|save)\.[a-z_]{1,40}$/.test(value) ? value : "";
+    const value =
+      new URLSearchParams(location.search).get("connection_error") ?? "";
+    return /^(state|claim|membership|token_exchange|token_validation|profile|save)\.[a-z_]{1,40}$/.test(
+      value,
+    )
+      ? value
+      : "";
   });
   const [status, setStatus] = useState<MicrosoftStatus | null>(null),
     [busy, setBusy] = useState(false),
@@ -114,7 +119,9 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           <Icon name="calendar" /> Microsoft 365
         </h2>
         <span className="eyebrow">
-          {status?.connected ? "Connected · Read only" : "Calendar + Outlook"}
+          {status?.connected
+            ? "Connected · Read only"
+            : "Calendar · Outlook · Teams"}
         </span>
       </div>
       <p className="muted">
@@ -139,13 +146,17 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
               <Icon name="search" /> Relevant Outlook email
             </span>
             <span>
-              <Icon name="person" /> Teams comes later
+              <Icon name="person" />{" "}
+              {status.teamsConnected
+                ? "Teams chats and channel context"
+                : "Teams · Reconnect to enable"}
             </span>
           </div>
           <p className="muted small">
-            Cora can read your default calendar and mailbox. She cannot send
-            messages or change meetings. Relevant excerpts may appear in your
-            saved Cora conversations.
+            Cora can read your default calendar, mailbox, and Teams messages
+            available to your account. She cannot send messages or change
+            meetings. Relevant excerpts may appear in your saved Cora
+            conversations.
           </p>
           <div className="microsoft-actions">
             <button
@@ -155,7 +166,9 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
               {busy
                 ? "Working…"
                 : status.connected
-                  ? "Reconnect Microsoft 365"
+                  ? status.teamsConnected
+                    ? "Reconnect Microsoft 365"
+                    : "Enable Teams"
                   : "Connect Microsoft 365"}
             </button>
             {status.connected && (
@@ -178,6 +191,9 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
               {[
                 "Help me prepare for my next meeting.",
                 "Find recent emails that need a follow-up.",
+                ...(status.teamsConnected
+                  ? ["What needs my attention in recent Teams chats?"]
+                  : []),
               ].map((prompt) => (
                 <button
                   key={prompt}
@@ -200,7 +216,9 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           {notice}
         </p>
       )}
-      {connectionError && <p className="muted small">Connection reference: {connectionError}</p>}
+      {connectionError && (
+        <p className="muted small">Connection reference: {connectionError}</p>
+      )}
       {error && (
         <div role="alert" className="error-message">
           <p>{error}</p>

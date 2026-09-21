@@ -1,6 +1,6 @@
 # Command — Microsoft 365
 
-Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel to the signed-in user's default Outlook calendar and mailbox. Teams and the ChatGPT interface follow separately.
+Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel to the signed-in user's default Outlook calendar, mailbox, and Teams context. The ChatGPT interface follows separately.
 
 ## Entra registration
 
@@ -12,8 +12,10 @@ Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel
    - `User.Read`
    - `Calendars.Read`
    - `Mail.Read`
+   - `Chat.Read` (chat discovery, message search and chat reads)
+   - `ChannelMessage.Read.All` (selected channel messages and replies; administrator consent required)
    - `offline_access` (keeps the delegated connection available between visits)
-   The authentication library also requests standard `openid` and `profile` sign-in scopes. No application permissions, mail sending, calendar writing, or Teams permissions are needed.
+   The authentication library also requests standard `openid` and `profile` sign-in scopes. No application permissions, mail sending, calendar writing, or Teams writing permissions are needed.
 5. Grant HCPA administrator consent if required by your tenant policy. Leave implicit grants and public-client flows disabled. Existing HCPA Conditional Access policies continue to apply.
 6. Create a client secret and note its expiry in HCPA's normal credential management process. Copy the **Value**, not the secret ID, directly into the server environment below. Do not paste it into chat, source control, or client-side variables.
 
@@ -34,10 +36,14 @@ The production origin defaults to `https://cmd.hillspafl.gov`. For local OAuth t
 
 ## Enable and verify
 
-Apply `20260921161124_microsoft_connection.sql`, deploy the application with the configured environment, then open **Settings → Microsoft 365 → Connect Microsoft 365**. Sign in as **mazurk@hillspafl.gov**. The Microsoft mailbox must match the authenticated Command email; choosing another account is rejected.
+Apply `20260921161124_microsoft_connection.sql` and `20260921165755_teams_consent.sql`, deploy the application with the configured environment, then open **Settings → Microsoft 365 → Connect Microsoft 365**. Sign in as **mazurk@hillspafl.gov**. The Microsoft mailbox must match the authenticated Command email; choosing another account is rejected.
+
+For an existing Outlook connection, choose **Enable Teams** after adding the two delegated permissions to the existing registration. No new app, secret, or environment variable is required. Existing Outlook access remains usable until reconnect begins. A cancelled/failed reconnect must be retried to restore the Microsoft connection.
 
 Try:
 
+- “What needs my attention in recent Teams chats?”
+- “Find the Teams discussion about a project, then read the relevant message.”
 - “What meetings do I have today?”
 - “Help me prepare for my next meeting.”
 - “Find recent emails about [a known subject], then read the relevant message.”
@@ -78,9 +84,21 @@ Production activation is verified. After Kevin corrected the Netlify client-secr
 
 A follow-up diagnostic release adds allowlisted, content-free connection references (stage and known error code). Its 18 Microsoft unit tests passed, including credential-error redaction. No raw provider error, authorization code, token or mailbox content is logged.
 
+## Teams behavior and limits
+
+Four Cora tools provide indexed message search, recent chat discovery, reading a discovered chat, and reading a discovered chat/channel message (including replies when Graph supplies the parent identity). They use Microsoft Graph v1.0 and delegated user access only. Search is a read-only POST to the fixed `/search/query` endpoint; every other Teams request is GET. There are no send, edit, deletion, tenant-wide export, attachment, file, recording, or transcript tools.
+
+Each search returns at most 25 excerpts; recent-chat discovery returns at most 25 chats; one selected chat returns at most 30 recently modified messages. These are deliberately bounded, not complete history. Search indexing can lag, result order is not chronological, and Graph's search count is not a total match count. All results report retrieval time and truncation. Each message body is converted to plain text and bounded; raw HTML is never rendered. References are valid only in the current Cora turn, paths are constructed from discovered Graph identities, and source links accept only approved Microsoft hosts.
+
+Consent metadata is server-owned and contains no message content. Legacy connections default to no Teams grant; Teams consent failures do not delete working Outlook credentials. Membership and connection generation are checked before and after reads, including before returning request-local cached data. Queries and message bodies are omitted from operational audit parameters. As with Outlook, generated conversation answers and source titles may retain relevant excerpts in the user's private Cora history.
+
+Kevin confirmed the Entra permissions and administrator consent during implementation. Production activation and test results are recorded below after deployment.
+
 ## References
 
 - [Microsoft authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow)
 - [MSAL Node token caching](https://learn.microsoft.com/en-us/entra/msal/javascript/node/caching)
 - [Microsoft Graph calendar view](https://learn.microsoft.com/en-us/graph/api/user-list-calendarview?view=graph-rest-1.0)
+- [Teams search scope and limitations](https://learn.microsoft.com/en-us/graph/search-concept-chat-messages)
+- [Read Teams chat/channel messages](https://learn.microsoft.com/en-us/graph/api/chatmessage-get?view=graph-rest-1.0)
 - [Microsoft Graph messages](https://learn.microsoft.com/en-us/graph/api/user-list-messages?view=graph-rest-1.0)

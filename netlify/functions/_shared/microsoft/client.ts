@@ -2,7 +2,7 @@ import { InteractionRequiredAuthError } from "@azure/msal-node";
 import { microsoftApp, boundedResponse } from "./msal";
 import type { AppClient } from "../../../../src/platform/supabase";
 import type { MicrosoftConfig } from "./config";
-import { scopes } from "./config";
+import { scopes, teamsScopes, hasTeamsConsent } from "./config";
 import { seal, unseal } from "./crypto";
 
 export function graphUrl(
@@ -76,10 +76,15 @@ export async function microsoftToken(
   userId: string,
   config: MicrosoftConfig,
   signal: AbortSignal,
+  teams = false,
 ) {
   const row = await connection(store, userId);
   if (!row?.token_cache || !row.account_id)
     throw new Error("Microsoft 365 is not connected. Connect it in Settings.");
+  if (teams && !hasTeamsConsent(row.granted_scopes))
+    throw new Error(
+      "Teams needs additional consent. Reconnect Microsoft 365 in Settings to enable Teams; Outlook remains available.",
+    );
   const app = microsoftApp(config, signal),
     context = `${userId}:${row.generation}:cache`;
   try {
@@ -94,7 +99,10 @@ export async function microsoftToken(
       account.tenantId.toLowerCase() !== config.tenantId.toLowerCase()
     )
       throw new Error("account_missing");
-    const token = await app.acquireTokenSilent({ account, scopes });
+    const token = await app.acquireTokenSilent({
+      account,
+      scopes: teams ? teamsScopes : scopes,
+    });
     if (!token?.accessToken) throw new Error("token_missing");
     // Compare-and-swap: a concurrent disconnect/reconnect can never be undone by
     // a slow refresh, nor can a stale refresh overwrite a newer token cache.
@@ -124,6 +132,11 @@ export async function microsoftToken(
         "errorCode" in error &&
         error.errorCode === "invalid_grant")
     ) {
+      if (teams)
+        throw new Error(
+          "Teams consent needs renewing. Reconnect Microsoft 365 in Settings. Outlook remains available.",
+          { cause: error },
+        );
       await store
         .from("microsoft_connections")
         .delete()

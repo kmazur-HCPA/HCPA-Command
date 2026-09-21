@@ -92,7 +92,7 @@ test("Microsoft connection settings, callback, source prompts and disconnect", a
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockBackend(page);
   let connected = true;
-  await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: true, connected, email: user.email } }));
+  await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: true, connected, teamsConnected: connected, email: user.email } }));
   await page.route("**/api/microsoft/disconnect", route => { connected = false; return route.fulfill({ json: { connected: false } }); });
   await page.route("**/api/cora/history*", route => route.fulfill({ json: { conversations: [] } }));
   await login(page);
@@ -304,7 +304,7 @@ test('Cora streams, preserves page context, and creates a task only through its 
  let actions=0;let turn:Record<string,unknown>={}
  await page.route('**/api/cora/chat',async route=>{
   const request=route.request().postDataJSON();expect(request.context.page).toBe('project');expect(request).not.toHaveProperty('userId')
-  turn={id:request.requestId,user_id:userId,conversation_id:request.conversationId,message:request.message,context:request.context,response:'Ready to add. Review the task below, then choose Add task.',sources:[{id:'outlook:fixture',title:'Vendor message',kind:'outlook_mail',url:'https://outlook.office.com/mail/id/fixture'},{id:'outlook:unsafe',title:'Unsafe source',kind:'outlook_mail',url:'javascript:alert(1)'}],proposal:{title:'Follow up with Erik',due_date:'2026-09-22',priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}
+  turn={id:request.requestId,user_id:userId,conversation_id:request.conversationId,message:request.message,context:request.context,response:'Ready to add. Review the task below, then choose Add task.',sources:[{id:'outlook:fixture',title:'Vendor message',kind:'outlook_mail',url:'https://outlook.office.com/mail/id/fixture'},{id:'teams:fixture',title:'Teams discussion',kind:'teams_message',url:'https://teams.microsoft.com/l/message/fixture/123'},{id:'teams:unsafe',title:'Unsafe Teams source',kind:'teams_message',url:'https://attacker.test/l/message/fixture/123'},{id:'outlook:unsafe',title:'Unsafe source',kind:'outlook_mail',url:'javascript:alert(1)'}],proposal:{title:'Follow up with Erik',due_date:'2026-09-22',priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}
   await route.fulfill({contentType:'application/x-ndjson',body:[{type:'status',message:'Thinking it through…'},{type:'delta',text:'Ready to add.'},{type:'complete',turn}].map(e=>JSON.stringify(e)).join('\n')+'\n'})
  })
  await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:turn.id});return r.fulfill(actions===1?{status:409,json:{message:'Task creation was not confirmed. Retry this same card.'}}:{json:{taskId:turn.task_id,created:true}})})
@@ -313,7 +313,11 @@ test('Cora streams, preserves page context, and creates a task only through its 
  await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Add a task for tomorrow to follow up with Erik.')
  await panel.getByRole('button',{name:'Send to Cora'}).click();await expect(panel.getByRole('heading',{name:'Follow up with Erik'})).toBeVisible();expect(actions).toBe(0)
  await panel.locator('summary').filter({hasText:'Sources'}).click()
+ await expect(panel.getByRole('link',{name:'Teams discussion'})).toHaveAttribute('href','https://teams.microsoft.com/l/message/fixture/123')
+ await expect(panel.getByRole('link',{name:'Unsafe Teams source'})).toHaveCount(0)
  await expect(panel.getByRole('link',{name:'Vendor message'})).toHaveAttribute('href','https://outlook.office.com/mail/id/fixture')
+ await expect(panel.getByRole('link',{name:'Teams discussion'})).toHaveAttribute('href','https://teams.microsoft.com/l/message/fixture/123')
+ await expect(panel.getByRole('link',{name:'Unsafe Teams source'})).toHaveCount(0)
  await expect(panel.getByRole('link',{name:'Vendor message'})).toHaveAttribute('rel','noopener noreferrer')
  await expect(panel.getByText('Unsafe source')).toHaveCount(0)
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('not confirmed');await expect(panel.getByText('Task created',{exact:true})).toHaveCount(0)

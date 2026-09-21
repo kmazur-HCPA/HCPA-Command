@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import type { Database } from "../../../../src/data/database.types";
 import type { MicrosoftConfig } from "./config";
-import { scopes } from "./config";
+import { consentScopes, hasTeamsConsent, normalizedScope } from "./config";
 import { digest, nonce, seal, unseal } from "./crypto";
 import { connection, graphRead, graphUrl } from "./client";
 export type MicrosoftServerConfig = {
@@ -59,7 +59,8 @@ export async function handleMicrosoft(
     auth: authOptions,
     global: { fetch: timedFetch },
   });
-  let stage = "state", failureCode = "unavailable";
+  let stage = "state",
+    failureCode = "unavailable";
   const finish = (result: string) =>
     new Response(null, {
       status: 303,
@@ -122,7 +123,7 @@ export async function handleMicrosoft(
       stage = "token_exchange";
       const token = await app.acquireTokenByCode({
         code,
-        scopes,
+        scopes: consentScopes,
         redirectUri: config.origin + "/api/microsoft/callback",
         codeVerifier: unseal(
           row.verifier,
@@ -134,7 +135,7 @@ export async function handleMicrosoft(
       if (
         !token?.account ||
         token.tenantId.toLowerCase() !== config.tenantId.toLowerCase() ||
-        !scopes.every((scope) =>
+        !consentScopes.every((scope) =>
           token.scopes.some(
             (grant) =>
               grant
@@ -177,6 +178,7 @@ export async function handleMicrosoft(
             config.encryptionKey,
             `${row.user_id}:${row.generation}:cache`,
           ),
+          granted_scopes: token.scopes.map(normalizedScope),
           account_id: token.account.homeAccountId,
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -233,6 +235,8 @@ export async function handleMicrosoft(
         {
           configured: true,
           connected: !!row?.token_cache,
+          teamsConnected:
+            !!row?.token_cache && hasTeamsConsent(row.granted_scopes),
           ...(row?.token_cache
             ? { email: row.account_email, connectedAt: row.connected_at }
             : {}),
@@ -256,7 +260,7 @@ export async function handleMicrosoft(
       generation = randomUUID();
     const app = microsoftApp(config, signal);
     const url = await app.getAuthCodeUrl({
-      scopes: [...scopes, "offline_access"],
+      scopes: [...consentScopes, "offline_access"],
       redirectUri: config.origin + "/api/microsoft/callback",
       state,
       codeChallenge: digest(verifier),
@@ -275,6 +279,7 @@ export async function handleMicrosoft(
         `${user.id}:${generation}:verifier`,
       ),
       auth_expires_at: new Date(Date.now() + 600000).toISOString(),
+      granted_scopes: [],
       token_cache: null,
       account_id: null,
       account_email: user.email,
@@ -295,9 +300,31 @@ export async function handleMicrosoft(
     );
   } catch (error) {
     // Never log raw MSAL/Graph errors: they may contain mailbox data or tokens.
-    const knownCodes = ["invalid_client", "invalid_grant", "invalid_scope", "invalid_request", "endpoints_resolution_error", "network_error", "client_authentication_required", "token_parsing_error"];
-    if (error && typeof error === "object" && "errorCode" in error && typeof error.errorCode === "string" && knownCodes.includes(error.errorCode)) failureCode = error.errorCode;
-    console.warn(JSON.stringify({ event: "microsoft_connection_failed", stage, code: failureCode }));
+    const knownCodes = [
+      "invalid_client",
+      "invalid_grant",
+      "invalid_scope",
+      "invalid_request",
+      "endpoints_resolution_error",
+      "network_error",
+      "client_authentication_required",
+      "token_parsing_error",
+    ];
+    if (
+      error &&
+      typeof error === "object" &&
+      "errorCode" in error &&
+      typeof error.errorCode === "string" &&
+      knownCodes.includes(error.errorCode)
+    )
+      failureCode = error.errorCode;
+    console.warn(
+      JSON.stringify({
+        event: "microsoft_connection_failed",
+        stage,
+        code: failureCode,
+      }),
+    );
     return callback && config
       ? finish("failed")
       : respond(

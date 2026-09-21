@@ -4,7 +4,7 @@ import type { CoraSource } from "../../../../src/features/cora/model";
 import { outlookLink } from "../../../../src/features/microsoft/model";
 import { connection, graphRead, graphUrl, microsoftToken } from "./client";
 import type { MicrosoftConfig } from "./config";
-function definition(
+export function definition(
   name: string,
   description: string,
   properties: Record<string, unknown>,

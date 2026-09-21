@@ -358,3 +358,8 @@ Kevin’s Cora implementation brief authorizes the narrow first milestone across
 ## Microsoft 365 sequencing decision — September 21, 2026
 
 Kevin authorized bringing read-only Microsoft connection management, Calendar and Outlook context forward after Cora v0.1. Use a new HCPA single-tenant **Command — Microsoft 365** Entra registration. [Setup and operational notes](MICROSOFT-365-SETUP.md) define the bounded delivery and tenant activation checks. Teams remains a separate follow-on scope; the ChatGPT/MCP interface follows the shared backend integration. This does not close all of Phases 13–14: full Meeting Mode, selected Teams access and pilot acceptance remain outstanding.
+
+
+### Teams extension — September 21, 2026
+
+Kevin authorized Teams integration and confirmed delegated `Chat.Read` and `ChannelMessage.Read.All` plus administrator consent on the existing registration. The release adds on-demand message search, recent chats, bounded conversation reads, and selected channel-message reads to Cora. No Teams writes, tenant-wide exports, attachments, recordings, or background synchronization are included. [Activation and operational limits](MICROSOFT-365-SETUP.md) document reconnect and validation. The ChatGPT/MCP interface and full Meeting Mode remain separate work.
