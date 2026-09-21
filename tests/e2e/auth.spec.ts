@@ -30,10 +30,12 @@ async function login(page: Page) {
 test('sign in, save preference, reload, and sign out', async ({ page }) => {
   await mockBackend(page); await login(page)
   await expect(page.getByRole('heading', { name: 'Your workspace is ready.' })).toBeVisible()
-  await page.getByLabel('Appearance').selectOption('light')
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Appearance' }).selectOption('light')
   await expect(page.getByRole('status')).toHaveText('Appearance saved.')
   await page.reload()
-  await expect(page.getByLabel('Appearance')).toHaveValue('light')
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await expect(page.getByRole('combobox', { name: 'Appearance' })).toHaveValue('light')
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Welcome to Command.' })).toBeVisible()
   await page.reload()
@@ -42,7 +44,7 @@ test('sign in, save preference, reload, and sign out', async ({ page }) => {
 test('authenticated but unapproved account never sees workspace', async ({ page }) => {
   await mockBackend(page, { approved: false }); await login(page)
   await expect(page.getByRole('heading', { name: 'Access is not enabled.' })).toBeVisible()
-  await expect(page.getByLabel('Appearance')).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Appearance' })).toHaveCount(0)
 })
 test('invalid credentials receive a generic error', async ({ page }) => {
   await mockBackend(page, { wrongPassword: true }); await login(page)
@@ -67,3 +69,31 @@ for(const width of [390,744,1133]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 }
+for (const [width,height] of [[744,1133],[1133,744],[390,844],[1440,900]]) {
+  test(`workspace navigation fits ${width} by ${height}`, async ({ page }) => {
+    await page.setViewportSize({width:width!,height:height!}); await mockBackend(page); await login(page)
+    await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible()
+    await page.screenshot({path:`test-results/shell-${width}.png`,fullPage:true})
+    await page.getByRole('button',{name:'Settings',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeFocused()
+    await expect(page.getByRole('combobox', { name: 'Appearance' })).toBeVisible()
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true)
+    await page.getByRole('button',{name:'Workspace',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Your workspace is ready.'})).toBeVisible()
+  })
+}
+test('connection loss is visible and reduced motion disables transitions', async ({page,context}) => {
+  await mockBackend(page); await login(page)
+  await page.emulateMedia({reducedMotion:'reduce'})
+  expect(await page.getByRole('button',{name:'Settings',exact:true}).evaluate(el=>getComputedStyle(el).transitionDuration)).toBe('0s')
+  await context.setOffline(true)
+  await expect(page.getByText('You’re offline. Reconnect to load or save your workspace.')).toBeVisible()
+})
+
+test('workspace remains usable with doubled text size', async ({page}) => {
+  await page.setViewportSize({width:744,height:1133}); await mockBackend(page); await login(page)
+  await page.addStyleTag({content:'html { font-size: 200%; } h1 { font-size: 3rem; } p, button { font-size: 1rem; }'})
+  await page.getByRole('button',{name:'Settings',exact:true}).click()
+  await expect(page.getByRole('combobox',{name:'Appearance'})).toBeVisible()
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+})

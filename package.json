@@ -14,12 +14,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build": "tsc --noEmit && vite build && node scripts/check-build.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build-pwa.mjs && node scripts/check-build.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:test": "supabase test db"
+    "db:test": "supabase test db",
+    "test:pwa": "playwright test --config playwright.pwa.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",

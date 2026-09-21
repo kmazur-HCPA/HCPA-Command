@@ -19,6 +19,7 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run test:pwa
   local-supabase:
     runs-on: ubuntu-latest
     timeout-minutes: 20

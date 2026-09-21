@@ -1,15 +1,16 @@
 # Command
 
-Private work planning for HCPA. Phase 0 is accepted; Phase 1 provides the authenticated foundation. Tasks, Work Day, capture, AI and the installed PWA follow in later phases.
+Private work planning for HCPA. Phase 0 is accepted; Phase 1 provides the authenticated foundation; Phase 2 adds the responsive, installable shell. Tasks, Work Day, capture, AI and the installed PWA follow in later phases.
 
 - [Development roadmap](docs/COMMAND-DEVELOPMENT-ROADMAP.md)
+- [Phase 2 delivery and device checks](docs/PHASE-2-STATUS.md)
 - [Phase 1 delivery and remaining checks](docs/PHASE-1-STATUS.md)
 - [Operating runbook](docs/PHASE-1-RUNBOOK.md)
 - [Accepted build contract](docs/PHASE-0-BUILD-CONTRACT.md)
 
 ## Develop and verify
 
-Use Node 22. Run `npm ci`, then `npm run check`. Run `npx playwright install chromium` and `npm run test:e2e` for browser workflows. `npm run dev` without environment configuration shows a disconnected preview.
+Use Node 22. Run `npm ci`, then `npm run check`. Run `npx playwright install chromium` and `npm run test:e2e` for browser workflows. Run `npm run test:pwa` to verify the built service worker, offline privacy and update lifecycle. `npm run dev` without environment configuration shows a disconnected preview.
 
 There is exactly one hosted Supabase project, production. For connected development use Docker and `npm run db:start`; copy local public values into an ignored `.env.local` using `.env.example` as the field reference. Never point development at production. `npm run db:test` runs database assertions against disposable local Supabase. The normal test suite also exercises the actual SQL migration in isolated PGlite databases without Docker.
 

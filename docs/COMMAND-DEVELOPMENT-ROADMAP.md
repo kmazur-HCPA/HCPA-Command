@@ -2,7 +2,7 @@
 
 **Owner:** Kevin Mazur · HCPA Enterprise Technology  
 **Version:** 1.0 · September 21, 2026  
-**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phase 1 implementation in progress. See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
+**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phase 2 authorized and implemented; physical-device acceptance pending. See the [Phase 2 delivery record](PHASE-2-STATUS.md). See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
 **Source:** [Command master brief](COMMAND-MASTER-BRIEF.md)
 
 ## Recommended development path
@@ -334,7 +334,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 A phase closes when its deliverables are usable, its gate and applicable shared requirements pass, documentation/export coverage is updated, and Kevin accepts the demonstration. Record any limitation explicitly; do not describe planned controls as implemented security or measured performance.
 
-**Next action:** Finish the operational acceptance checks in the [Phase 1 delivery record](PHASE-1-STATUS.md), then proceed to the Mini-first PWA shell after acceptance. Phase 0 is accepted.
+**Next action:** Complete the physical-device checks in the [Phase 2 delivery record](PHASE-2-STATUS.md), then begin Tasks and persistent Reminders in Phase 3. Carry forward the remaining Phase 1 operational checks.
 
 ## Traceability to the master brief
 
