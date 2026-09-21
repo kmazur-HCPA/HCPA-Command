@@ -70,7 +70,11 @@ Four real-provider evaluations with synthetic data passed: calendar retrieval, e
 
 The production migration is applied. Direct grant checks confirm RLS enabled, no anonymous/browser reads, and server access. The security advisor reports only the informational “RLS Enabled No Policy” notice for this intentionally server-only table; no browser policies or grants should be added to silence it. [Advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 
-The HCPA tenant authority was reachable and all four local Microsoft environment variables were present. The generated encryption key was also configured as a production Functions secret in Netlify. Native Auth/PostgREST CI and live user consent/retrieval are separate acceptance checks; record their results below when completed.
+The HCPA tenant authority was reachable and all four local Microsoft environment variables were present. The generated encryption key was also configured as a production Functions secret in Netlify. [Full CI for the implementation](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35626914254) passed both application and native Supabase jobs, including the new real Auth/PostgREST connection tests and existing recovery drill. Production deploy `6ab15d8c60ef740008a909b4` published commit `ecf7ade4599a7218afc403a130037d70abad5446`.
+
+Live Settings confirms the server configuration is present. Microsoft's account chooser and consent screen requested exactly the intended delegated permissions for Kevin's account; organization-wide consent was left unchecked. The first callback failed before establishing a connection. The configured local client secret has GUID format, consistent with a Secret ID rather than the required Value; Kevin has been asked to replace it in Netlify and locally. Calendar/email retrieval remains unverified until the corrected credential is deployed and connection completes.
+
+A follow-up diagnostic release adds allowlisted, content-free connection references (stage and known error code). Its 18 Microsoft unit tests passed, including credential-error redaction. No raw provider error, authorization code, token or mailbox content is logged.
 
 ## References
 

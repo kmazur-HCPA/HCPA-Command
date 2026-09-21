@@ -172,6 +172,17 @@ async function begin() {
   };
 }
 describe("Microsoft connection authorization", () => {
+  it("exposes only an allowlisted diagnostic when the app credential is rejected", async () => {
+    const started = await begin();
+    const app = msal.microsoftApp(cfg, new AbortController().signal);
+    app.acquireTokenByCode = async () => { throw Object.assign(new Error("sensitive-provider-details"), { errorCode: "invalid_client" }); };
+    vi.mocked(msal.microsoftApp).mockReturnValue(app);
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await handleMicrosoft(started.callback(), server);
+    expect(result.headers.get("location")).toContain("connection_error=token_exchange.invalid_client");
+    expect(JSON.stringify(log.mock.calls)).not.toContain("sensitive-provider-details");
+    expect(rows[0]!.token_cache).toBeNull();
+  });
   it("rejects anonymous, wrong-origin and unsupported-method requests before Microsoft access", async () => {
     expect(
       (
