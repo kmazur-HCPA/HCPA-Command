@@ -50,25 +50,8 @@ export function Icon({
 }
 export function Mark() {
   return (
-    <svg className="command-mark" viewBox="0 0 64 64" aria-hidden="true">
-      <circle
-        cx="32"
-        cy="32"
-        r="25"
-        fill="none"
-        stroke="currentColor"
-        strokeOpacity=".24"
-        strokeWidth="2"
-      />
-      <path
-        d="M12 18a25 25 0 0 1 39 0M13 47a25 25 0 0 0 38-2"
-        fill="none"
-        stroke="#f97316"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path d="m35 14 9 0-15 36h-9z" fill="#ff8a36" />
-      <circle cx="53" cy="20" r="3" fill="#f97316" />
+    <svg className="command-mark" viewBox="0 0 512 512" aria-hidden="true">
+      <path d="M279 112h72L233 400h-72z" fill="#ff963f" />
     </svg>
   );
 }

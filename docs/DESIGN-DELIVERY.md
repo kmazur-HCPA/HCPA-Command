@@ -6,7 +6,7 @@ Canonical production URL: https://cmd.hillspafl.gov.
 
 Light is a bright editorial workspace: white elevated cards, a graphite rail, strong orange navigation, and a clean focus card. Dark is a warm graphite workspace: restrained outlined navigation, softly lit focus treatment, inset surfaces, and an open brief with an accent rule. Both preserve navigation positions and task behavior.
 
-The slash/orbit mark is native SVG, with dark browser and install icons. Geist is self-hosted as one 29 KB Latin variable font. Short entrance transitions, hover feedback, and focus progress respect reduced-motion preferences. No animation framework or remote font service is used.
+The orange slash mark is shared across navigation, mobile branding, and capture, with matching dark browser and install icons. It is native SVG. Geist is self-hosted as one 29 KB Latin variable font. Short entrance transitions, hover feedback, and focus progress respect reduced-motion preferences. No animation framework or remote font service is used.
 
 Work Day shows real due-task, reminder, focus, and learning counts; saved priorities; quick task completion; current projects; reminders; waiting dependencies; and a deterministic brief. The ring measures selected priority slots, not task completion. Calendar, weather, and AI-generated advice are not represented as working integrations. Search uses the existing owner-scoped search endpoint and supports workspace navigation. Cmd/Ctrl+K opens it; Shift+Cmd/Ctrl+K opens capture.
 
