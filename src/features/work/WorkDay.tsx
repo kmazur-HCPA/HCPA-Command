@@ -110,7 +110,23 @@ export function WorkDay({
     <ul className="day-list">
       {items.map((item) => (
         <li key={item.id}>
-          <span className="timeline-dot" />
+          {item.kind === "reminder" ? (
+            <button
+              className="completion-control"
+              disabled={!!busy}
+              aria-label={`Complete ${item.title}`}
+              title="Complete reminder"
+              onClick={() => void complete(item)}
+            >
+              {busy === item.id ? (
+                <span className="loading-dot" />
+              ) : (
+                <Icon name="check" />
+              )}
+            </button>
+          ) : (
+            <span className="timeline-dot" />
+          )}
           <div>
             <button className="row-title" onClick={() => onOpen(item)}>
               {item.title}
