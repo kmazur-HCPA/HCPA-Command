@@ -13,7 +13,6 @@ self.addEventListener('activate', event => { event.waitUntil((async () => {
   for (const name of await caches.keys()) if (name.startsWith('command-static-') && name !== CACHE) await caches.delete(name);
   await self.clients.claim();
 })()); });
-self.addEventListener('message', event => { if (event.data?.type === 'ACTIVATE_UPDATE') event.waitUntil(self.skipWaiting()); });
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);

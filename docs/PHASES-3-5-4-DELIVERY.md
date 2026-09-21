@@ -24,7 +24,7 @@ Work Day assembles three explicitly selected task priority slots, due tasks, per
 
 Quick Capture is available from the global header, including on a phone. It saves the original text as a Journal Capture with a stable client-generated ID. A title is derived for listing; the body retains the entered whitespace and wording. Classification is optional.
 
-Editors save user-scoped local drafts while typing. Failures are visible; corrupt drafts are not silently overwritten. Failed/uncertain server writes are reconciled by stable IDs and optimistic versions. A conflicting edit remains local until the saved version is reviewed and the user explicitly elects to replace it. Settings exposes draft export/discard. Logout and app updates are blocked while stored drafts need attention. Session expiry hides the editor; the same authorized user can recover the draft after signing in again. Device storage clearing/eviction is not recoverable by this application.
+Editors save user-scoped local drafts while typing. Failures are visible; corrupt drafts are not silently overwritten. Failed/uncertain server writes are reconciled by stable IDs and optimistic versions. A conflicting edit remains local until the saved version is reviewed and the user explicitly elects to replace it. Settings exposes draft export/discard. Logout is blocked while stored drafts need attention. Updates never force a reload; active editors retain normal refresh warnings. Session expiry hides the editor; the same authorized user can recover the draft after signing in again. Device storage clearing/eviction is not recoverable by this application.
 
 ## Security and performance
 

@@ -16,7 +16,7 @@ Mini and phone layouts use a single-column feed, focus first, five-item bottom n
 
 - TypeScript, lint, 68 unit/database tests and production build pass.
 - 23 browser tests pass, including saved themes, quick completion, command search, draft recovery, and 390/744/1133/1440 pixel layouts.
-- Both production PWA tests pass: private data excluded from caches and explicit update activation preserved.
+- Both production PWA tests pass: private data excluded from caches and updates leave active edits untouched and normal refresh loads the latest page.
 - Populated and empty layouts were inspected visually. Screenshots below use synthetic test records, not production data.
 - Compressed JavaScript/CSS totals approximately 148 KiB; font adds 29 KB. Existing 190 KiB JS/CSS budget remains enforced.
 
@@ -26,4 +26,4 @@ Mini and phone layouts use a single-column feed, focus first, five-item bottom n
 
 Netlify production app origin and Supabase Site URL now use the canonical hostname. The exact canonical `/auth/reset` URL is allowlisted; email recovery remains disabled as requested. The existing Netlify alias and its exact recovery redirect remain available during transition. Save or export any local drafts there before switching. Browser sessions and installed PWAs are origin-specific; sign in and install from the canonical address.
 
-No production schema or data migration is part of this release. Revert the design commit and redeploy to roll back the UI. Keep the canonical origin settings. Existing static PWA resources update through the normal explicit reload flow, with unsaved-draft protection.
+No production schema or data migration is part of this release. Revert the design commit and redeploy to roll back the UI. Keep the canonical origin settings. App navigation uses the network, so a normal refresh loads the latest release without an update popup. The static offline worker updates naturally after older tabs close. No update forces a page reload; editor refresh warnings and local draft recovery remain in place.

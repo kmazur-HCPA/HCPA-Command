@@ -159,17 +159,6 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
       setBusy(false);
     }
   }
-  useEffect(() => {
-    const guard = (event: Event) => {
-      try {
-        if (listDrafts(localStorage, user.id).length) event.preventDefault();
-      } catch {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener("command:before-update", guard);
-    return () => window.removeEventListener("command:before-update", guard);
-  }, [user.id]);
   return (
     <div className="workspace app-shell">
       <a className="skip-link" href="#main">
