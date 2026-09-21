@@ -2,7 +2,7 @@
 
 **Owner:** Kevin Mazur · HCPA Enterprise Technology  
 **Version:** 1.0 · September 21, 2026  
-**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phases 3, 5 and 4 implemented in Kevin’s requested order; integration/release and pilot acceptance tracked in the [delivery record](PHASES-3-5-4-DELIVERY.md). See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
+**Status:** Phase 0 accepted by Kevin on September 21, 2026. Phases 3, 5 and 4 implemented in Kevin’s requested order; integration/release and pilot acceptance tracked in the [delivery record](PHASES-3-5-4-DELIVERY.md). Phases 6–7 delivery is tracked [here](PHASES-6-7-DELIVERY.md). See the [accepted build contract](PHASE-0-BUILD-CONTRACT.md).
 **Source:** [Command master brief](COMMAND-MASTER-BRIEF.md)
 
 ## Recommended development path
@@ -334,7 +334,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 A phase closes when its deliverables are usable, its gate and applicable shared requirements pass, documentation/export coverage is updated, and Kevin accepts the demonstration. Record any limitation explicitly; do not describe planned controls as implemented security or measured performance.
 
-**Next action:** Validate the delivered Phases 3 → 5 → 4 on Kevin’s devices, close the operational readiness checks, and complete the five-workday pilot before expanding scope.
+**Next action:** Kevin authorized continued implementation of Phases 6 and 7 on September 21, 2026. Validate Learning/AI Lab and private Library using the [delivery record](PHASES-6-7-DELIVERY.md). Carry forward device, operational-readiness and five-workday pilot acceptance before declaring the foundation accepted. Phase 8 is next after review.
 
 ## Traceability to the master brief
 
