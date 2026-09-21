@@ -52,3 +52,13 @@ Kevin coordinates incidents and review. External alert routing and an independen
 Weekly: inspect provider errors, CI failures and dependency advisories (`npm audit --audit-level=high`); review Supabase advisors. Update dependencies on a branch with pinned versions and lockfile, then run the full pipeline. Monthly: review access/membership and export/recovery procedure. Quarterly and after significant schema/storage changes: rerun the isolated recovery drill. These are documented owner procedures, not scheduled automations.
 
 Deployment order: validate the migration in disposable local CI, apply it to the single production Supabase project, verify RPC grants/RLS and advisors, then publish the app. Roll back the frontend first if needed. The expanded search projection is derived data; source fields and originals remain unchanged. Do not roll back by deleting records or file versions.
+
+## Release evidence — September 21, 2026
+
+Code revision `66a55f5` passed [Foundation checks run 35616683465](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35616683465): 76 unit/database tests, 23 pgTAP assertions, real Auth/API/Storage integration, 26 browser workflows, two PWA tests, type checking, lint, build and dependency audit. JS/CSS startup transfer is 154 KiB gzip against the 190 KiB budget; the export module loads on demand.
+
+Native PostgreSQL growth results: 15,000 synthetic records across two owners, 10,000 owned by the caller; selective filtering 9.802 ms, ranked selective search 18.757 ms, ranked common-term search 326.866 ms. These are individual database measurements on GitHub-hosted CI, not p95 end-to-end device measurements. RLS selected a scan rather than GIN; no privilege bypass or leakproof overrides were introduced.
+
+The isolated recovery drill restored 10 records, four revisions and six original files in 479 ms. Exact database snapshots and original SHA-256 digests matched after restoration; the other approved user remained isolated. This does not establish a hosted recovery time or independent backup schedule.
+
+The production migration was applied successfully. Both RPCs use invoker rights, deny anonymous execution and retain authenticated RLS. Supabase security advisors returned no findings. Performance advisors reported informational unused indexes and the existing fixed Auth connection allocation; no warning/error findings. Physical-device, VoiceOver and five-workday pilot acceptance remain open.

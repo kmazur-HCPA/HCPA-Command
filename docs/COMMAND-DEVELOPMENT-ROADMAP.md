@@ -334,7 +334,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 A phase closes when its deliverables are usable, its gate and applicable shared requirements pass, documentation/export coverage is updated, and Kevin accepts the demonstration. Record any limitation explicitly; do not describe planned controls as implemented security or measured performance.
 
-**Current work:** Kevin authorized Phase 8 on September 21, 2026, emphasizing comprehensive and fast site search. He explicitly declined external alert routing and an independent backup destination. See [Phase 8 delivery](PHASE-8-DELIVERY.md). Carry forward physical-device/accessibility and five-workday pilot acceptance before declaring the foundation accepted.
+**Latest delivery:** Phase 8 implementation and automated verification completed September 21, 2026, following Kevin’s request for comprehensive and fast site search. He explicitly declined external alert routing and an independent backup destination. See [Phase 8 delivery](PHASE-8-DELIVERY.md). Carry forward physical-device/accessibility and five-workday pilot acceptance before declaring the foundation accepted.
 
 ## Traceability to the master brief
 
