@@ -774,6 +774,9 @@ describe("Teams consent and bounded retrieval", () => {
           id: "19:meeting@thread.v2",
           chatType: "meeting",
           topic: "Fixture meeting",
+          members: Array.from({ length: 21 }, (_, i) => ({
+            displayName: `Member ${i}`,
+          })),
         },
       ],
       "@odata.nextLink": "https://attacker.test/",
@@ -783,6 +786,13 @@ describe("Teams consent and bounded retrieval", () => {
       truncated: boolean;
     };
     expect(chats.truncated).toBe(true);
+    expect(chats.records[0]).toMatchObject({
+      participants: Array.from({ length: 20 }, (_, i) => ({
+        name: `Member ${i}`,
+      })),
+      participants_truncated: true,
+    });
+    expect(graphCalls[0]!.searchParams.get("$expand")).toBe("members");
     graphResponse = {
       value: Array.from({ length: 31 }, (_, i) => ({
         id: String(i),

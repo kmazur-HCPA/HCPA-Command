@@ -329,6 +329,8 @@ export function createTeamsReader(
       const url = new URL(`https://graph.microsoft.com${path}`);
       url.searchParams.set("$top", name === "list_teams_chats" ? "25" : "30");
       url.searchParams.set("$orderby", "lastUpdatedDateTime desc");
+      if (name === "list_teams_chats")
+        url.searchParams.set("$expand", "members");
       if (name === "read_teams_chat")
         url.searchParams.set("$orderby", "lastModifiedDateTime desc");
       const data = await graphRead(
@@ -355,6 +357,11 @@ export function createTeamsReader(
             reference: id ? reference : null,
             topic:
               teamsText(row.topic, 200) || `${text(row.chatType, 40)} chat`,
+            participants: list(row.members)
+              .slice(0, 20)
+              .map((member) => ({ name: text(member.displayName, 150) })),
+            participants_truncated:
+              list(row.members).length > 20 || !!row["members@odata.nextLink"],
             type: text(row.chatType, 40),
             updated_at: text(row.lastUpdatedDateTime, 50),
             url: teamsLink(row.webUrl),
