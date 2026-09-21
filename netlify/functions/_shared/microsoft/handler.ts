@@ -59,12 +59,13 @@ export async function handleMicrosoft(
     auth: authOptions,
     global: { fetch: timedFetch },
   });
+  let stage = "state", failureCode = "unavailable";
   const finish = (result: string) =>
     new Response(null, {
       status: 303,
       headers: {
         ...headers,
-        Location: `${config!.origin}/?page=settings&microsoft=${result}`,
+        Location: `${config!.origin}/?page=settings&microsoft=${result}${result === "failed" ? `&connection_error=${stage}.${failureCode}` : ""}`,
         "Set-Cookie": cookie(config!.origin, "", 0),
       },
     });
@@ -96,6 +97,7 @@ export async function handleMicrosoft(
         .maybeSingle();
       const row = pending.data;
       if (pending.error || !row?.verifier) return finish("failed");
+      stage = "claim";
       const consumed = await store
         .from("microsoft_connections")
         .update({
@@ -112,10 +114,12 @@ export async function handleMicrosoft(
       if (consumed.error || !consumed.data) return finish("failed");
       if (params.has("error") || !code || code.length > 10000)
         return finish("cancelled");
+      stage = "membership";
       const active = await connection(store, row.user_id);
       if (!active || active.generation !== row.generation)
         return finish("failed");
       const app = microsoftApp(config, signal);
+      stage = "token_exchange";
       const token = await app.acquireTokenByCode({
         code,
         scopes,
@@ -126,6 +130,7 @@ export async function handleMicrosoft(
           `${row.user_id}:${row.generation}:verifier`,
         ),
       });
+      stage = "token_validation";
       if (
         !token?.account ||
         token.tenantId.toLowerCase() !== config.tenantId.toLowerCase() ||
@@ -140,6 +145,7 @@ export async function handleMicrosoft(
         )
       )
         return finish("failed");
+      stage = "profile";
       const profile = await graphRead(
         graphUrl(
           "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName",
@@ -158,9 +164,11 @@ export async function handleMicrosoft(
         )
       )
         return finish("wrong_account");
+      stage = "membership";
       const stillActive = await connection(store, row.user_id);
       if (!stillActive || stillActive.generation !== row.generation)
         return finish("failed");
+      stage = "save";
       const saved = await store
         .from("microsoft_connections")
         .update({
@@ -285,8 +293,11 @@ export async function handleMicrosoft(
         },
       },
     );
-  } catch {
+  } catch (error) {
     // Never log raw MSAL/Graph errors: they may contain mailbox data or tokens.
+    const knownCodes = ["invalid_client", "invalid_grant", "invalid_scope", "invalid_request", "endpoints_resolution_error", "network_error", "client_authentication_required", "token_parsing_error"];
+    if (error && typeof error === "object" && "errorCode" in error && typeof error.errorCode === "string" && knownCodes.includes(error.errorCode)) failureCode = error.errorCode;
+    console.warn(JSON.stringify({ event: "microsoft_connection_failed", stage, code: failureCode }));
     return callback && config
       ? finish("failed")
       : respond(

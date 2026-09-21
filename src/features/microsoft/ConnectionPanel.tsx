@@ -32,6 +32,10 @@ const callbackMessages: Record<string, string> = {
     "Microsoft connection was not completed. Retry Connect; check the HCPA app permissions if it continues.",
 };
 export function ConnectionPanel({ client }: { client: AppClient }) {
+  const [connectionError] = useState(() => {
+    const value = new URLSearchParams(location.search).get("connection_error") ?? "";
+    return /^(state|claim|membership|token_exchange|token_validation|profile|save)\.[a-z_]{1,40}$/.test(value) ? value : "";
+  });
   const [status, setStatus] = useState<MicrosoftStatus | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -46,6 +50,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
     const url = new URL(location.href);
     if (url.searchParams.has("microsoft")) {
       url.searchParams.delete("microsoft");
+      url.searchParams.delete("connection_error");
       history.replaceState(null, "", url.pathname + url.search);
     }
     let active = true;
@@ -195,6 +200,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           {notice}
         </p>
       )}
+      {connectionError && <p className="muted small">Connection reference: {connectionError}</p>}
       {error && (
         <div role="alert" className="error-message">
           <p>{error}</p>
