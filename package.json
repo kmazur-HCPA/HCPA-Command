@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "dev:netlify": "netlify dev",
+    "dev:netlify": "node --env-file-if-exists=.env.production.local node_modules/netlify-cli/bin/run.js dev --context production",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

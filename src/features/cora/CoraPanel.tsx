@@ -49,7 +49,10 @@ export function CoraPanel({
     setLastPrompt(prompt);
     if (prompt && !draft) setDraft(prompt);
   }
-  useEffect(() => onDirty(busy || !!action || !!draft.trim()), [busy, action, draft, onDirty]);
+  useEffect(
+    () => onDirty(busy || !!action || !!draft.trim()),
+    [busy, action, draft, onDirty],
+  );
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
