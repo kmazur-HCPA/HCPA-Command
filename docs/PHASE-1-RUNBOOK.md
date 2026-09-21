@@ -59,4 +59,4 @@ Review failed authentication, server errors, backup health, dependency advisorie
 
 ## Domain
 
-The current HTTPS origin is the Netlify application address. `cmd.hillspafl.gov` has not been cut over. Kevin coordinates authoritative DNS. Confirm the requested hostname's existing use, configure it on this Netlify project, add the provider-verified DNS record, and wait for certificate issuance. Then update the production app origin, Supabase Site URL and exact recovery redirect together, redeploy, and test. Do not add wildcard Auth redirect URLs.
+The canonical HTTPS origin is `https://cmd.hillspafl.gov`. Netlify production `VITE_APP_ORIGIN`, Supabase Site URL, and the exact `/auth/reset` redirect use this hostname. The Netlify alias remains reachable so an existing browser session can export or save any origin-local drafts before switching. Sign in separately at the canonical hostname; browser sessions, installed PWAs, and local drafts do not migrate between origins. Keep previews disconnected and never add wildcard Auth redirects.

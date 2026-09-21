@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-const assets = (await readdir('dist/assets')).filter(name => /\.(js|css)$/.test(name)).map(name => `/assets/${name}`)
-const files = [...assets, '/offline.html', '/offline.css', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/manifest.webmanifest']
+const assets = (await readdir('dist/assets')).filter(name => /\.(js|css|woff2)$/.test(name)).map(name => `/assets/${name}`)
+const files = [...assets, '/icon.svg', '/favicon.ico', '/offline.html', '/offline.css', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/manifest.webmanifest']
 const hash = createHash('sha256')
 for (const file of files) hash.update(await readFile(`dist${file}`))
 const version = hash.digest('hex').slice(0,16)
