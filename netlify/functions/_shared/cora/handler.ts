@@ -334,7 +334,7 @@ export async function handleCora(
             .update({
               status: "error",
               response:
-                "Cora could not finish this response. No changes were made.",
+                "Cora could not finish this response. Check Command for any saved reminders before retrying.",
               finished_at: new Date().toISOString(),
             })
             .eq("id", turn.id)
@@ -343,8 +343,8 @@ export async function handleCora(
           emit({
             type: "error",
             message: signal.aborted
-              ? "Stopped. No changes were made."
-              : "Cora could not finish. Your message is saved; please try again. No changes were made.",
+              ? "Stopped. Check Command for any saved reminders before retrying."
+              : "Cora could not finish. Your message is saved; please try again. Check Command for any saved reminders before retrying.",
           });
         } finally {
           console.info(

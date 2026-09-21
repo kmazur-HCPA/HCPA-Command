@@ -32,6 +32,23 @@ describe('Work record integrity and authorization', () => {
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
 
+  it('automatic reminder writes require consent, deduplicate resolved sources and remain owner isolated',async()=>{
+    await db.query('insert into public.cora_review_preferences(user_id,automatic_reminders) values($1,true),($2,false)',[owner,other]);
+    const call=()=>db.query<{r:{id:string;created:boolean}}>("select public.cora_create_reminder($1,$2,'Follow up','Evidence','2026-09-22',null) r",[owner,'a'.repeat(64)]);
+    const first=(await call()).rows[0]!.r;expect(first.created).toBe(true);
+    await db.query("update public.work_items set status='Dismissed',archived=true where id=$1",[first.id]);
+    expect((await call()).rows[0]!.r).toMatchObject({id:first.id,created:false});
+    const alternate=await db.query<{r:{id:string;created:boolean}}>("select public.cora_create_reminder($1,$2,'Follow up','Other evidence','2026-09-22',null) r",[owner,'b'.repeat(64)]);
+    expect(alternate.rows[0]!.r).toMatchObject({id:first.id,created:false});
+    await db.exec('savepoint paused');
+    await expect(db.query("select public.cora_create_reminder($1,$2,'Title','Body',null,null)",[other,'c'.repeat(64)])).rejects.toThrow('disabled');
+    await db.exec('rollback to savepoint paused');
+    await authenticate(other);
+    expect((await db.query('select * from public.cora_reminder_sources')).rows).toHaveLength(0);
+    await db.exec('savepoint forbidden');
+    await expect(call()).rejects.toThrow(/permission denied/);
+    await db.exec('rollback to savepoint forbidden');
+  });
   it('keeps MCP credentials server-only, enforces quota and revokes on membership changes',async()=>{
     await db.query("insert into public.cora_mcp_connections(user_id,token_hash,expires_at) values ($1,$2,now()+interval '90 days')",[owner,'a'.repeat(43)])
     const grants=await db.query<{role:string;allowed:boolean}>("select role, has_table_privilege(role,'public.cora_mcp_connections','SELECT') allowed from (values ('anon'),('authenticated'),('service_role')) r(role)")

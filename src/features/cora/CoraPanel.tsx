@@ -168,6 +168,7 @@ export function CoraPanel({
           if (event.type === "delta") setPartial((p) => p + event.text);
           if (event.type === "error") setError(event.message);
           if (event.type === "complete") {
+            if (event.turn.action_status === "created") onCreated();
             setTurns((old) => [
               ...old.filter((t) => t.id !== event.turn.id),
               event.turn,
@@ -181,7 +182,7 @@ export function CoraPanel({
     } catch (e) {
       setError(
         abort.current.signal.aborted
-          ? "Stopped. Reload history to check the final response. No changes were made."
+          ? "Stopped. Reload history to check the final response. Check Command for saved reminders before retrying."
           : (e as Error).message,
       );
     } finally {

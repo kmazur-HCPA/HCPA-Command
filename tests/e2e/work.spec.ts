@@ -14,6 +14,8 @@ const user = {
 };
 const jwt = `${Buffer.from('{"alg":"HS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub: uid, role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test`;
 async function setup(page: Page) {
+  await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[]}));
+  await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:false}}));
   await page.route("**/api/cora/connection/status", route => route.fulfill({json:{connection:null}}));
   await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   const rows: WorkItem[] = [],
@@ -31,6 +33,8 @@ async function setup(page: Page) {
       url = new URL(request.url()),
       p = url.searchParams,
       method = request.method();
+    if(url.pathname.endsWith('/cora_workday_reviews'))return route.fulfill({json:[]});
+    if(url.pathname.endsWith('/cora_review_preferences'))return route.fulfill({json:{automatic_reminders:false}});
     if (url.pathname === "/auth/v1/token")
       return route.fulfill({
         json: {

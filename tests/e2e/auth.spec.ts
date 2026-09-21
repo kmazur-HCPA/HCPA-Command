@@ -32,6 +32,8 @@ async function mockBackend(
   };
   await page.route("https://command-test.supabase.co/**", async (route) => {
     const url = new URL(route.request().url());
+    if(url.pathname.endsWith('/cora_workday_reviews'))return route.fulfill({json:[]});
+    if(url.pathname.endsWith('/cora_review_preferences'))return route.fulfill({json:{automatic_reminders:false}});
     if (url.pathname === "/auth/v1/token") {
       if (options.wrongPassword)
         return route.fulfill({
@@ -381,4 +383,20 @@ test('Cora reviews a date-only reminder and saves only after explicit confirmati
  await card.getByRole('button',{name:'Confirm changes'}).click();
  await expect(card.getByRole('button',{name:'Open record'})).toBeVisible();expect(actions).toBe(1);
  expect((await new AxeBuilder({page}).include('.cora-panel').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+});
+
+test('automatic reminders refresh the workspace without a confirmation card and reviews can be paused',async({page})=>{
+ await mockBackend(page);
+ let enabled=true,paused=false;
+ await page.route('**/rest/v1/cora_review_preferences*',r=>{if(r.request().method()==='PATCH'){enabled=r.request().postDataJSON().automatic_reminders;paused=!enabled;return r.fulfill({json:{user_id:userId}})}return r.fulfill({json:{user_id:userId,automatic_reminders:enabled}})});
+ await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[{id:userId,user_id:userId,status:'partial',summary:'Email checked; Teams temporarily unavailable.',started_at:new Date().toISOString(),finished_at:new Date().toISOString()}]}));
+ await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
+ await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{id:userId,user_id:userId,conversation_id:userId,message:'Remind me tomorrow',context:{page:'workspace',recordId:null},response:'Saved your reminder for tomorrow.',sources:[],proposal:null,task_id:userId,status:'complete',action_status:'created',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}})+'\n'}));
+ await login(page);
+ await expect(page.getByText('Email checked; Teams temporarily unavailable.')).toBeVisible();
+ await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});
+ await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Remind me tomorrow');await panel.getByRole('button',{name:'Send to Cora'}).click();
+ await expect(panel.getByText('Saved your reminder for tomorrow.')).toBeVisible();await expect(panel.getByRole('button',{name:'Confirm changes'})).toHaveCount(0);
+ await panel.getByRole('button',{name:'Close Cora'}).click();await page.getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('button',{name:'Pause automatic reminders',exact:true}).click();await expect(page.getByRole('button',{name:'Enable automatic reminders',exact:true})).toBeVisible();expect(paused).toBe(true);
 });

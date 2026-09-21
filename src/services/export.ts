@@ -4,6 +4,10 @@ import type { LibraryVersion } from "./library";
 import { measured } from "../platform/telemetry";
 import { Zip, ZipPassThrough, strToU8 } from "fflate";
 export type ExportSnapshot = {
+  cora_review_preferences?: Record<string,unknown>[];
+  cora_reminder_sources?: Record<string,unknown>[];
+  cora_workday_reviews?: Record<string,unknown>[];
+
   cora_mcp_activity?: import("../data/database.types").Database["public"]["Tables"]["cora_mcp_activity"]["Row"][];
   cora_conversations?: import("../features/cora/model").CoraConversation[];
   cora_turns?: import("../features/cora/model").CoraTurn[];
@@ -59,7 +63,7 @@ export function validateSnapshot(snapshot: ExportSnapshot) {
     if (snapshot[table].some((row) => row.user_id !== snapshot.user_id))
       throw new Error("Export ownership mismatch.");
   }
-  for(const table of ['cora_conversations','cora_turns','cora_activity','cora_mcp_activity'] as const){
+  for(const table of ['cora_conversations','cora_turns','cora_activity','cora_mcp_activity','cora_review_preferences','cora_reminder_sources','cora_workday_reviews'] as const){
     const rows=snapshot[table];
     if(rows && (rows.length!==snapshot.counts[table]||rows.some(row=>row.user_id!==snapshot.user_id)))throw new Error('Cora export integrity mismatch.');
   }

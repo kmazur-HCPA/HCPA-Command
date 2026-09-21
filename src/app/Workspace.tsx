@@ -1,3 +1,4 @@
+import {WorkdayReviews} from "../features/reviews/WorkdayReviews";
 import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { AppClient } from "../platform/supabase";
@@ -408,6 +409,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                 </section>
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading ChatGPT connection…</p>}><ChatGPTConnection client={client}/></Suspense>
+                <WorkdayReviews client={client} settings/>
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />
                 <section className="settings-panel">

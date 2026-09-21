@@ -139,7 +139,7 @@ describe("Private ChatGPT MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(17);
+    expect(list.result.tools).toHaveLength(20);
     expect(
       list.result.tools
         .filter(
@@ -147,7 +147,7 @@ describe("Private ChatGPT MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task"]);
+    ).toEqual(["prepare_record", "prepare_task", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
   });
   it("reads only the token owner and audits the tool call without writing work", async () => {

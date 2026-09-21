@@ -1,3 +1,4 @@
+import { automaticTools, automaticTool } from "./automatic";
 import { prepareRecord } from "./actions";
 import OpenAI from "openai";
 import type { AppClient } from "../../../../src/platform/supabase";
@@ -42,6 +43,7 @@ export async function runCora({
     ? createTeamsReader(store, turn.user_id, microsoft, signal, sources)
     : undefined;
   let proposal: CoraProposal | null = null;
+  const createdReminders: string[] = [];
   const audit = async (
     tool: string,
     args: Record<string, unknown>,
@@ -169,8 +171,24 @@ export async function runCora({
         model,
         messages,
         tools: readMicrosoft
-          ? [...tools, ...microsoftTools, ...teamsTools]
-          : tools,
+          ? [
+              ...tools,
+              ...automaticTools.filter(
+                (t) =>
+                  t.type === "function" &&
+                  t.function.name === "create_reminder",
+              ),
+              ...microsoftTools,
+              ...teamsTools,
+            ]
+          : [
+              ...tools,
+              ...automaticTools.filter(
+                (t) =>
+                  t.type === "function" &&
+                  t.function.name === "create_reminder",
+              ),
+            ],
         parallel_tool_calls: false,
         stream: true,
         max_completion_tokens: 2200,
@@ -228,7 +246,14 @@ export async function runCora({
           sources: [...sources.values()].slice(0, 100),
           proposal,
           status: "complete",
-          action_status: proposal ? "proposed" : "none",
+          action_status: proposal
+            ? "proposed"
+            : createdReminders.length
+              ? "created"
+              : "none",
+          ...(createdReminders.length && !proposal
+            ? { task_id: createdReminders[0] }
+            : {}),
           finished_at: new Date().toISOString(),
         })
         .eq("id", turn.id)
@@ -238,7 +263,7 @@ export async function runCora({
         .single();
       if (saved.error)
         throw new Error(
-          "Cora could not save this conversation. No changes were made.",
+          "Cora could not save this conversation. Check Command for any saved reminders before retrying.",
         );
       const active = await client
         .from("app_memberships")
@@ -262,7 +287,23 @@ export async function runCora({
         args = JSON.parse(call.function.arguments) as Record<string, unknown>;
         if (!args || typeof args !== "object" || Array.isArray(args))
           throw new Error("Invalid tool arguments.");
-        if (call.function.name === "prepare_record") {
+        if (call.function.name === "create_reminder") {
+          const receipt = await automaticTool(
+            store,
+            turn.user_id,
+            call.function.name,
+            args,
+          );
+          result = receipt;
+          if ("id" in receipt) {
+            createdReminders.push(receipt.id);
+            sources.set(receipt.id, {
+              id: receipt.id,
+              title: String(args.title),
+              kind: "reminder",
+            });
+          }
+        } else if (call.function.name === "prepare_record") {
           if (proposal)
             throw new Error(
               "Only one action proposal per request is supported.",
@@ -342,6 +383,6 @@ export async function runCora({
     }
   }
   throw new Error(
-    "Cora reached the tool limit. Please narrow the question. No changes were made.",
+    "Cora reached the tool limit. Please narrow the question. Check Command for any saved reminders before retrying.",
   );
 }

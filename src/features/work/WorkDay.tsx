@@ -1,3 +1,4 @@
+import {WorkdayReviews} from "../reviews/WorkdayReviews";
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { workDay, patchWork } from "../../services/work";
@@ -24,6 +25,7 @@ export function WorkDay({
     [now, setNow] = useState(() => Date.now()),
     [busy, setBusy] = useState<string | null>(null),
     [notice, setNotice] = useState("");
+  const refreshMinute = Math.floor(now/60000);
   const date = today(new Date(now)),
     hour = Number(
       new Intl.DateTimeFormat("en-US", {
@@ -53,7 +55,7 @@ export function WorkDay({
     return () => {
       alive = false;
     };
-  }, [client, date, revision, retry]);
+  }, [client, date, revision, retry, refreshMinute]);
   const ready =
       data?.reminders.filter((r) => effectiveStatus(r, now) === "Active") ?? [],
     snoozed =
@@ -505,6 +507,7 @@ export function WorkDay({
               </section>
             </div>{" "}
           </div>
+          <WorkdayReviews client={client}/>
           <footer className="day-footer">
             <span>COMMAND / YOUR DAY, WITH INTENTION</span>
             <span>FOCUS · ORGANIZE · EXPLORE · DO</span>

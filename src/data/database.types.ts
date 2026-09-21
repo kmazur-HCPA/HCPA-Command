@@ -7,6 +7,10 @@ import type { MicrosoftConnection } from '../features/microsoft/model'
 export type Database = {
   public: {
     Tables: {
+      cora_review_preferences: {Row:{user_id:string;automatic_reminders:boolean};Insert:{user_id:string;automatic_reminders:boolean};Update:{automatic_reminders:boolean};Relationships:[]}
+      cora_reminder_sources: {Row:{user_id:string;source_hash:string;reminder_id:string;created_at:string};Insert:never;Update:never;Relationships:[]}
+      cora_workday_reviews: {Row:{id:string;user_id:string;status:'running'|'complete'|'partial'|'failed';summary:string;started_at:string;finished_at:string|null};Insert:{id:string;user_id:string;status:string;summary:string;finished_at?:string|null};Update:{status:string;summary:string;finished_at:string|null};Relationships:[]}
+
       cora_mcp_connections: {Row:{user_id:string;id:string;token_hash:string;created_at:string;expires_at:string;last_used_at:string|null};Insert:{user_id:string;id:string;token_hash:string;created_at:string;expires_at:string;last_used_at?:string|null};Update:{last_used_at?:string};Relationships:[]}
       cora_mcp_activity: {Row:{id:string;user_id:string;connection_id:string;tool:string;success:boolean;created_at:string};Insert:never;Update:{success:boolean};Relationships:[]}
 
@@ -37,7 +41,7 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: { cora_mcp_reserve:{Args:{p_hash:string;p_tool:string};Returns:string}; cora_begin:{Args:{p_user:string;p_conversation:string;p_request:string;p_message:string;p_context:CoraContext};Returns:{turn:CoraTurn;started:boolean}}; search_work:{Args:{query_text:string;module_filter?:string;status_filter?:string;archive_filter?:string;tag_filter?:string;page_offset?:number};Returns:SearchResult[]}; export_workspace:{Args:Record<string,never>;Returns:unknown}; convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
+    Functions: { cora_create_reminder:{Args:{p_user:string;p_source_hash:string;p_title:string;p_body:string;p_due:string|null;p_at:string|null};Returns:{id:string;created:boolean;saved:boolean}}; cora_mcp_reserve:{Args:{p_hash:string;p_tool:string};Returns:string}; cora_begin:{Args:{p_user:string;p_conversation:string;p_request:string;p_message:string;p_context:CoraContext};Returns:{turn:CoraTurn;started:boolean}}; search_work:{Args:{query_text:string;module_filter?:string;status_filter?:string;archive_filter?:string;tag_filter?:string;page_offset?:number};Returns:SearchResult[]}; export_workspace:{Args:Record<string,never>;Returns:unknown}; convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
