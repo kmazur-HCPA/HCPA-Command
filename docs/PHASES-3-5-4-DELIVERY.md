@@ -32,7 +32,7 @@ One production Supabase project remains in use. All work and revision tables hav
 
 Work Day and lists fetch summary fields instead of entire note/revision bodies. Lists are paginated (50 records), Journal revisions are paginated (20), and link selectors search bounded results. Work Day shows at most 30 due tasks, 100 open reminders and 30 waiting items, with explicit links/notices for the remainder. Search uses an indexed PostgreSQL text-search vector including original Journal text. All mutations record content-free operation timing and database audit metadata.
 
-The application remains within the 190 KiB gzip JavaScript/CSS budget (approximately 136 KiB in local builds). Tests include a 3,350-record synthetic dataset: 1,000 tasks, 250 reminders, 2,000 Journal entries and 100 waiting items. Database timing and local loopback API timings are diagnostic baselines, not production-device latency claims.
+The application remains within the 190 KiB gzip JavaScript/CSS budget (approximately 137 KiB in local builds). Tests include a 3,350-record synthetic dataset: 1,000 tasks, 250 reminders, 2,000 Journal entries and 100 waiting items. Database timing and local loopback API timings are diagnostic baselines, not production-device latency claims.
 
 ## Validation and acceptance
 
@@ -45,3 +45,9 @@ Carry forward the Phase 1 operational gates: confirm the approved data/records s
 ## Rollout and rollback
 
 Apply the three additive migrations in 3 → 5 → 4 order before publishing the app. The Phase 2 app remains compatible with the expanded schema. Verify advisors and CI before promotion. If the UI needs rollback, republish the previous Netlify deployment; retain the new tables and records and forward-fix the application. Do not drop populated tables as a rollback. Database restoration follows the Phase 1 recovery runbook.
+
+## Release evidence — September 21, 2026
+
+The three production migrations were applied in order and recorded as `20260921131114`, `20260921131131`, and `20260921131141`. Anonymous record reads, authenticated hard deletes and revision rewrites are denied. The security advisor returned no findings. Performance notices are informational: newly created indexes have no usage history yet, and Auth retains its existing fixed connection allocation ([Supabase guidance](https://supabase.com/docs/guides/deployment/going-into-prod)). Retain the indexes for the workload and reassess after pilot use ([index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index)).
+
+[Release CI](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35603421863) passed the application suite, 20 browser tests, two built-PWA tests, 18 pgTAP assertions, and real disposable Auth/REST checks. Subsequent timestamp reconciliation coverage brings the local unit/database total to 57 passing tests. Thirty synthetic loopback API writes measured p50 4 ms and p95 6 ms; these are CI diagnostics, not HCPA network or device results.
