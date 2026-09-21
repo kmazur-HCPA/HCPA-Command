@@ -2,8 +2,9 @@
 
 Production: **https://cmd.hillspafl.gov**.
 
-Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. AI remains a later phase.
+Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. Cora adds live Command and Microsoft context, with task proposals reviewed before saving.
 
+- [Cora in ChatGPT: connection and operations](docs/CORA-CHATGPT-SETUP.md)
 - [Phase 8 search, exports and operations](docs/PHASE-8-DELIVERY.md)
 - [Visual redesign and theme guide](docs/DESIGN-DELIVERY.md)
 - [Phases 3 → 5 → 4 delivery and pilot checks](docs/PHASES-3-5-4-DELIVERY.md)
@@ -23,7 +24,7 @@ The GitHub workflow includes application checks and disposable Supabase integrat
 
 ## Production boundary
 
-React/Vite/TypeScript on Netlify; Supabase Auth and PostgreSQL. Public signup and anonymous sign-in are disabled. An authenticated user also needs active app membership; row-level security enforces ownership. No service-role key belongs in the browser or Netlify functions. The access function verifies the user's token and membership with a public key.
+React/Vite/TypeScript on Netlify; Supabase Auth and PostgreSQL. Public signup and anonymous sign-in are disabled. An authenticated user also needs active app membership; row-level security enforces ownership. Privileged Supabase and Microsoft credentials stay in production server functions; none belong in the browser. The access function verifies the user's token and membership with a public key. Cora's server-only operations validate the owner and membership before using privileged credentials.
 
 Email/password sign-in, no MFA, and no SMTP service are Kevin's current decisions. Self-service email recovery is deferred; administrator-assisted recovery is documented in the runbook.
 

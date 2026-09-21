@@ -10,7 +10,7 @@ Cora’s private ChatGPT agent uses the same Command tools and Microsoft connect
 - One token per Command owner; 90-day expiry. Replacing or revoking it immediately invalidates the previous token. Membership revocation removes it as well. A token cannot sign in to Command, access Supabase directly, manage credentials, send messages or save work.
 - Only a SHA-256 digest of a random 256-bit token is stored. Microsoft credentials stay encrypted server-side. No new Entra registration, Supabase project, OAuth server, or AI API key is needed.
 
-The agent instructions are maintained in [CORA-CHATGPT-INSTRUCTIONS.md](CORA-CHATGPT-INSTRUCTIONS.md). Keep the agent and app private. No schedules or autonomous triggers are configured.
+The agent instructions are maintained in [CORA-CHATGPT-INSTRUCTIONS.md](CORA-CHATGPT-INSTRUCTIONS.md). Keep the agent and app private. The verified connection uses the agent-owned account option; do not share this agent with other people while it carries Kevin’s connection. Switch to end-user accounts and verify each user’s authorization before any future sharing. No schedules or autonomous triggers are configured.
 
 ## Tools and boundaries
 
@@ -34,4 +34,16 @@ Rollback: revoke the ChatGPT token and remove the private app from the agent. Th
 
 ## Verification
 
-Local validation covers MCP negotiation/tool discovery, token and membership rejection, owner filters, schema rejection, task-proposal retry identity, absence of work writes, reference isolation/expiry, database permissions/quotas, exported audit ownership, credential controls and explicit task confirmation. PWA checks ensure authenticated API responses remain uncached. Exact production deployment and live-agent verification are recorded below when completed.
+Local validation covers MCP negotiation/tool discovery, token and membership rejection, owner filters, schema rejection, task-proposal retry identity, absence of work writes, reference isolation/expiry, database permissions/quotas, exported audit ownership, credential controls and explicit task confirmation. PWA checks ensure authenticated API responses remain uncached. Production deployment and live-agent verification are recorded below.
+
+## Release evidence — September 21, 2026
+
+- Application commit: `5ac99c8efb5fd0ca7a5d3268e2205fd4d32bb625`.
+- Production Netlify deploy: `6ab16ce0b186a0000862147f`, published 17:44 UTC.
+- Supabase migration `cora_chatgpt_mcp` applied successfully (hosted migration version `20260921174240`; source file `20260921173141_cora_chatgpt_mcp.sql`).
+- [CI run 35633877773](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35633877773) passed application and disposable Supabase checks. The suite includes 120 unit/database tests, 31 browser workflows, two PWA tests, native Auth/PostgREST and recovery validation. Dependency audit: no reported vulnerabilities. Compressed JS/CSS: 163 KiB against the 190 KiB budget.
+- [Cora agent](https://chatgpt.com/agents/a/agt_6ab1695d307081919f999a6dd9c2f9c6) created in HCPA_IT with the checked-in instructions. Kevin connected the private Command Cora app (`asdk_app_6ab16d7fd6788191ae60c4b5fdfabab6`); the agent update was saved and the preview confirms “Private to you.”
+
+Live verification completed at 17:53 UTC through the ChatGPT agent: `get_my_tasks`, `get_outlook_calendar`, `search_outlook_mail`, `read_outlook_message`, `list_teams_chats`, `read_teams_chat`, `search_teams_messages`, and `read_teams_message` all recorded successful server-side audits. Selected Outlook and Teams reads used references discovered in earlier HTTP calls. The agent reported successful bounded reads without quoting message contents. No task proposal, work item, message or schedule was created during the live check. Unauthenticated production MCP requests return HTTP 401.
+
+The initial connection expires December 20, 2026. Renew it in Command Settings and update the private ChatGPT app credential before continuing after expiry. No secret or token value is included in this delivery record.
