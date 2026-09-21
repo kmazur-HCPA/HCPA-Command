@@ -1,0 +1,56 @@
+{
+  "name": "hcpa-command",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:netlify": "netlify dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "build": "tsc --noEmit && vite build && node scripts/check-build.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:test": "supabase test db"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@eslint/js": "10.0.1",
+    "@netlify/functions": "6.0.0",
+    "@playwright/test": "1.63.0",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.12.0",
+    "jsdom": "30.1.0",
+    "netlify-cli": "27.8.0",
+    "supabase": "2.117.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  },
+  "overrides": {
+    "sharp": "^0.35.4"
+  }
+}

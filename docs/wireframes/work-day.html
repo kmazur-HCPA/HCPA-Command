@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Command — Phase 0 Work Day wireframe</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e6e8eb; background: #0b0c0e; }
+    body { margin: 0; }
+    button, input, textarea, select { font: inherit; }
+    button, select { cursor: pointer; }
+    button { min-height: 44px; }
+    button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #fb923c; outline-offset: 3px; }
+    .review { max-width: 1160px; margin: auto; padding: 24px; }
+    .review-header { display: flex; gap: 20px; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; }
+    .review-header p { color: #a5abb3; font-size: 13px; margin: 6px 0 0; }
+    .review-title { font-weight: 600; font-size: 16px; }
+    .review-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .review-controls button, .review-controls select { color: #e6e8eb; background: #191b1e; border: 1px solid #41464d; border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+    .review-controls label { font-size: 13px; color: #a5abb3; }
+    .app { --bg: #111214; --surface: #191b1e; --hover: #272a2f; --line: #30343a; --text: #f4f5f6; --sub: #a5abb3; --orange: #f97316; --accent: #ffac72; --soft: #30231c; --amber: #e8bb76; width: 100%; max-width: 744px; margin: 0 auto; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; box-shadow: 0 18px 65px #0003; }
+    .app.light { --bg: #f5f6f7; --surface: #fff; --hover: #e9ecef; --line: #d2d6da; --text: #202226; --sub: #58616b; --orange: #ea6a0b; --accent: #994006; --soft: #fff0e3; --amber: #79521a; }
+    .app.landscape { max-width: 1080px; }
+    .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 28px; border-bottom: 1px solid var(--line); }
+    .brand { font-weight: 750; letter-spacing: .17em; font-size: 15px; }
+    .brand-mark { color: var(--orange); margin-right: 6px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .date { font-size: 13px; color: var(--sub); }
+    .app button { color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+    .app button:hover { background: var(--hover); }
+    .app .capture-button { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+    .app .capture-button:hover { opacity: .86; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .nav { display: flex; gap: 4px; padding: 10px 24px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+    .nav button { border: 0; color: var(--sub); white-space: nowrap; font-size: 14px; }
+    .nav button[aria-current="page"] { background: var(--soft); color: var(--accent); }
+    .content { min-width: 0; padding: 30px 28px 24px; }
+    .eyebrow { color: var(--sub); font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 8px; }
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 32px); letter-spacing: -.045em; font-weight: 650; }
+    .intro { color: var(--sub); margin: 9px 0 20px; font-size: 15px; line-height: 1.5; }
+    .signals { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--sub); font-size: 13px; padding-bottom: 25px; border-bottom: 1px solid var(--line); }
+    .signals strong { color: var(--text); font-weight: 600; }
+    .columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 30px; }
+    section { margin-top: 27px; min-width: 0; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -.02em; margin: 0; }
+    .section-head .subaction { border: 0; color: var(--sub); font-size: 13px; padding: 8px; }
+    .section-caption { font-size: 13px; color: var(--sub); margin: 0 0 12px; line-height: 1.5; }
+    .focus-item { display: flex; gap: 14px; align-items: flex-start; padding: 17px 14px; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; background: var(--surface); }
+    .focus-item:first-child { border-left: 3px solid var(--orange); padding-left: 12px; }
+    .app .check { width: 44px; height: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; margin: -5px 0; }
+    .check span { display: block; width: 21px; height: 21px; border: 1.5px solid var(--sub); border-radius: 6px; }
+    .item-body { flex: 1; min-width: 0; }
+    .item-title { font-size: 15px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+    .item-meta { color: var(--sub); font-size: 12px; line-height: 1.5; margin-top: 5px; }
+    .item-meta .due { color: var(--amber); }
+    .rank { color: var(--sub); font-size: 12px; padding-top: 5px; }
+    .list { list-style: none; padding: 0; margin: 0; }
+    .row { display: flex; align-items: flex-start; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .app .snooze { color: var(--sub); font-size: 12px; padding: 8px; margin-top: -6px; }
+    .party { width: 35px; height: 35px; flex-shrink: 0; display: grid; place-items: center; background: var(--hover); color: var(--sub); border-radius: 50%; font-size: 12px; }
+    .footnote { color: var(--sub); font-size: 12px; margin: 22px 0 0; line-height: 1.6; }
+    .toast { margin-top: 18px; color: var(--accent); min-height: 22px; font-size: 13px; }
+    .hidden, [hidden] { display: none !important; }
+    .empty { padding: 18px 0; color: var(--sub); font-size: 14px; }
+    .landscape .layout { grid-template-columns: 145px minmax(0, 1fr); }
+    .landscape .nav { display: flex; flex-direction: column; padding: 24px 12px; border-bottom: 0; border-right: 1px solid var(--line); }
+    .landscape .nav button { text-align: left; }
+    .landscape .columns { grid-template-columns: 1.15fr 1fr; }
+    .landscape .primary-col { grid-row: span 2; }
+    .landscape .content { padding: 28px 24px; }
+    dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid #40454c; border-radius: 16px; background: #191b1e; color: #f4f5f6; padding: 24px; }
+    dialog::backdrop { background: #0009; }
+    dialog h2 { margin-bottom: 8px; }
+    dialog p { color: #a5abb3; font-size: 14px; line-height: 1.5; }
+    dialog label { display: block; font-size: 14px; margin-bottom: 8px; }
+    dialog textarea { width: 100%; min-height: 180px; resize: vertical; border: 1px solid #58616b; background: #111214; color: #f4f5f6; border-radius: 8px; padding: 14px; font-size: 16px; }
+    dialog .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    dialog button { padding: 10px 16px; border: 1px solid #58616b; border-radius: 8px; background: transparent; color: #f4f5f6; }
+    dialog .save { background: #f4f5f6; color: #111214; font-weight: 600; }
+    dialog .snooze-options { display: grid; gap: 8px; }
+    .review-footer { max-width: 744px; margin: 18px auto; font-size: 13px; color: #a5abb3; line-height: 1.65; }
+    .review-footer a { color: #f3b17e; }
+    .app input[type="search"] { width: 100%; min-height: 46px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); padding: 10px 14px; font-size: 16px; margin-top: 12px; }
+    @media (max-width: 760px) { .landscape .layout { grid-template-columns: minmax(0, 1fr); } .landscape .nav { flex-direction: row; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); } .landscape .columns { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 480px) { .review { padding: 14px 8px; } .review-header { padding: 0 8px; } .app { border-radius: 12px; } .topbar { padding: 12px 16px; } .date { display: none; } .content, .landscape .content { padding: 24px 16px 16px; } .nav { padding: 8px; } .nav button { padding: 10px 12px; } .row { gap: 6px; } .review-footer { padding: 0 8px; } }
+  </style>
+</head>
+<body>
+<main class="review">
+  <header class="review-header">
+    <div><div class="review-title">Phase 0 · Work Day wireframe</div><p>Synthetic examples · local demonstration · resets on reload</p></div>
+    <div class="review-controls">
+      <label for="layout-choice">Layout</label>
+      <select id="layout-choice"><option value="portrait">Mini portrait</option><option value="landscape">Mini landscape / desktop</option></select>
+      <button type="button" id="theme-toggle" aria-pressed="false">Light appearance</button>
+      <button type="button" id="reset">Reset demo</button>
+    </div>
+  </header>
+  <div class="app" id="command">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">/</span>COMMAND</div>
+      <div class="top-actions"><span class="date">Mon, September 21</span><button type="button" class="capture-button" id="open-capture">+ Capture</button></div>
+    </header>
+    <div class="layout">
+      <nav class="nav" aria-label="Command pilot navigation">
+        <button type="button" data-page="day" aria-current="page">Work Day</button>
+        <button type="button" data-page="tasks">Tasks</button>
+        <button type="button" data-page="captures">Captures</button>
+        <button type="button" data-page="settings">Settings</button>
+      </nav>
+      <div class="content">
+        <div id="page-day" class="page">
+          <p class="eyebrow">Monday, September 21</p>
+          <h1>Good morning, Kevin.</h1>
+          <p class="intro">Here's what matters today.</p>
+          <div class="signals"><span><strong id="priority-count">3</strong> priorities</span><span><strong id="reminder-count">3</strong> active reminders</span><span><strong>2</strong> waiting on</span></div>
+          <div class="columns">
+            <section class="primary-col" aria-labelledby="priority-heading">
+              <div class="section-head"><h2 id="priority-heading">Priority work</h2><button class="subaction" type="button" id="view-tasks">View tasks →</button></div>
+              <p class="section-caption">A short list. Room to make progress.</p>
+              <ol class="list" id="priorities"></ol>
+            </section>
+            <section aria-labelledby="reminder-heading">
+              <div class="section-head"><h2 id="reminder-heading">Reminders</h2></div>
+              <p class="section-caption">Here until you complete, snooze or dismiss them.</p>
+              <ul class="list" id="reminders"></ul>
+              <p class="section-caption" id="snoozed-summary" hidden></p>
+            </section>
+            <section aria-labelledby="waiting-heading">
+              <div class="section-head"><h2 id="waiting-heading">Waiting on</h2></div>
+              <ul class="list"><li class="row"><span class="party" aria-hidden="true">V</span><div class="item-body"><p class="item-title">Workshop availability</p><div class="item-meta">Training provider · follow up tomorrow</div></div></li><li class="row"><span class="party" aria-hidden="true">T</span><div class="item-body"><p class="item-title">Review of planning outline</p><div class="item-meta">Project team · requested Friday</div></div></li></ul>
+            </section>
+          </div>
+        </div>
+        <div id="page-tasks" class="page" hidden><p class="eyebrow">Your work</p><h1>Tasks</h1><p class="intro">The same tasks, with space to look beyond today.</p><label for="task-search">Find a task</label><input type="search" id="task-search" placeholder="Search task titles"><ul class="list" id="task-list"></ul></div>
+        <div id="page-captures" class="page" hidden><p class="eyebrow">Capture first. Classify second.</p><h1>Captures</h1><p class="intro">A place for a thought before it needs a category.</p><ul class="list" id="capture-list"></ul></div>
+        <div id="page-settings" class="page" hidden><p class="eyebrow">Preferences</p><h1>Settings</h1><section><h2>Appearance</h2><p class="intro">Dark and light are both supported. Use the appearance control above to compare them.</p><h2>Time zone</h2><p class="intro">America/New_York</p><h2>Pilot access</h2><p class="intro">Kevin only. Sign-in and recovery screens will be designed during the secure foundation phase.</p></section></div>
+        <div class="toast" id="status" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+  <p class="review-footer">Try completing a priority, snoozing a reminder, or capturing a thought. This is a layout and interaction review—not a working application. Calendar, Cora and other later features are intentionally absent. <a href="../PHASE-0-BUILD-CONTRACT.md">Build contract</a></p>
+</main>
+<dialog id="capture-dialog" aria-labelledby="capture-title">
+  <form id="capture-form"><h2 id="capture-title">Capture a thought</h2><p>No category needed. Write it down first.</p><label for="capture-text">What's on your mind?</label><textarea id="capture-text" required maxlength="10000" placeholder="An idea, a note, something to return to…"></textarea><p>Demo only: text stays in this page until reload.</p><div class="dialog-actions"><button type="button" id="cancel-capture">Keep editing later</button><button type="submit" class="save">Save capture</button></div></form>
+</dialog>
+<dialog id="snooze-dialog" aria-labelledby="snooze-title"><h2 id="snooze-title">Snooze reminder</h2><p id="snooze-description"></p><div class="snooze-options"><button type="button" data-snooze="Later today">Later today</button><button type="button" data-snooze="Tomorrow morning">Tomorrow morning</button><button type="button" data-snooze="Next week">Next week</button><button type="button" id="cancel-snooze">Cancel</button></div></dialog>
+<script>
+  'use strict';
+  const app = document.getElementById('command');
+  const status = document.getElementById('status');
+  const tasks = [
+    {id:'t1', title:'Draft the program outline', meta:'Primary · due today', complete:false},
+    {id:'t2', title:'Review the next milestone', meta:'Secondary · 30 minutes', complete:false},
+    {id:'t3', title:'Organize this week’s learning notes', meta:'If time · 15 minutes', complete:false}
+  ];
+  const reminders = [
+    {id:'r1', title:'Send the workshop follow-up', meta:'Due yesterday · still active', complete:false, snoozed:''},
+    {id:'r2', title:'Check conference registration', meta:'Today · after lunch', complete:false, snoozed:''},
+    {id:'r3', title:'Bring the planning notebook', meta:'No scheduled time', complete:false, snoozed:''}
+  ];
+  const captures = [];
+  let snoozeTarget = null;
+  let currentPage = 'day';
+  function announce(message) { status.textContent = message; }
+  function make(tag, className, text) { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; }
+  function empty(container, text) { container.append(make('li', 'empty', text)); }
+  function checkButton(label, onClick) { const button = make('button', 'check'); button.type='button'; button.setAttribute('aria-label', label); button.append(make('span')); button.addEventListener('click', onClick); return button; }
+  function showPage(name) {
+    currentPage = name;
+    document.querySelectorAll('.page').forEach(page => { page.hidden = page.id !== 'page-' + name; });
+    document.querySelectorAll('[data-page]').forEach(button => { if(button.dataset.page === name) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); });
+    status.textContent='';
+  }
+  function render() {
+    const priorityList = document.getElementById('priorities'); priorityList.replaceChildren();
+    tasks.filter(task => !task.complete).forEach((task, index) => {
+      const row = make('li','focus-item');
+      row.append(checkButton('Complete ' + task.title, () => { task.complete=true; render(); announce('Completed: ' + task.title); document.querySelector('[data-page="'+currentPage+'"]').focus(); }));
+      const body = make('div','item-body'); body.append(make('p','item-title',task.title),make('div','item-meta',task.meta)); row.append(body,make('span','rank',String(index+1).padStart(2,'0'))); priorityList.append(row);
+    });
+    if (!priorityList.children.length) empty(priorityList,'Your priorities are complete.');
+    document.getElementById('priority-count').textContent=String(tasks.filter(task=>!task.complete).length);
+    const reminderList = document.getElementById('reminders'); reminderList.replaceChildren();
+    reminders.filter(reminder=>!reminder.complete&&!reminder.snoozed).forEach(reminder=>{
+      const row=make('li','row'); row.append(checkButton('Complete '+reminder.title,()=>{reminder.complete=true; render(); announce('Completed: '+reminder.title); document.querySelector('[data-page="day"]').focus();}));
+      const body=make('div','item-body'); body.append(make('p','item-title',reminder.title),make('div','item-meta',reminder.meta)); row.append(body);
+      const snooze=make('button','snooze','Snooze'); snooze.type='button'; snooze.setAttribute('aria-label','Snooze '+reminder.title); snooze.addEventListener('click',()=>{snoozeTarget=reminder; document.getElementById('snooze-description').textContent=reminder.title; document.getElementById('snooze-dialog').showModal();}); row.append(snooze); reminderList.append(row);
+    });
+    if(!reminderList.children.length) empty(reminderList,'No active reminders.');
+    document.getElementById('reminder-count').textContent=String(reminders.filter(reminder=>!reminder.complete&&!reminder.snoozed).length);
+    const snoozed=reminders.filter(reminder=>reminder.snoozed); const summary=document.getElementById('snoozed-summary'); summary.hidden=!snoozed.length; summary.textContent=snoozed.map(reminder=>reminder.title+' — '+reminder.snoozed).join(' · ');
+    const taskList=document.getElementById('task-list'); taskList.replaceChildren(); const query=document.getElementById('task-search').value.toLowerCase();
+    tasks.filter(task=>task.title.toLowerCase().includes(query)).forEach(task=>{const row=make('li','row'); const body=make('div','item-body'); body.append(make('p','item-title',task.title),make('div','item-meta',task.complete?'Complete':task.meta)); row.append(body); taskList.append(row);});
+    if(!taskList.children.length) empty(taskList,'No matching tasks.');
+    const captureList=document.getElementById('capture-list'); captureList.replaceChildren(); captures.forEach(capture=>{const row=make('li','row'); const body=make('div','item-body'); body.append(make('p','item-title',capture),make('div','item-meta','Just now · unclassified')); row.append(body); captureList.append(row);}); if(!captures.length) empty(captureList,'No captures yet. Use + Capture whenever something comes to mind.');
+  }
+  document.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>showPage(button.dataset.page)));
+  document.getElementById('view-tasks').addEventListener('click',()=>{showPage('tasks'); document.getElementById('task-search').focus();});
+  document.getElementById('task-search').addEventListener('input',render);
+  document.getElementById('layout-choice').addEventListener('change',event=>app.classList.toggle('landscape',event.target.value==='landscape'));
+  document.getElementById('theme-toggle').addEventListener('click',event=>{const light=app.classList.toggle('light'); event.target.setAttribute('aria-pressed',String(light)); event.target.textContent=light?'Dark appearance':'Light appearance';});
+  document.getElementById('open-capture').addEventListener('click',()=>{document.getElementById('capture-dialog').showModal(); document.getElementById('capture-text').focus();});
+  document.getElementById('cancel-capture').addEventListener('click',()=>document.getElementById('capture-dialog').close());
+  document.getElementById('capture-form').addEventListener('submit',event=>{event.preventDefault(); const text=document.getElementById('capture-text').value.trim(); if(!text) {document.getElementById('capture-text').focus(); return;} captures.unshift(text); document.getElementById('capture-text').value=''; document.getElementById('capture-dialog').close(); render(); showPage('captures'); announce('Capture added to this demo.');});
+  document.querySelectorAll('[data-snooze]').forEach(button=>button.addEventListener('click',()=>{if(!snoozeTarget)return; snoozeTarget.snoozed=button.dataset.snooze; const title=snoozeTarget.title; document.getElementById('snooze-dialog').close(); render(); announce('Snoozed '+title+' until '+button.dataset.snooze.toLowerCase()+'.'); document.querySelector('[data-page="day"]').focus(); snoozeTarget=null;}));
+  document.getElementById('cancel-snooze').addEventListener('click',()=>document.getElementById('snooze-dialog').close());
+  document.getElementById('reset').addEventListener('click',()=>{tasks.forEach(task=>task.complete=false); reminders.forEach(reminder=>{reminder.complete=false;reminder.snoozed='';});captures.length=0; document.getElementById('capture-text').value=''; document.getElementById('task-search').value=''; render();showPage('day');announce('Demo reset.');});
+  render();
+</script>
+</body>
+</html>
