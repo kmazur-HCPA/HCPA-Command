@@ -4,6 +4,9 @@ import type { LibraryVersion } from "./library";
 import { measured } from "../platform/telemetry";
 import { Zip, ZipPassThrough, strToU8 } from "fflate";
 export type ExportSnapshot = {
+  cora_conversations?: import("../features/cora/model").CoraConversation[];
+  cora_turns?: import("../features/cora/model").CoraTurn[];
+  cora_activity?: import("../features/cora/model").CoraActivity[];
   format: "command-workspace";
   format_version: 1;
   exported_at: string;
@@ -55,6 +58,13 @@ export function validateSnapshot(snapshot: ExportSnapshot) {
     if (snapshot[table].some((row) => row.user_id !== snapshot.user_id))
       throw new Error("Export ownership mismatch.");
   }
+  for(const table of ['cora_conversations','cora_turns','cora_activity'] as const){
+    const rows=snapshot[table];
+    if(rows && (rows.length!==snapshot.counts[table]||rows.some(row=>row.user_id!==snapshot.user_id)))throw new Error('Cora export integrity mismatch.');
+  }
+  const conversations=new Set(snapshot.cora_conversations?.map(row=>row.id));
+  const turns=new Set(snapshot.cora_turns?.map(row=>row.id));
+  if(snapshot.cora_turns?.some(row=>!conversations.has(row.conversation_id))||snapshot.cora_activity?.some(row=>!turns.has(row.turn_id)))throw new Error('Unresolved Cora relationship.');
   const ids = new Set(snapshot.work_items.map((row) => row.id));
   if (ids.size !== snapshot.work_items.length)
     throw new Error("Duplicate record IDs.");

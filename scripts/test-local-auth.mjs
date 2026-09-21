@@ -1,3 +1,4 @@
+import {testCora} from './test-cora-local.mjs'
 import {testPhase8} from './test-phase8-local.mjs'
 import {testLibrary} from './test-library-local.mjs'
 import assert from 'node:assert/strict'
@@ -63,6 +64,7 @@ try {
   console.log(JSON.stringify({event:'local_api_latency',samples:30,p50_ms:Math.round(timings[14]),p95_ms:Math.round(timings[28]),scope:'loopback synthetic writes; not production-device latency'}))
   console.log('PASS: tasks, waiting/person/project links, immutable journal revisions, retry-safe conversion and insert, priority slot, and RLS through real local APIs.')
   await testLibrary({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
+  await testCora({admin,owner,outsider,users,url,anonKey:values.ANON_KEY,secret:values.SERVICE_ROLE_KEY})
   await testPhase8({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
   // Test the administrator-assisted recovery path selected for this pilot.
   const newPassword=randomBytes(32).toString('base64url')
@@ -76,6 +78,7 @@ try {
   console.log('PASS: local GoTrue signup denial, login, RLS, persisted mutation/audit, recovery, revocation and logout.')
 } finally {
   for(const id of users) {
+    for(const table of ['cora_activity','cora_turns','cora_conversations'])await admin.from(table).delete().eq('user_id',id)
     const versions=await admin.from('library_versions').select('id,document_id').eq('user_id',id)
     if(versions.data?.length)await admin.storage.from('command-library').remove(versions.data.map(v=>`${id}/${v.document_id}/${v.id}`))
     await admin.from('library_versions').delete().eq('user_id',id)

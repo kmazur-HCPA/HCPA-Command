@@ -352,9 +352,10 @@ export function WorkDay({
                   </li>
                 </ul>
                 <p className="brief-disclosure">
-                  A live summary of your records. No AI-generated advice.
+                  A live summary of your records.
                 </p>
               </section>
+              <button className="panel-link" onClick={()=>window.dispatchEvent(new CustomEvent("command:cora",{detail:"Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?"}))}>Ask Cora for perspective <Icon name="arrow"/></button>
               <section className="day-panel waiting-panel">
                 {heading("clock", "Waiting on", "Manage waiting", "waiting")}
                 {data.waiting.length

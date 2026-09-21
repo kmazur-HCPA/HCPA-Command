@@ -30,3 +30,5 @@ Email/password sign-in, no MFA, and no SMTP service are Kevin's current decision
 Preview builds have no production database connection. Production public environment settings are scoped to production in Netlify. Dependency versions are locked; the `sharp` override patches the Netlify CLI's transitive dependency.
 
 Learning, AI Lab and private Library: [Phases 6–7 delivery and file recovery](docs/PHASES-6-7-DELIVERY.md).
+
+Cora v0.1: [implementation, operating boundaries and acceptance](docs/CORA-DELIVERY.md).

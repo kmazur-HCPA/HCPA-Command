@@ -24,7 +24,7 @@ describe('Work record integrity and authorization', () => {
       grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
     `)
     await db.exec(await readFile('supabase/migrations/20260921115103_foundation.sql', 'utf8'))
-    for(const file of (await readdir('supabase/migrations')).filter(name=>!name.includes('foundation')).sort()) await db.exec(await readFile(`supabase/migrations/${file}`,'utf8'))
+    for(const file of (await readdir('supabase/migrations')).filter(name=>name!=='20260921115103_foundation.sql').sort()) await db.exec(await readFile(`supabase/migrations/${file}`,'utf8'))
     await db.query('insert into auth.users(id) values ($1),($2),($3)', [owner, other, unapproved])
     await db.query('insert into public.app_memberships(user_id) values ($1),($2)', [owner, other])
   })
@@ -168,6 +168,37 @@ describe('Work record integrity and authorization', () => {
     await authenticate(owner)
     expect((await db.query("select * from public.search_work('Private')")).rows).toHaveLength(0)
     await expect(db.query('select public.export_workspace()')).rejects.toThrow(/unavailable/)
+  })
+
+  it('reserves Cora requests once and restricts writes to the server role',async()=>{
+    const request='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',conversation='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    await db.exec('set local role service_role')
+    const args=[owner,conversation,request,'What needs attention?',JSON.stringify({page:'workspace',recordId:null})]
+    const first=await db.query<{value:{started:boolean}}>('select public.cora_begin($1,$2,$3,$4,$5::jsonb) value',args)
+    const second=await db.query<{value:{started:boolean}}>('select public.cora_begin($1,$2,$3,$4,$5::jsonb) value',args)
+    expect(first.rows[0]!.value.started).toBe(true);expect(second.rows[0]!.value.started).toBe(false)
+    await db.exec('reset role');await authenticate(owner)
+    expect((await db.query('select * from public.cora_turns')).rows).toHaveLength(1)
+    const exported=(await db.query<{value:{counts:{cora_turns:number}}}>('select public.export_workspace() value')).rows[0]!.value
+    expect(exported.counts.cora_turns).toBe(1)
+    await expect(db.query('select public.cora_begin($1,$2,$3,$4,$5::jsonb)',args)).rejects.toThrow(/permission denied/)
+  })
+  it('isolates Cora history and prevents browser-forged assistant receipts',async()=>{
+    await db.exec('set local role service_role')
+    await db.query("select public.cora_begin($1,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Private conversation','{}')",[owner])
+    await db.exec('reset role');await authenticate(other)
+    expect((await db.query('select * from public.cora_conversations')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.cora_turns')).rows).toHaveLength(0)
+    await expect(db.query("update public.cora_turns set response='Task created'" )).rejects.toThrow(/permission denied/)
+  })
+  it('serializes separate Cora requests and hides history on revocation',async()=>{
+    await db.exec('set local role service_role')
+    await db.query("select public.cora_begin($1,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Private conversation','{}')",[owner])
+    await db.exec('savepoint next_request')
+    await expect(db.query("select public.cora_begin($1,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc','Another question','{}')",[owner])).rejects.toThrow(/already working/)
+    await db.exec('rollback to savepoint next_request; reset role')
+    await db.query('update public.app_memberships set active=false where user_id=$1',[owner]);await authenticate(owner)
+    expect((await db.query('select * from public.cora_turns')).rows).toHaveLength(0)
   })
 
 })

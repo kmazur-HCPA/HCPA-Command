@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { AppClient } from "../platform/supabase";
 import { readPreferences, saveTheme } from "../services/account";
@@ -17,10 +17,15 @@ import { Drafts } from "../features/work/Drafts";
 import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
 
+const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
+
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
   const [page, setPage] = useState<"workspace" | "settings" | "lab" | Kind>(
     "workspace",
   );
+  const [coraDirty,setCoraDirty]=useState(false);
+  const [cora,setCora]=useState(false),[coraLoaded,setCoraLoaded]=useState(false),[coraPrompt,setCoraPrompt]=useState('');
+  const openCora=(prompt='')=>{setCoraLoaded(true);setCora(true);if(prompt)setCoraPrompt(prompt)};
   const [capture, setCapture] = useState(false);
   const [palette, setPalette] = useState(false),
     [more, setMore] = useState(false);
@@ -45,8 +50,10 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
   }, []);
   useEffect(() => {
     const open = () => setCapture(true);
+    const ask = (event:Event) => {setCoraLoaded(true);setCora(true);setCoraPrompt((event as CustomEvent<string>).detail??'')};
+    window.addEventListener("command:cora",ask);
     window.addEventListener("command:capture", open);
-    return () => window.removeEventListener("command:capture", open);
+    return () => {window.removeEventListener("command:capture", open);window.removeEventListener("command:cora",ask)};
   }, []);
   const [workRevision, setWorkRevision] = useState(0);
   const [recordId, setRecordId] = useState<string | null>(() =>
@@ -133,6 +140,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
     }
   }
   async function logout() {
+    if(coraDirty){setError("Finish or clear your Cora draft before signing out.");openCora();return}
     try {
       const drafts = listDrafts(localStorage, user.id);
       if (drafts.length) {
@@ -161,7 +169,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
     }
   }
   return (
-    <div className="workspace app-shell">
+    <div className={cora?"workspace app-shell cora-open":"workspace app-shell"}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -244,6 +252,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
         >
           <Icon name="sun" />
         </button>
+        <button className="cora-entry" onClick={()=>openCora()} aria-expanded={cora}><Mark/><span>Ask Cora</span></button>
         <button className="capture-button" onClick={() => setCapture(true)}>
           <Icon name="plus" />
           <span>Quick Capture</span>
@@ -276,11 +285,11 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
         </button>
         <button
           className="mobile-capture"
-          aria-label="Capture a thought"
-          onClick={() => setCapture(true)}
+          aria-label="Ask Cora"
+          onClick={() => openCora()}
         >
-          <Icon name="plus" />
-          <span>Capture</span>
+          <Mark />
+          <span>Cora</span>
         </button>
         <button
           aria-current={page === "project" ? "page" : undefined}
@@ -311,6 +320,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
             </button>
           </div>
           <div className="more-grid">
+            <button onClick={()=>{setMore(false);setCapture(true)}}>Quick Capture</button>
             {navigation
               .filter((n) => !["workspace", "task", "project"].includes(n.page))
               .map((n) => (
@@ -343,7 +353,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           <Lab client={client} userId={user.id} onOpen={openRecord} />
         ) : page !== "workspace" && page !== "settings" ? (
           <WorkList
-            key={page}
+            key={`${page}-${workRevision}`}
             client={client}
             userId={user.id}
             kind={page}
@@ -419,6 +429,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           </div>
         )}
       </main>
+      {coraLoaded&&<Suspense fallback={null}><CoraPanel client={client} open={cora} onDirty={setCoraDirty} context={{page,recordId}} prompt={coraPrompt} onClose={()=>setCora(false)} onOpen={openRecord} onCreated={()=>setWorkRevision(v=>v+1)}/></Suspense>}
       {palette && (
         <Palette
           client={client}

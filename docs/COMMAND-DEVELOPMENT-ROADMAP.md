@@ -349,3 +349,7 @@ A phase closes when its deliverables are usable, its gate and applicable shared 
 | Phase 7 — Intelligence | Phase 17 |
 
 The product vision and feature requirements remain in the master brief. This document governs sequencing, bounded delivery, and acceptance. Platform-specific APIs, pricing, service limits, model selections, and legal requirements must be reverified when their implementation phase begins.
+
+## Cora v0.1 scope decision — September 21, 2026
+
+Kevin’s Cora implementation brief authorizes the narrow first milestone across conversational access, live read tools, page context and controlled task creation. [Cora delivery notes](CORA-DELIVERY.md) define this slice. Task-card review is the initial write boundary. Broader Phase 9 reminder/completion/snooze actions and Phase 10 automatic AI briefs remain later work; this slice does not mark those entire roadmap phases accepted.

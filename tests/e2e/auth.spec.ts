@@ -257,3 +257,30 @@ test('WCAG automated checks cover both themes, mobile navigation, search and set
  await page.getByRole('button',{name:'Settings',exact:true}).click()
  expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
 })
+
+test('Cora streams, preserves page context, and creates a task only through its reviewed card',async({page})=>{
+ await mockBackend(page);await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}))
+ let actions=0;let turn:Record<string,unknown>={}
+ await page.route('**/api/cora/chat',async route=>{
+  const request=route.request().postDataJSON();expect(request.context.page).toBe('project');expect(request).not.toHaveProperty('userId')
+  turn={id:request.requestId,user_id:userId,conversation_id:request.conversationId,message:request.message,context:request.context,response:'Ready to add. Review the task below, then choose Add task.',sources:[],proposal:{title:'Follow up with Erik',due_date:'2026-09-22',priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}
+  await route.fulfill({contentType:'application/x-ndjson',body:[{type:'status',message:'Thinking it through…'},{type:'delta',text:'Ready to add.'},{type:'complete',turn}].map(e=>JSON.stringify(e)).join('\n')+'\n'})
+ })
+ await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:turn.id});return r.fulfill(actions===1?{status:409,json:{message:'Task creation was not confirmed. Retry this same card.'}}:{json:{taskId:turn.task_id,created:true}})})
+ await login(page);await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});await expect(panel).toBeVisible()
+ await page.getByRole('button',{name:'Projects',exact:true}).click()
+ await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Add a task for tomorrow to follow up with Erik.')
+ await panel.getByRole('button',{name:'Send to Cora'}).click();await expect(panel.getByRole('heading',{name:'Follow up with Erik'})).toBeVisible();expect(actions).toBe(0)
+ await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('not confirmed');await expect(panel.getByText('Task created',{exact:true})).toHaveCount(0)
+ await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(2)
+ for(const theme of ['dark','light']){
+  if(theme==='light')await page.getByRole('button',{name:'Switch color theme'}).click()
+  await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))))
+  expect((await new AxeBuilder({page}).include('.cora-panel').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
+  await page.screenshot({path:`test-results/cora-${theme}.png`})
+ }
+ await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('heading',{name:'Projects',exact:true})).toBeVisible()
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Ask Cora',exact:true}).click();await expect(panel).toBeVisible();await expect(panel.getByText('Task created',{exact:true})).toBeVisible()
+ await page.screenshot({path:'test-results/cora-mobile.png'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+ await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('button',{name:'Ask Cora',exact:true})).toBeFocused()
+})
