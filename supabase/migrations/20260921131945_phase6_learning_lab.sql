@@ -28,6 +28,7 @@ begin
  for link_id,expected_kind in select * from (values (new.learning_id,'learning'),(new.program_id,'program'),(new.use_case_id,'use_case'),(new.experiment_id,'experiment'),(new.decision_id,'journal')) as links(id,kind) loop
  if link_id is not null and (link_id=new.id or not exists(select 1 from public.work_items where id=link_id and user_id=new.user_id and kind=expected_kind and (expected_kind<>'journal' or entry_type='Decision'))) then raise exception 'Invalid learning or lab link' using errcode='23514'; end if;
  end loop;
+ if new.kind='journal' and new.entry_type<>'Decision' and exists(select 1 from public.work_items where user_id=new.user_id and decision_id=new.id) then raise exception 'This entry is referenced as a decision; retain its Decision type'; end if;
  allowed := case new.kind
  when 'learning' then array['provider','type','url','start_date','completion_date','progress','topic','takeaways','usefulness','applicability']
  when 'program' then array['definition','objectives','milestones','roadmap','current_state','accomplishments','risks','next_work','governance','platforms','data_handling','human_review']

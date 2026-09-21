@@ -106,6 +106,12 @@ describe('Work record integrity and authorization', () => {
     await db.exec('reset role');await authenticate(other)
     expect((await db.query("select id from public.work_items where kind in ('learning','experiment')")).rows).toHaveLength(0)
   })
+  it('preserves the Decision type when a lab record references it',async()=>{
+    await authenticate(owner)
+    const decision=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status,entry_type) values ($1,'journal','Decision','Recorded','Decision') returning id",[owner])).rows[0]!.id
+    await db.query("insert into public.work_items(user_id,kind,title,status,decision_id) values ($1,'experiment','Experiment','Planned',$2)",[owner,decision])
+    await expect(db.query("update public.work_items set entry_type='Thought' where id=$1",[decision])).rejects.toThrow(/referenced as a decision/)
+  })
   it('requires recorded decisions for approval and rejects invalid learning progress',async()=>{
     await authenticate(owner)
     await expect(db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'use_case','Unsafe shortcut','Approved')",[owner])).rejects.toThrow(/decision/)
