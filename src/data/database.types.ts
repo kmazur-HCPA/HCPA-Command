@@ -1,3 +1,4 @@
+import type {SearchResult} from '../services/search'
 import type {LibraryVersion} from '../services/library'
 import type { WorkItem, WorkInput } from '../features/work/model'
 // Foundation schema. Regenerate against the project when schema migrations change.
@@ -27,7 +28,7 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: { convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
+    Functions: { search_work:{Args:{query_text:string;module_filter?:string;status_filter?:string;archive_filter?:string;tag_filter?:string;page_offset?:number};Returns:SearchResult[]}; export_workspace:{Args:Record<string,never>;Returns:unknown}; convert_reminder: { Args: { reminder_id:string; expected_version:number }; Returns:string } }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

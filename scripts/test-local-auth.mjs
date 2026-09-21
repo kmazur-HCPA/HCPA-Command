@@ -1,3 +1,4 @@
+import {testPhase8} from './test-phase8-local.mjs'
 import {testLibrary} from './test-library-local.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -62,6 +63,7 @@ try {
   console.log(JSON.stringify({event:'local_api_latency',samples:30,p50_ms:Math.round(timings[14]),p95_ms:Math.round(timings[28]),scope:'loopback synthetic writes; not production-device latency'}))
   console.log('PASS: tasks, waiting/person/project links, immutable journal revisions, retry-safe conversion and insert, priority slot, and RLS through real local APIs.')
   await testLibrary({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
+  await testPhase8({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
   // Test the administrator-assisted recovery path selected for this pilot.
   const newPassword=randomBytes(32).toString('base64url')
   const changed=await admin.auth.admin.updateUserById(users[0],{password:newPassword});if(changed.error)throw changed.error

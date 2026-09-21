@@ -49,6 +49,12 @@ async function setup(page: Page) {
         json: { user_id: uid, theme, timezone: "America/New_York", version: 1 },
       });
     }
+    if(url.pathname.endsWith('/rpc/export_workspace'))return route.fulfill({json:{format:'command-workspace',format_version:1,exported_at:new Date().toISOString(),user_id:uid,work_items:rows,journal_revisions:[],library_versions:[],user_preferences:[],app_memberships:[],activity_log:[],counts:{work_items:rows.length,journal_revisions:0,library_versions:0,user_preferences:0,app_memberships:0,activity_log:0}}});
+    if(url.pathname.endsWith('/rpc/search_work')) {
+      const input=request.postDataJSON();const query=input.query_text.toLowerCase();
+      const selected=rows.filter(row=>(!input.module_filter||row.kind===input.module_filter)&&(!input.status_filter||row.status===input.status_filter)&&(input.archive_filter==='all'||row.archived===(input.archive_filter==='archived'))&&(!input.tag_filter||row.tags.includes(input.tag_filter))&&JSON.stringify([row.title,row.body,row.tags,row.details]).toLowerCase().includes(query));
+      return route.fulfill({json:selected.slice(input.page_offset,input.page_offset+26).map(row=>({...row,excerpt:row.body,rank:1}))});
+    }
     if (url.pathname.endsWith("/journal_revisions"))
       return route.fulfill({
         json: history
@@ -568,7 +574,7 @@ test("designed dashboard uses real counts, completion, search, and responsive th
     "Complete",
   );
   await page.getByRole("button", { name: "Search Command" }).click();
-  await page.getByRole("textbox", { name: "Search Command" }).fill("Settings");
+  await page.getByRole("searchbox", { name: "Search Command" }).fill("Settings");
   await page
     .getByRole("dialog", { name: "Command search" })
     .getByRole("button", { name: "Settings", exact: true })
@@ -596,3 +602,32 @@ test("designed dashboard uses real counts, completion, search, and responsive th
     await page.getByRole("button", { name: "Close workspaces" }).click();
   }
 });
+
+test('global search filters, source links, pagination and archive boundaries',async({page})=>{
+ const {rows}=await setup(page)
+ for(let i=0;i<30;i++)rows.push({...newItem('task',uid),title:`Spatial record ${i}`,body:'Searchable metadata',tags:['gis'],original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null})
+ rows[0]!.archived=true
+ await page.getByRole('button',{name:'Search Command',exact:true}).click()
+ await page.getByRole('searchbox',{name:'Search Command'}).fill('Spatial')
+ await expect(page.locator('.search-result')).toHaveCount(25)
+ await page.getByRole('button',{name:'Next results'}).click();await expect(page.locator('.search-result')).toHaveCount(4)
+ await page.getByText('Filter results',{exact:true}).click()
+ await page.getByRole('combobox',{name:'Archive',exact:true}).selectOption('archived');await expect(page.locator('.search-result')).toHaveCount(1)
+ await expect(page.locator('.search-result')).toContainText('Archived')
+ await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('learning');await expect(page.getByText('No matching records. Try fewer words or include archived records.')).toBeVisible()
+ await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('task')
+ await page.locator('.search-result').click();await expect(page.getByRole('heading',{name:'Spatial record 0'})).toBeVisible()
+})
+
+test('workspace export downloads a complete portable archive',async({page})=>{
+ const {rows}=await setup(page)
+ rows.push({...newItem('project',uid),title:'Portable project',original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null})
+ rows.push({...newItem('task',uid),title:'Linked task',project_id:rows[0]!.id,original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null})
+ await page.getByRole('button',{name:'Settings',exact:true}).click()
+ const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Export workspace',exact:true}).click()
+ const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/^command-workspace-.*\.zip$/)
+ const {readFile}=await import('node:fs/promises');const {unzipSync,strFromU8}=await import('fflate')
+ const files=unzipSync(await readFile((await download.path())!));const snapshot=JSON.parse(strFromU8(files['workspace.json']!))
+ expect(snapshot.counts.work_items).toBe(2);expect(snapshot.work_items[1].project_id).toBe(snapshot.work_items[0].id)
+ await expect(page.getByRole('status').filter({hasText:'Export ready:'})).toContainText('2 records and 0 verified originals')
+})

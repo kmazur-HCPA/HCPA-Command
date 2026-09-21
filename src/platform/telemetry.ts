@@ -1,4 +1,4 @@
-type Operation = 'work.read' | 'work.write' | 'work.convert' | 'auth.sign_in' | 'auth.sign_out' | 'auth.recovery' | 'auth.password_update' | 'access.check' | 'preferences.read' | 'preferences.write'
+type Operation = 'work.search' | 'work.export' | 'work.read' | 'work.write' | 'work.convert' | 'auth.sign_in' | 'auth.sign_out' | 'auth.recovery' | 'auth.password_update' | 'access.check' | 'preferences.read' | 'preferences.write'
 type Result = 'ok' | 'error'
 // Deliberately no arbitrary metadata: emails, tokens, URLs and record content never enter this logger.
 export function recordTiming(operation: Operation, startedAt: number, result: Result) {

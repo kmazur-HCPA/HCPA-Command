@@ -138,4 +138,36 @@ describe('Work record integrity and authorization', () => {
     expect((await db.query('select count(*)::integer as n from public.work_items')).rows[0]).toEqual({n:3350})
   },15000)
 
+  it('searches tags, structured metadata, original text, prefixes, filters and filenames with ownership',async()=>{
+    await db.query("insert into public.work_items(user_id,kind,title,body,status,tags) values ($1,'task','Architecture review','Original zephyr context','Inbox',array['geospatial'])",[owner])
+    await db.query("insert into public.work_items(user_id,kind,title,status,details) values ($1,'learning','Course','In Progress',jsonb_build_object('provider','Cartography Institute','takeaways','spatial resilience'))",[owner])
+    const doc=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status,details) values ($1,'library','Reference','Recorded',jsonb_build_object('classification','Internal')) returning id",[owner])).rows[0]!.id
+    await db.query("insert into public.library_versions(id,user_id,document_id,filename,media_type,size_bytes,sha256,state) values(gen_random_uuid(),$1,$2,'procurement-handbook.pdf','application/pdf',12,repeat('a',64),'ready')",[owner,doc])
+    await db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Hidden geospatial','Inbox')",[other])
+    await authenticate(owner)
+    for(const term of ['geospatial','archit','cartography','spatial','zephyr','procure']) expect((await db.query('select * from public.search_work($1)',[term])).rows.length,term).toBeGreaterThan(0)
+    expect((await db.query("select * from public.search_work('geospatial')")).rows).toHaveLength(1)
+    expect((await db.query("select * from public.search_work('geospatial','learning')")).rows).toHaveLength(0)
+    await db.exec("update public.work_items set archived=true where kind='task'")
+    expect((await db.query("select * from public.search_work('geospatial')")).rows).toHaveLength(0)
+    expect((await db.query("select * from public.search_work('geospatial',null,null,'all','geospatial')")).rows).toHaveLength(1)
+    expect((await db.query("select * from public.search_work('-geospatial')")).rows).toHaveLength(0)
+  })
+  it('ranks titles first and exports complete owned records with reconciled counts',async()=>{
+    await db.query("insert into public.work_items(user_id,kind,title,body,status) values ($1,'task','Geospatial','notes','Inbox'),($1,'task','Other record','Geospatial','Inbox'),($2,'task','Secret','Geospatial','Inbox')",[owner,other])
+    await authenticate(owner)
+    const results=await db.query<{title:string}>("select * from public.search_work('Geospatial')")
+    expect(results.rows).toHaveLength(2);expect(results.rows[0]!.title).toBe('Geospatial')
+    const result=(await db.query<{value:{work_items:{id:string;user_id:string}[];counts:{work_items:number}}}>('select public.export_workspace() value')).rows[0]!.value
+    expect(result.counts.work_items).toBe(2);expect(result.work_items).toHaveLength(2)
+    expect(result.work_items.every(row=>row.user_id===owner)).toBe(true)
+  })
+  it('denies unapproved export and hides search results after revocation',async()=>{
+    await db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'task','Private record','Inbox')",[owner])
+    await db.query('update public.app_memberships set active=false where user_id=$1',[owner])
+    await authenticate(owner)
+    expect((await db.query("select * from public.search_work('Private')")).rows).toHaveLength(0)
+    await expect(db.query('select public.export_workspace()')).rejects.toThrow(/unavailable/)
+  })
+
 })

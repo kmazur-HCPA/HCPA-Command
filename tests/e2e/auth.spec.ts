@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -240,3 +241,19 @@ test("workspace remains usable with doubled text size", async ({ page }) => {
     ),
   ).toBe(true);
 });
+
+test('WCAG automated checks cover both themes, mobile navigation, search and settings',async({page})=>{
+ await mockBackend(page);await login(page);await expect(page.locator('.day-stats')).toBeVisible()
+ for(const theme of ['dark','light']){
+  if(theme==='light'){await page.getByRole('button',{name:'Switch color theme'}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','light')}
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>undefined))))
+  const scan=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();expect(scan.violations).toEqual([])
+ }
+ await page.getByRole('button',{name:'Search Command'}).click();await page.getByText('Filter results',{exact:true}).click()
+ expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
+ await page.getByRole('button',{name:'Close search'}).click()
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'More',exact:true}).click()
+ expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
+ await page.getByRole('button',{name:'Settings',exact:true}).click()
+ expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
+})

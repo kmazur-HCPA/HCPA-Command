@@ -4,6 +4,7 @@ Production: **https://cmd.hillspafl.gov**.
 
 Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. AI remains a later phase.
 
+- [Phase 8 search, exports and operations](docs/PHASE-8-DELIVERY.md)
 - [Visual redesign and theme guide](docs/DESIGN-DELIVERY.md)
 - [Phases 3 → 5 → 4 delivery and pilot checks](docs/PHASES-3-5-4-DELIVERY.md)
 - [Development roadmap](docs/COMMAND-DEVELOPMENT-ROADMAP.md)

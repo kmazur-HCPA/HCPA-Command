@@ -12,6 +12,7 @@ import { Palette } from "../ui/Palette";
 import { WorkList } from "../features/work/WorkList";
 import { WorkDay } from "../features/work/WorkDay";
 import { Capture } from "../features/work/Capture";
+import { ExportPanel } from '../features/export/ExportPanel';
 import { Drafts } from "../features/work/Drafts";
 import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
@@ -389,7 +390,8 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                     {message}
                   </p>
                 </section>
-                <Drafts userId={user.id} />
+                <ExportPanel client={client} />
+              <Drafts userId={user.id} />
                 <section className="settings-panel">
                   <h2>Install Command</h2>
                   <p className="muted">

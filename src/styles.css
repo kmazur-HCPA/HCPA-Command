@@ -1202,7 +1202,7 @@ p {
   font-weight: 700;
 }
 :root[data-theme="light"] .day-signature {
-  opacity: 0.35;
+  opacity: 1;
 }
 @keyframes orbit {
   to {
@@ -1749,3 +1749,16 @@ summary {
     grid-template-areas: "focus" "priority" "radar" "projects" "brief" "learning" "waiting" "capture";
   }
 }
+.search-filters { margin:0; padding:0 20px; border-bottom:1px solid var(--border); }
+.search-filters summary { font-size:12px; }
+.search-filters .form-grid { gap:12px; }
+.search-filters label { margin-bottom:12px; font-size:12px; }
+.search-filters input,.search-filters select { font-size:14px; }
+.search-result { text-decoration:none; border-radius:8px; }
+.search-result strong { font-size:14px; font-weight:600; }
+.search-excerpt { display:block; font-size:12px; line-height:1.5; color:var(--muted); margin-top:6px; }
+.search-pagination { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:16px; }
+.search-pagination span { font-size:12px; color:var(--muted); }
+.search-pagination button { font-size:11px; }
+.palette { overflow-y:auto; }
+.export-progress { width:100%; }

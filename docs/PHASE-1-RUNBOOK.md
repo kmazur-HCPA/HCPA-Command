@@ -45,18 +45,22 @@ For code rollback, select the prior known-good production deployment in Netlify 
 
 ## Recovery and backups
 
-Targets remain RPO at most 24 hours and RTO at most one business day. These are objectives, not measured service guarantees. Before real organizational data, Kevin must designate the backup operator and approved independent backup destination, verify a post-migration hosted backup and retention, and run a timed recovery drill.
+Targets remain RPO at most 24 hours and RTO at most one business day. These are objectives, not measured service guarantees. On September 21, Kevin explicitly declined an independent backup destination for Phase 8. No independent backup process is configured. Kevin remains coordinating recovery owner. User exports and the disposable application-data/document restoration drill are described in PHASE-8-DELIVERY.md.
 
 For an isolated drill, use disposable local PostgreSQL/Supabase, apply the committed migrations, restore a synthetic record from an export, and verify its owner, contents and RLS boundary. `npm test` includes an isolated synthetic preference export/delete/restore assertion. That is evidence of record restoration, not a production disaster-recovery exercise. Never restore over production merely to test recovery. No second hosted project is needed.
 
-For a real incident, preserve evidence, suspend writes, select an approved known-good backup, restore into an isolated environment, verify row counts/ownership/migrations and the recovery point, then coordinate a controlled cutover. Include Auth identities and application data in the backup design. Storage objects will require a separate backup plan when file storage is introduced.
+For a real incident, preserve evidence, suspend writes, select an approved known-good backup, restore into an isolated environment, verify row counts/ownership/migrations and the recovery point, then coordinate a controlled cutover. Include Auth identities and application data in the backup design. Library objects are now included in verified user exports; Supabase database backups alone do not include original object bytes.
 
 ## Logs and maintenance
 
-Netlify function logs include request ID, status and duration; client operations record operation/result/timing without note contents or tokens. Supabase Auth logs cover identity events; `activity_log` records important database changes atomically. Browser telemetry currently stays in the browser console; centralized client error collection and alert routing are not yet configured.
+Netlify function logs include request ID, status and duration; client operations record operation/result/timing without note contents or tokens. Supabase Auth logs cover identity events; `activity_log` records important database changes atomically. Browser telemetry stays in the browser console. Kevin explicitly declined external failure-alert routing on September 21, 2026.
 
 Review failed authentication, server errors, backup health, dependency advisories and Supabase advisors regularly. Investigate using request IDs, never by copying credentials or protected content into logs. Measure user-perceived latency on Kevin's devices before accepting the later pilot performance targets.
 
 ## Domain
 
 The canonical HTTPS origin is `https://cmd.hillspafl.gov`. Netlify production `VITE_APP_ORIGIN`, Supabase Site URL, and the exact `/auth/reset` redirect use this hostname. The Netlify alias remains reachable so an existing browser session can export or save any origin-local drafts before switching. Sign in separately at the canonical hostname; browser sessions, installed PWAs, and local drafts do not migrate between origins. Keep previews disconnected and never add wildcard Auth redirects.
+
+## Phase 8 support
+
+See [search, exports, recovery verification and maintenance](PHASE-8-DELIVERY.md) for the current operating procedure and accepted exceptions.
