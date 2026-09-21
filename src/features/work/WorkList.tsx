@@ -34,7 +34,7 @@ export function WorkList({client,userId,kind,onOpen}:{client:AppClient;userId:st
    <button className="record-title" onClick={()=>onOpen(item)}>{item.title}</button>
    <p className="record-meta">{effectiveStatus(item,now)} · {item.priority} · {displayDate(item.due_date,item.remind_at)}{item.status==='Snoozed'&&` · Snoozed until ${displayDate(null,item.snoozed_until)}`}</p>
    <div className="record-actions">
-    {!['journal','person'].includes(kind)&&!['Complete','Cancelled','Dismissed'].includes(item.status)&&<button disabled={busy} onClick={()=>void act(item,{status:'Complete',snoozed_until:null})}>Complete</button>}
+    {statuses(kind).includes('Complete')&&!['Complete','Cancelled','Dismissed'].includes(item.status)&&<button disabled={busy} onClick={()=>void act(item,{status:'Complete',snoozed_until:null})}>Complete</button>}
     {kind==='reminder'&&!['Complete','Dismissed'].includes(item.status)&&<><button disabled={busy} onClick={()=>void act(item,{status:'Snoozed',snoozed_until:new Date(Date.now()+3600000).toISOString()})}>Snooze 1 hour</button><button disabled={busy} onClick={()=>void act(item,{status:'Dismissed',snoozed_until:null})}>Dismiss</button><button disabled={busy} onClick={()=>void act(item,'convert')}>Convert to task</button></>}
     <button disabled={busy} onClick={()=>void act(item,{archived:!item.archived})}>{item.archived?'Restore':'Archive'}</button>
    </div>

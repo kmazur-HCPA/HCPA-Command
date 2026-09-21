@@ -1,11 +1,12 @@
 import type { AppClient } from '../platform/supabase'
 import { measured } from '../platform/telemetry'
 import type { Kind, WorkInput, WorkItem } from '../features/work/model'
-const summaryColumns='id,user_id,kind,title,status,priority,due_date,remind_at,snoozed_until,converted_task_id,completed_at,archived,version,created_at,updated_at,project_id,initiative_id,person_id,task_id,source_entry_id,entry_type,tags,organization,person_role,focus_slot' as const
-export type WorkFilter = {kind?:Kind; search?:string; status?:string; priority?:string; archived?:boolean; offset?:number; projectId?:string;personId?:string;initiativeId?:string;sourceId?:string;taskId?:string;entryType?:string;tag?:string}
+const summaryColumns='id,user_id,kind,title,status,priority,due_date,remind_at,snoozed_until,converted_task_id,completed_at,archived,version,created_at,updated_at,project_id,initiative_id,person_id,task_id,source_entry_id,entry_type,tags,organization,person_role,focus_slot,learning_id,program_id,use_case_id,experiment_id,decision_id' as const
+export type WorkFilter = {kind?:Kind; search?:string; status?:string; priority?:string; archived?:boolean; offset?:number; projectId?:string;personId?:string;initiativeId?:string;sourceId?:string;taskId?:string;entryType?:string;tag?:string;learningId?:string;programId?:string;useCaseId?:string;experimentId?:string;decisionId?:string}
 export async function listWork(client:AppClient, filter:WorkFilter) {
  return measured('work.read',async()=>{
   let q=client.from('work_items').select(summaryColumns).eq('archived',filter.archived??false).order('created_at',{ascending:false}).order('id').range(filter.offset??0,(filter.offset??0)+49)
+  for(const [key,column] of [['learningId','learning_id'],['programId','program_id'],['useCaseId','use_case_id'],['experimentId','experiment_id'],['decisionId','decision_id']] as const)if(filter[key])q=q.eq(column,filter[key]!)
   if(filter.kind)q=q.eq('kind',filter.kind)
   if(filter.search)q=q.textSearch('search_vector',filter.search,{type:'websearch',config:'english'})
   if(filter.projectId)q=q.eq('project_id',filter.projectId)
@@ -60,8 +61,9 @@ export async function revisions(client:AppClient,id:string,offset=0) {
  if(error)throw new Error('Revision history is unavailable.');return data
 }
 
-export async function listChoices(client:AppClient,kind:Kind,search:string) {
+export async function listChoices(client:AppClient,kind:Kind,search:string,decisionOnly=false) {
  let query=client.from('work_items').select('id,title,archived').eq('kind',kind).eq('archived',false).order('title').limit(50)
+ if(decisionOnly)query=query.eq('entry_type','Decision')
  if(search)query=query.ilike('title',`%${search.replace(/[\\%_]/g,'\\$&')}%`)
  const {data,error}=await query;if(error)throw new Error('Choices unavailable');return data
 }

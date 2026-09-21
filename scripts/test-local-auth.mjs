@@ -1,3 +1,4 @@
+import {testLibrary} from './test-library-local.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { createClient } from '@supabase/supabase-js'
@@ -60,6 +61,7 @@ try {
   timings.sort((a,b)=>a-b)
   console.log(JSON.stringify({event:'local_api_latency',samples:30,p50_ms:Math.round(timings[14]),p95_ms:Math.round(timings[28]),scope:'loopback synthetic writes; not production-device latency'}))
   console.log('PASS: tasks, waiting/person/project links, immutable journal revisions, retry-safe conversion and insert, priority slot, and RLS through real local APIs.')
+  await testLibrary({admin,owner,outsider,users,url,anonKey:values.ANON_KEY})
   // Test the administrator-assisted recovery path selected for this pilot.
   const newPassword=randomBytes(32).toString('base64url')
   const changed=await admin.auth.admin.updateUserById(users[0],{password:newPassword});if(changed.error)throw changed.error
@@ -72,6 +74,9 @@ try {
   console.log('PASS: local GoTrue signup denial, login, RLS, persisted mutation/audit, recovery, revocation and logout.')
 } finally {
   for(const id of users) {
+    const versions=await admin.from('library_versions').select('id,document_id').eq('user_id',id)
+    if(versions.data?.length)await admin.storage.from('command-library').remove(versions.data.map(v=>`${id}/${v.document_id}/${v.id}`))
+    await admin.from('library_versions').delete().eq('user_id',id)
     await admin.from('journal_revisions').delete().eq('user_id',id)
     await admin.from('work_items').delete().eq('user_id',id)
     const result=await admin.auth.admin.deleteUser(id);if(result.error)console.error('Synthetic user cleanup failed; reset the disposable local database.') }

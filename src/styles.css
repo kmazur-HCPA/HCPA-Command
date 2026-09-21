@@ -103,3 +103,7 @@ details { margin:24px 0; }summary { cursor:pointer;padding:14px 0;min-height:46p
 .day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.day-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:0}.day-panel h2{margin:0;font-size:20px}.day-panel .section-heading{margin-bottom:12px;align-items:center}.day-panel .section-heading button{font-size:12px;padding:8px 10px}.focus-panel{border-top:3px solid var(--orange)}.day-list{list-style:none;padding:0;margin:0}.day-list li{border-top:1px solid var(--border);padding:12px 0}.day-list button{background:none;border:0;padding:0;text-align:left;overflow-wrap:anywhere;max-width:100%;font-size:16px}.capture-button{border-color:var(--orange)}
 @media(max-width:1050px){.day-grid{grid-template-columns:1fr}}@media(max-width:500px){.workspace-header{gap:8px;padding-left:16px;padding-right:16px}.workspace-header .brand{font-size:12px}.workspace-header button{font-size:12px;padding:10px}.day-panel{padding:20px}}
 .conflict-panel{padding:16px;border:1px solid var(--orange);border-radius:10px;margin:16px 0}.conflict-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.originals {margin-block:2rem;padding-block:1rem;border-top:1px solid var(--border)}
+.file-hash {overflow-wrap:anywhere;font-size:.75rem}
+.originals progress {width:100%;margin-top:1rem}
+.context-summary > div {margin-block:.8rem}

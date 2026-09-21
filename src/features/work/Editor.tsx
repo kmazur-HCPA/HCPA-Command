@@ -5,12 +5,13 @@ import { getWork,saveWork } from '../../services/work'
 import { newItem, priorities, statuses, toInput, entryTypes } from './model'
 import type { Kind, WorkInput, WorkItem } from './model'
 import { useDraftGuard } from './useDraftGuard'
+import { LabFields } from '../lab/LabFields'
 import { LinkPicker } from './LinkPicker'
 import { fromLocalDateTime, localDateTime } from './dates'
 export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:AppClient;userId:string;kind:Kind;item?:WorkItem;seed?:Partial<WorkInput>;onClose:()=>void;onSaved:(item:WorkItem)=>void}) {
  const key=item?`edit:${item.id}`:`new:${kind}${seed?.source_entry_id?`:${seed.source_entry_id}`:''}`
  const [initial]=useState(()=>{
-  const base=item?toInput(item):{...newItem(kind,userId),...seed}
+  const base=item?{...newItem(kind,userId),...toInput(item)}:{...newItem(kind,userId),...seed}
   try {
    const stored=draftStore(localStorage,userId).read(key)
    if(stored){const parsed=JSON.parse(stored.text) as {input:WorkInput;version?:number};if(parsed.input.user_id!==userId||parsed.input.kind!==kind)throw new Error();return {...parsed,recovered:true,error:''}}
@@ -54,6 +55,7 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
    {kind==='person'&&<div className="form-grid"><label>Role<input maxLength={240} value={input.person_role} disabled={busy} onChange={e=>change({person_role:e.target.value})}/></label><label>Organization<input maxLength={240} value={input.organization} disabled={busy} onChange={e=>change({organization:e.target.value})}/></label></div>}
    {kind==='task'&&<label>Work Day priority slot<select value={input.focus_slot??''} disabled={busy} onChange={e=>change({focus_slot:e.target.value?Number(e.target.value):null})}><option value="">Not a chosen priority</option>{[1,2,3].map(slot=><option key={slot} value={slot}>Priority {slot}</option>)}</select></label>}
    {kind==='waiting'&&<label>Responsible person or organization<input maxLength={240} value={input.organization} disabled={busy} onChange={e=>change({organization:e.target.value})}/></label>}
+   <LabFields input={input} disabled={busy} onChange={change}/>
    <label>Tags (comma separated, up to 20)<input maxLength={2000} value={tagText} disabled={busy} onChange={e=>{setTagText(e.target.value);change({tags:e.target.value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,20)})}}/></label>
    <div className="form-grid"><label>Status<select value={input.status} disabled={busy} onChange={e=>change({status:e.target.value,snoozed_until:e.target.value==='Snoozed'?new Date(Date.now()+3600000).toISOString():null})}>{statuses(kind).map(s=><option key={s}>{s}</option>)}</select></label>
    <label>Priority<select value={input.priority} disabled={busy} onChange={e=>change({priority:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
@@ -67,6 +69,7 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
     {kind!=='person'&&<LinkPicker client={client} kind="person" label="Person" value={input.person_id} disabled={busy} onChange={id=>change({person_id:id})}/>}
     {kind!=='task'&&<LinkPicker client={client} kind="task" label="Task" value={input.task_id} disabled={busy} onChange={id=>change({task_id:id})}/>}
     {kind==='task'&&<LinkPicker client={client} kind="journal" label="Source entry" value={input.source_entry_id} disabled={busy} onChange={id=>change({source_entry_id:id})}/>}
+    {([['learning_id','learning','Learning source'],['program_id','program','AI Program'],['use_case_id','use_case','Use case'],['experiment_id','experiment','Experiment'],['decision_id','journal','Decision']] as const).filter(([,target])=>target!==kind||target==='journal').map(([field,target,label])=><LinkPicker key={field} client={client} kind={target} label={label} value={input[field]??null} disabled={busy} decisionOnly={field==='decision_id'} onChange={id=>change({[field]:id})}/>)}
    </div></details>
    {kind==='reminder'&&<p className="muted small">Times use America/New_York. During the fall clock change, repeated times use the first occurrence (daylight time). Spring-forward times that do not exist are rejected.</p>}
    {error&&<button type="button" disabled={busy} onClick={()=>{void getWork(client,input.id).then(setLatest).catch(()=>setError('Could not load the latest server copy.'))}}>Compare latest saved version</button>}

@@ -98,3 +98,30 @@ test('a decision links to a project and generates a traceable task',async({page}
  const task=rows.find(r=>r.kind==='task')!;expect(task.source_entry_id).toBe(rows.find(r=>r.kind==='journal')!.id);expect(task.project_id).toBe(rows[0]!.id)
  await expect(page.getByRole('link',{name:'Adopt the new process',exact:true})).toBeVisible()
 })
+
+test('learning connects to an experiment and a recorded decision',async({page})=>{
+ const {rows}=await setup(page)
+ await page.getByRole('button',{name:'Learning',exact:true}).click();await page.getByRole('button',{name:'New learning',exact:true}).click()
+ await page.getByLabel('Title',{exact:true}).fill('Evaluation course');await page.getByLabel('Progress (%)',{exact:true}).fill('100');await page.getByLabel('Key takeaways',{exact:true}).fill('Use representative synthetic examples');await page.getByRole('button',{name:'Save',exact:true}).click()
+ await page.getByRole('button',{name:'AI Lab',exact:true}).click();await page.getByRole('button',{name:'Experiments',exact:true}).click();await page.getByRole('button',{name:'New experiment',exact:true}).click()
+ await page.getByLabel('Title',{exact:true}).fill('Compare evaluation methods');await page.getByLabel('Hypothesis',{exact:true}).fill('A rubric improves agreement');await page.getByLabel('Conclusion',{exact:true}).fill('Adopt rubric');await page.getByText('Links and context',{exact:true}).click();await page.getByRole('combobox',{name:'Learning source',exact:true}).selectOption(rows[0]!.id);await page.getByRole('button',{name:'Save',exact:true}).click()
+ await page.getByRole('button',{name:'Journal',exact:true}).click();await page.getByRole('button',{name:'New journal',exact:true}).click();await page.getByLabel('Title',{exact:true}).fill('Use the rubric');await page.getByRole('combobox',{name:'Entry type',exact:true}).selectOption('Decision');await page.getByText('Links and context',{exact:true}).click();await page.getByRole('combobox',{name:'Experiment',exact:true}).selectOption(rows.find(r=>r.kind==='experiment')!.id);await page.getByRole('button',{name:'Save',exact:true}).click();await page.getByRole('button',{name:'Use the rubric',exact:true}).click();await expect(page.getByRole('link',{name:'Compare evaluation methods',exact:true})).toBeVisible()
+ expect(rows.find(r=>r.kind==='experiment')!.learning_id).toBe(rows[0]!.id)
+})
+test('Library preserves metadata links and recovers an interrupted original upload',async({page})=>{
+ const {rows}=await setup(page)
+ const versions:Record<string,unknown>[]=[];let fail=true
+ await page.route('https://command-test.supabase.co/rest/v1/library_versions*',route=>route.fulfill({json:versions}))
+ await page.route('https://command-test.supabase.co/functions/v1/library',async route=>{
+  if(route.request().headers()['content-type']?.includes('application/json'))return route.fulfill({contentType:'application/octet-stream',body:'Synthetic original'})
+  const raw=route.request().postDataBuffer()!.toString(),id=raw.match(/name="id"\r\n\r\n([^\r]+)/)![1]!
+  if(!versions.length)versions.push({id,user_id:uid,document_id:rows.find(r=>r.kind==='library')!.id,filename:'reference.txt',media_type:'text/plain',size_bytes:18,sha256:'a'.repeat(64),state:'pending',created_at:new Date().toISOString()})
+  if(fail){fail=false;return route.fulfill({status:503,json:{error:'Original uploaded; finalization is pending. Retry the same version and file.'}})}
+  expect(id).toBe(versions[0]!.id);versions[0]!.state='ready';return route.fulfill({json:versions[0]})
+ })
+ await page.getByRole('button',{name:'Library',exact:true}).click();await page.getByRole('button',{name:'New library',exact:true}).click();await page.getByLabel('Title',{exact:true}).fill('Reference document');await page.getByLabel('Classification',{exact:true}).selectOption('Internal');await page.getByRole('button',{name:'Save',exact:true}).click();await page.getByRole('button',{name:'Reference document',exact:true}).click()
+ const fixture={name:'reference.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic original')}
+ await page.getByLabel('Choose original file').setInputFiles(fixture);await page.getByRole('button',{name:'Upload new version',exact:true}).click();await expect(page.getByRole('alert')).toContainText('finalization is pending')
+ await page.reload();await expect(page.getByText('Pending attempt:',{exact:false})).toBeVisible();await page.getByLabel('Choose original file').setInputFiles(fixture);await page.getByRole('button',{name:'Retry upload',exact:true}).click();await expect(page.getByRole('status')).toContainText('Original verified and saved')
+ const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Download original',exact:true}).click();expect((await downloaded).suggestedFilename()).toBe('reference.txt');expect(versions).toHaveLength(1)
+})

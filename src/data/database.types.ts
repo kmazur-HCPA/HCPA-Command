@@ -1,8 +1,10 @@
+import type {LibraryVersion} from '../services/library'
 import type { WorkItem, WorkInput } from '../features/work/model'
 // Foundation schema. Regenerate against the project when schema migrations change.
 export type Database = {
   public: {
     Tables: {
+      library_versions: {Row:LibraryVersion;Insert:never;Update:never;Relationships:[]}
       journal_revisions: { Row: {id:string;item_id:string;user_id:string;version:number;snapshot:WorkItem;created_at:string};Insert:never;Update:never;Relationships:[] }
       work_items: { Row: WorkItem; Insert: WorkInput; Update: Partial<WorkInput>; Relationships: [] }
       app_memberships: {

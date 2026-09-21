@@ -33,6 +33,17 @@ jobs:
       - run: npx supabase start
       - run: npm run db:test
       - run: npx supabase status -o env > .env.supabase.test
+      - name: Serve authenticated Library function
+        run: |
+          npx supabase functions serve library > /tmp/command-functions.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:54321/functions/v1/library || true)
+            if [ "$code" = "401" ]; then exit 0; fi
+            sleep 1
+          done
+          exit 1
       - run: node scripts/test-local-auth.mjs
+      - if: failure()
+        run: tail -80 /tmp/command-functions.log
       - if: always()
         run: npx supabase stop --no-backup

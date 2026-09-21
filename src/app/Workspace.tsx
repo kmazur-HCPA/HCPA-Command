@@ -11,16 +11,17 @@ import { WorkList } from '../features/work/WorkList'
 import { WorkDay } from '../features/work/WorkDay'
 import { Capture } from '../features/work/Capture'
 import { Drafts } from '../features/work/Drafts'
+import { Lab } from '../features/lab/Lab'
 import { listDrafts } from '../platform/drafts'
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
-  const [page, setPage] = useState<'workspace' | 'settings' | Kind>('workspace')
+  const [page, setPage] = useState<'workspace' | 'settings' | 'lab' | Kind>('workspace')
   const [capture,setCapture]=useState(false)
   const [workRevision,setWorkRevision]=useState(0)
   const [recordId,setRecordId]=useState<string|null>(()=>new URLSearchParams(location.search).get('record'))
   function openRecord(item:Pick<WorkItem,'id'>){setRecordId(item.id);history.replaceState(null,'',`/?record=${item.id}`)}
   function closeRecord(){setRecordId(null);history.replaceState(null,'','/')}
-  function navigate(next: 'workspace' | 'settings' | Kind) { closeRecord(); setPage(next); requestAnimationFrame(() => document.querySelector<HTMLElement>('#main h1')?.focus()) }
+  function navigate(next: 'workspace' | 'settings' | 'lab' | Kind) { closeRecord(); setPage(next); requestAnimationFrame(() => document.querySelector<HTMLElement>('#main h1')?.focus()) }
   const [preferences, setPreferences] = useState<Preferences | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -63,12 +64,13 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
     <header className="workspace-header"><span className="brand"><span aria-hidden="true">/</span> COMMAND</span><span className="header-context">Your private workspace</span><button className="capture-button" onClick={()=>setCapture(true)}>Quick Capture</button><button type="button" disabled={busy} onClick={() => void logout()}>Sign out</button></header>
     <nav className="shell-nav" aria-label="Main navigation">
       <button aria-current={page==='workspace'?'page':undefined} onClick={()=>navigate('workspace')}>Work Day</button>
-      {(['task','project','journal','person','initiative'] as Kind[]).map(kind=><button key={kind} aria-current={page===kind?'page':undefined} onClick={()=>navigate(kind)}>{labels[kind]}</button>)}
+      {(['task','project','journal','person','initiative','learning','library'] as Kind[]).map(kind=><button key={kind} aria-current={page===kind?'page':undefined} onClick={()=>navigate(kind)}>{labels[kind]}</button>)}
+      <button aria-current={page==='lab'?'page':undefined} onClick={()=>navigate('lab')}>AI Lab</button>
       <button aria-current={page==='settings'?'page':undefined} onClick={()=>navigate('settings')}>Settings</button>
       <span className="nav-caption">ATTENTION. CONTEXT. ACTION.</span>
     </nav>
     <main id="main" className="workspace-content" tabIndex={-1}>
-      {recordId ? <Detail key={recordId} client={client} userId={user.id} id={recordId} onClose={closeRecord}/> : (page!=='workspace'&&page!=='settings') ? <WorkList key={page} client={client} userId={user.id} kind={page} onOpen={openRecord}/> : <>
+      {recordId ? <Detail key={recordId} client={client} userId={user.id} id={recordId} onClose={closeRecord}/> : page==='lab'?<Lab client={client} userId={user.id} onOpen={openRecord}/> : (page!=='workspace'&&page!=='settings') ? <WorkList key={page} client={client} userId={user.id} kind={page} onOpen={openRecord}/> : <>
       {page==='workspace'?<WorkDay client={client} revision={workRevision} onOpen={openRecord} onNavigate={navigate}/>:<>
         <p className="eyebrow">Make it yours</p><h1 tabIndex={-1}>Settings</h1>
         <section className="settings-panel" aria-labelledby="appearance-title"><h2 id="appearance-title">Appearance</h2><p className="muted">Choose a theme for your signed-in devices.</p>

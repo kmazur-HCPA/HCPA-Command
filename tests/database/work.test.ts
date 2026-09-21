@@ -16,6 +16,7 @@ describe('Work record integrity and authorization', () => {
     db = new PGlite()
     await db.exec(`
       create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+      create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
       create schema auth; create table auth.users (id uuid primary key);
       create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
       create function auth.uid() returns uuid language sql stable as $$ select (auth.jwt()->>'sub')::uuid $$;
@@ -90,6 +91,28 @@ describe('Work record integrity and authorization', () => {
     await db.query("insert into public.work_items(user_id,kind,title,status,focus_slot) values ($1,'task','Replacement','Next',1)",[owner])
     expect((await db.query("select * from public.work_items where focus_slot is not null and status<>'Complete'")).rows).toHaveLength(3)
     await expect(db.query("insert into public.work_items(user_id,kind,title,status,focus_slot) values ($1,'task','Fourth','Next',2)",[owner])).rejects.toThrow(/duplicate key/)
+  })
+
+  it('traces learning through an experiment and decision with preserved revisions',async()=>{
+    await authenticate(owner)
+    const make=async(kind:string,status:string,details={})=>(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status,details) values ($1,$2,$2,$3,$4) returning id",[owner,kind,status,JSON.stringify(details)])).rows[0]!.id
+    const learning=await make('learning','Complete',{progress:'100',takeaways:'Evaluate with synthetic data'})
+    const experiment=await make('experiment','Complete',{hypothesis:'Structured evaluation improves consistency',results:'Repeatable results'})
+    await db.query('update public.work_items set learning_id=$1 where id=$2',[learning,experiment])
+    const decision=await make('journal','Recorded')
+    await db.query("update public.work_items set entry_type='Decision',experiment_id=$1,learning_id=$2 where id=$3",[experiment,learning,decision])
+    await db.query('update public.work_items set decision_id=$1 where id=$2',[decision,experiment])
+    expect((await db.query('select count(*)::integer as n from public.journal_revisions where item_id=$1',[experiment])).rows[0]).toEqual({n:3})
+    await db.exec('reset role');await authenticate(other)
+    expect((await db.query("select id from public.work_items where kind in ('learning','experiment')")).rows).toHaveLength(0)
+  })
+  it('requires recorded decisions for approval and rejects invalid learning progress',async()=>{
+    await authenticate(owner)
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status) values ($1,'use_case','Unsafe shortcut','Approved')",[owner])).rejects.toThrow(/decision/)
+  })
+  it('rejects invalid learning progress at the database boundary',async()=>{
+    await authenticate(owner)
+    await expect(db.query("insert into public.work_items(user_id,kind,title,status,details) values ($1,'learning','Course','Saved','{\"progress\":\"101\"}')",[owner])).rejects.toThrow(/Progress/)
   })
 
   it('reports database latency on the agreed synthetic pilot dataset',async()=>{

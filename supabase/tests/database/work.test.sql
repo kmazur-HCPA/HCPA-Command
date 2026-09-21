@@ -1,12 +1,17 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
-select plan(8);
+select plan(13);
 insert into auth.users(id,email) values('11111111-1111-4111-8111-111111111111','owner@example.test'),('22222222-2222-4222-8222-222222222222','other@example.test');
 insert into public.app_memberships(user_id) values('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222');
 select is(has_table_privilege('anon','public.work_items','SELECT'),false,'anonymous cannot read work');
 select is(has_table_privilege('authenticated','public.work_items','DELETE'),false,'work cannot be hard deleted');
 select is(has_table_privilege('authenticated','public.journal_revisions','UPDATE'),false,'history cannot be rewritten');
+select is(has_table_privilege('anon','public.library_versions','SELECT'),false,'anonymous file metadata denied');
+select is(has_table_privilege('authenticated','public.library_versions','INSERT'),false,'client cannot bypass file validator');
+select is(has_table_privilege('authenticated','public.library_versions','UPDATE'),false,'client cannot replace original metadata');
+select is((select public from storage.buckets where id='command-library'),false,'Library bucket is private');
+select is((select count(*) from pg_policies where schemaname='storage' and tablename='objects'),0::bigint,'no direct client Storage policy bypass');
 select set_config('request.jwt.claims','{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","is_anonymous":false}',true);
 set local role authenticated;
 insert into public.work_items(id,user_id,kind,title,body,status) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','journal','Entry','Original','Recorded');
