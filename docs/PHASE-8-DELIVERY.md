@@ -32,7 +32,7 @@ Browser exports are bounded at 50 MB of database JSON and 250 MB estimated total
 
 ## Verification and remaining device acceptance
 
-The release pipeline runs TypeScript, lint, unit/database tests, real local Supabase Auth/API/Storage tests, browser workflows, PWA offline/update tests and dependency audit. Growth tests generate 15,000 records (10,000 belonging to the caller) in a rolled-back local transaction, assert the selective RLS query uses `work_search`, and measure selective and common ranked searches. The SQL gate is 1.5 seconds on the CI host; this is not a production end-user latency guarantee.
+The release pipeline runs TypeScript, lint, unit/database tests, real local Supabase Auth/API/Storage tests, browser workflows, PWA offline/update tests and dependency audit. Growth tests generate 15,000 records (10,000 belonging to the caller) in a rolled-back local transaction, capture the authenticated query plan and measure selective and common ranked searches. PostgreSQL may choose an owner-filtered scan because full-text operators cannot run ahead of RLS checks; the gate measures authenticated latency rather than requiring a particular index. Ownership checks remain intact. The SQL gate is 1.5 seconds on the CI host; this is not a production end-user latency guarantee.
 
 Automated accessibility checks cover both themes, the search/filter dialog, the mobile workspace sheet and Settings against available WCAG A/AA rules. Responsive, keyboard, focus, doubled-text and reduced-motion checks supplement this. Automated checks are not a complete accessibility certification. Kevin’s physical iPad/iPhone Safari, installed-PWA, VoiceOver and five-workday pilot acceptance remain user-run checks.
 

@@ -616,6 +616,8 @@ test('global search filters, source links, pagination and archive boundaries',as
  await expect(page.locator('.search-result')).toContainText('Archived')
  await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('learning');await expect(page.getByText('No matching records. Try fewer words or include archived records.')).toBeVisible()
  await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('task')
+ await expect(page.locator('.search-result')).toHaveCount(1)
+ for(const width of [1440,744,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:`test-results/search-${width}.png`,animations:'disabled'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
  await page.locator('.search-result').click();await expect(page.getByRole('heading',{name:'Spatial record 0'})).toBeVisible()
 })
 

@@ -42,7 +42,7 @@ begin
    where v.user_id=(select auth.uid()) and v.state='ready' and (to_tsvector('english',v.filename)||to_tsvector('simple',v.filename))@@q
  ), ranked as (
    select w.id,w.kind,w.title,w.status,w.priority,w.archived,w.tags,w.updated_at,
-     left(w.body,2000)||' '||left(w.original_body,1000)||' '||left(w.goals||' '||w.current_state||' '||w.next_milestone||' '||w.organization||' '||w.person_role,1000)||' '||left(w.details::text,3000) as context,
+     w.body||' '||w.original_body||' '||w.goals||' '||w.current_state||' '||w.next_milestone||' '||w.organization||' '||w.person_role as context,w.details,
      (max(m.score)+case when lower(w.title)=lower(cleaned) then 10 else 0 end)::real as score
    from matches m join public.work_items w on w.id=m.id
    where w.user_id=(select auth.uid()) and (module_filter is null or w.kind=module_filter)
@@ -54,7 +54,7 @@ begin
    limit 26 offset page_offset
  )
  select r.id,r.kind,r.title,r.status,r.priority,r.archived,r.tags,r.updated_at,
-   ts_headline('english',r.context||' '||coalesce((select string_agg(v.filename,' ') from public.library_versions v where v.document_id=r.id and v.state='ready' and (to_tsvector('english',v.filename)||to_tsvector('simple',v.filename))@@q),''),q,'StartSel=,StopSel=,MaxWords=30,MinWords=8,MaxFragments=1'),r.score
+   ts_headline('english',r.context||' '||coalesce((select string_agg(value,' · ') from jsonb_each_text(r.details)),'')||' '||coalesce((select string_agg(v.filename,' ') from public.library_versions v where v.document_id=r.id and v.state='ready' and (to_tsvector('english',v.filename)||to_tsvector('simple',v.filename))@@q),''),q,'StartSel=,StopSel=,MaxWords=30,MinWords=8,MaxFragments=1'),r.score
  from ranked r order by r.score desc,r.updated_at desc,r.id;
 end $$;
 revoke all on function public.search_work(text,text,text,text,text,integer) from public,anon;
