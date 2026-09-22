@@ -49,6 +49,7 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
  return <dialog ref={dialog} className="record-dialog" aria-labelledby="editor-title" onCancel={event=>{event.preventDefault();if(!busy)close()}}>
   <form onSubmit={event=>void submit(event)}><div className="dialog-heading"><h2 id="editor-title">{item?'Edit':'New'} {kind}</h2><button type="button" disabled={busy} onClick={close} aria-label="Close editor">×</button></div>
    <label>{kind==='person'?'Full name':'Title'}<input autoFocus required maxLength={240} value={input.title} onChange={e=>change({title:e.target.value})} disabled={busy}/></label>
+   {kind==='task'&&<LinkPicker client={client} kind="project" label="Project" value={input.project_id} disabled={busy} onChange={id=>change({project_id:id})}/>}
    <label>Notes<textarea rows={7} maxLength={50000} value={input.body} onChange={e=>change({body:e.target.value})} disabled={busy}/></label>
    {kind==='journal'&&<label>Entry type<select value={input.entry_type} disabled={busy} onChange={e=>change({entry_type:e.target.value})}>{entryTypes.map(t=><option key={t}>{t}</option>)}</select></label>}
    {['project','initiative'].includes(kind)&&<>{(['goals','current_state','next_milestone'] as const).map((field,i)=><label key={field}>{['Goals','Current state','Next milestone'][i]}<textarea rows={3} maxLength={10000} value={input[field]} disabled={busy} onChange={e=>change({[field]:e.target.value})}/></label>)}</>}
@@ -64,7 +65,7 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
    {input.status==='Snoozed'&&<label>Snooze until · New York<input type="datetime-local" required value={input.snoozed_until?localDateTime(input.snoozed_until):''} disabled={busy} onChange={e=>{try{change({snoozed_until:fromLocalDateTime(e.target.value)})}catch(caught){setError((caught as Error).message)}}}/></label>}
    </div>}
    <details className="context-fields"><summary>Links and context</summary><div className="form-grid">
-    {kind!=='project'&&<LinkPicker client={client} kind="project" label="Project" value={input.project_id} disabled={busy} onChange={id=>change({project_id:id})}/>}
+    {kind!=='project'&&kind!=='task'&&<LinkPicker client={client} kind="project" label="Project" value={input.project_id} disabled={busy} onChange={id=>change({project_id:id})}/>}
     {kind!=='initiative'&&<LinkPicker client={client} kind="initiative" label="Initiative" value={input.initiative_id} disabled={busy} onChange={id=>change({initiative_id:id})}/>}
     {kind!=='person'&&<LinkPicker client={client} kind="person" label="Person" value={input.person_id} disabled={busy} onChange={id=>change({person_id:id})}/>}
     {kind!=='task'&&<LinkPicker client={client} kind="task" label="Task" value={input.task_id} disabled={busy} onChange={id=>change({task_id:id})}/>}
