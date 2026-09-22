@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import {
+  getWork,
   convertReminder,
   listWork,
   patchWork,
@@ -112,6 +113,14 @@ export function WorkList({
   ]);
   function refresh() {
     setRevision((v) => v + 1);
+  }
+  async function edit(item: Pick<WorkItem, "id">) {
+    if (busy) return;
+    setBusy(item.id);
+    setError("");
+    try { setEditor(await getWork(client, item.id)); }
+    catch { setError("Could not load this record for editing. Please retry."); }
+    finally { setBusy(null); }
   }
   async function act(item: WorkSummary, patch: Partial<WorkItem> | "convert") {
     if (busy) return;
@@ -249,6 +258,7 @@ export function WorkList({
                 •••
               </summary>
               <div className="record-actions">
+                <button disabled={!!busy} onClick={() => void edit(item)}>Edit</button>
                 <button onClick={() => onOpen(item)}>Open details</button>
                 {kind === "reminder" &&
                   !["Complete", "Dismissed"].includes(item.status) && (

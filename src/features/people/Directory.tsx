@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import type { WorkItem } from "../work/model";
 import { directoryPeople } from "../../services/people";
-import { patchWork } from "../../services/work";
+import { getWork, patchWork } from "../../services/work";
 import { Editor } from "../work/Editor";
 import { Icon } from "../../ui/Icon";
 import { ImportPeople } from "./ImportPeople";
@@ -29,6 +29,7 @@ export function Directory({
     [creating, setCreating] = useState(false),
     [importing, setImporting] = useState(false),
     [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<WorkItem | null>(null);
   useEffect(() => {
     let alive = true;
     const timer = setTimeout(async () => {
@@ -57,6 +58,14 @@ export function Directory({
   }, [client, query, archived, offset, revision, externalRevision]);
   function refresh() {
     setRevision((v) => v + 1);
+  }
+  async function edit(item: Pick<WorkItem, "id">) {
+    if (busy) return;
+    setBusy(item.id);
+    setError("");
+    try { setEditing(await getWork(client, item.id)); }
+    catch { setError("Could not load this record for editing. Please retry."); }
+    finally { setBusy(null); }
   }
   async function archive(person: DirectoryPerson) {
     if (busy) return;
@@ -207,6 +216,7 @@ export function Directory({
                     •••
                   </summary>
                   <div className="record-actions">
+                    <button disabled={!!busy} onClick={() => void edit(person)}>Edit</button>
                     <button onClick={() => onOpen(person)}>Open details</button>
                     <button
                       disabled={!!busy}
@@ -229,14 +239,16 @@ export function Directory({
           Load more people
         </button>
       )}
-      {creating && (
+      {(creating || editing) && (
         <Editor
           client={client}
           userId={userId}
           kind="person"
-          onClose={() => setCreating(false)}
+          item={editing ?? undefined}
+          onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => {
             setCreating(false);
+            setEditing(null);
             refresh();
           }}
         />
