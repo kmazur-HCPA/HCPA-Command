@@ -1,3 +1,9 @@
+import { createMicrosoftReader } from "./tools";
+import {
+  agendaRange,
+  calendarInstant,
+  type CalendarEvent,
+} from "../../../../src/features/microsoft/calendar";
 import { microsoftApp } from "./msal";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -32,11 +38,16 @@ export async function handleMicrosoft(
     Response.json({ message }, { status, headers });
   const callback = path === "/api/microsoft/callback";
   const expectedMethod =
-    callback || path === "/api/microsoft/status" ? "GET" : "POST";
+    callback ||
+    path === "/api/microsoft/status" ||
+    path === "/api/microsoft/calendar"
+      ? "GET"
+      : "POST";
   if (
     ![
       "/api/microsoft/callback",
       "/api/microsoft/status",
+      "/api/microsoft/calendar",
       "/api/microsoft/connect",
       "/api/microsoft/disconnect",
     ].includes(path)
@@ -207,6 +218,61 @@ export async function handleMicrosoft(
       .maybeSingle();
     if (member.error || !member.data?.active)
       return respond(403, "Command access is unavailable.");
+    if (path.endsWith("calendar")) {
+      const params = new URL(request.url).searchParams;
+      let range: { start: string; end: string };
+      try {
+        range = agendaRange(
+          params.get("date") ?? "",
+          Number(params.get("days") ?? "1"),
+        );
+      } catch {
+        return respond(400, "Choose a valid calendar date and range.");
+      }
+      if (!config || !(await connection(store, user.id))?.token_cache)
+        return respond(
+          409,
+          "Connect Microsoft 365 in Settings to see your calendar.",
+        );
+      const reader = createMicrosoftReader(
+        store,
+        user.id,
+        config,
+        signal,
+        new Map(),
+      );
+      const result = (await reader("get_outlook_calendar", range)) as {
+        records: Record<string, unknown>[];
+        truncated: boolean;
+        retrieved_at: string;
+      };
+      const events: CalendarEvent[] = result.records
+        .filter((row) => !row.isCancelled && row.responseStatus !== "declined")
+        .map((row) => {
+          const start = calendarInstant(row.start),
+            end = calendarInstant(row.end);
+          const durationMinutes = Math.round(
+            (Date.parse(end) - Date.parse(start)) / 60000,
+          );
+          if (durationMinutes < 0) throw new Error("Invalid event duration");
+          return {
+            id: String(row.id),
+            subject: String(row.subject || "Untitled event"),
+            start,
+            end,
+            allDay: row.isAllDay === true,
+            durationMinutes,
+          };
+        });
+      return Response.json(
+        {
+          events,
+          truncated: result.truncated,
+          retrievedAt: result.retrieved_at,
+        },
+        { headers },
+      );
+    }
     if (path.endsWith("disconnect")) {
       const result = await store
         .from("microsoft_connections")

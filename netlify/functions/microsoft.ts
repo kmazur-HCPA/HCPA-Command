@@ -37,6 +37,7 @@ export default async (request: Request, context: Context) => {
 export const config: Config = {
   path: [
     "/api/microsoft/status",
+    "/api/microsoft/calendar",
     "/api/microsoft/connect",
     "/api/microsoft/callback",
     "/api/microsoft/disconnect",

@@ -15,6 +15,7 @@ const user = {
 };
 const jwt = `${Buffer.from('{"alg":"HS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub: uid, role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test`;
 async function setup(page: Page) {
+  await page.route("**/api/microsoft/calendar?**",r=>r.fulfill({json:{events:[],truncated:false,retrievedAt:new Date().toISOString()}}));
   await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[]}));
   await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:false}}));
   await page.route("**/api/cora/connection/status", route => route.fulfill({json:{connection:null}}));
@@ -754,4 +755,34 @@ test('People directory supports contact fields, CSV preview, failed acknowledgem
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/people-mobile.png',animations:'disabled'});
+});
+
+test('Work Day gives tasks more room and shows calendar, reminders and waiting on in both themes',async({page})=>{
+ await page.setViewportSize({width:1600,height:1100});
+ const {rows}=await setup(page);
+ for(let i=0;i<24;i++)rows.push({...newItem('task',uid),title:`Work item ${i+1}`,original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
+ let fail=false;
+ await page.route('**/api/microsoft/calendar?**',r=>r.fulfill(fail?{status:503,json:{message:'Calendar temporarily unavailable.'}}:{json:{events:[{id:'one',subject:'Leadership sync',start:'2026-09-22T13:00:00.000Z',end:'2026-09-22T14:30:00.000Z',allDay:false,durationMinutes:90},{id:'two',subject:'Planning day',start:'2026-09-22T04:00:00.000Z',end:'2026-09-23T04:00:00.000Z',allDay:true,durationMinutes:1440}],truncated:false,retrievedAt:new Date().toISOString()}}));
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Work Day',exact:true}).click();
+ await expect(page.locator('.calendar-panel')).toContainText('Leadership sync');
+ await expect(page.locator('.calendar-panel')).toContainText('9:00 AM');
+ await expect(page.locator('.calendar-panel')).toContainText('1h 30m');
+ await expect(page.locator('.calendar-panel')).toContainText('All day');
+ await expect(page.getByRole('button',{name:'Work item 24',exact:true})).toBeAttached();
+ expect((await page.locator('.task-scroll-region').boundingBox())!.height).toBeGreaterThan(650);
+ await expect(page.locator('.projects-panel,.learning-panel')).toHaveCount(0);
+ await expect(page.locator('.reminders-panel')).toBeVisible();await expect(page.locator('.waiting-panel')).toBeVisible();
+ await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-dark.png',fullPage:true});
+ await page.getByRole('button',{name:'Switch color theme'}).click();
+ await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-light.png',fullPage:true});
+ await page.getByRole('combobox',{name:'Calendar range'}).selectOption('7');
+ await expect(page.locator('.calendar-panel')).toContainText('Leadership sync');
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-mobile.png',fullPage:true});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ fail=true;await page.locator('.calendar-panel').getByRole('button',{name:'Refresh',exact:true}).click();
+ await expect(page.locator('.calendar-panel')).toContainText('Calendar temporarily unavailable');
+ await expect(page.getByRole('button',{name:'Work item 1',exact:true})).toBeVisible();
 });

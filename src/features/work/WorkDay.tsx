@@ -6,7 +6,8 @@ import { workDay, patchWork } from "../../services/work";
 import { effectiveStatus } from "./model";
 import type { Kind, WorkItem, WorkSummary } from "./model";
 import { displayDate, today } from "./dates";
-import { Icon, Mark } from "../../ui/Icon";
+import { CalendarPanel } from "../microsoft/CalendarPanel";
+import { Icon } from "../../ui/Icon";
 export function WorkDay({
   client,
   userId,
@@ -222,11 +223,11 @@ export function WorkDay({
                   "task",
                 ],
                 [
-                  "learning",
-                  "Learning in progress",
-                  data.counts[5],
-                  "Keep your curiosity moving",
-                  "learning",
+                  "clock",
+                  "Waiting on",
+                  data.counts[3],
+                  "Follow-ups and dependencies",
+                  "waiting",
                 ],
               ] as const
             ).map(([icon, label, value, context, kind]) => (
@@ -267,97 +268,6 @@ export function WorkDay({
                   </button>
                 </div>
               </section>
-              <section className="day-panel reminders-panel">
-                {heading("bell", "On your radar", "All reminders", "reminder")}
-                {ready.length
-                  ? rows(ready.slice(0, 5))
-                  : empty(
-                      "bell",
-                      "Nothing needs a nudge.",
-                      "Reminders stay here until you complete, dismiss, or snooze them.",
-                    )}
-                {snoozed.length > 0 && (
-                  <details>
-                    <summary>Snoozed ({snoozed.length})</summary>
-                    {rows(snoozed.slice(0, 5))}
-                  </details>
-                )}
-                {ready.length > 5 && (
-                  <p className="small muted">
-                    {ready.length - 5} more active reminders in this view. Open
-                    All reminders.
-                  </p>
-                )}
-                {data.counts[2]! > 100 && (
-                  <p className="small muted">
-                    Oldest 100 open reminders loaded. Open All reminders for the
-                    rest.
-                  </p>
-                )}
-              </section>
-              <section className="day-panel waiting-panel">
-                {heading("clock", "Waiting on", "Manage waiting", "waiting")}
-                {data.waiting.length
-                  ? rows(data.waiting.slice(0, 4))
-                  : empty(
-                      "clock",
-                      "No loose ends here.",
-                      "Track a dependency and a follow-up date when work is in someone else’s hands.",
-                    )}
-                {data.counts[3]! > 4 && (
-                  <p className="small muted">
-                    Showing up to four. Open Manage waiting for all
-                    dependencies.
-                  </p>
-                )}
-              </section>
-              <section className="day-panel brief-panel">
-                {heading("flag", "Command brief", "Open Journal", "journal")}
-                <p className="brief-source">
-                  FROM YOUR SAVED WORK <span>·</span>{" "}
-                  {new Intl.DateTimeFormat("en-US", {
-                    timeZone: "America/New_York",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  }).format(now)}
-                </p>
-                <ul className="brief-list">
-                  <li>
-                    {data.focus.length
-                      ? `${data.focus.length} priorities selected. Start with “${data.focus[0]!.title}”.`
-                      : "Your focus is open. Choose one priority to give today a direction."}
-                  </li>
-                  <li>
-                    {data.counts[1]
-                      ? `${data.counts[1]} tasks are due today or earlier. Review what needs your attention.`
-                      : "No tasks are due today or overdue."}
-                  </li>
-                  <li>
-                    {data.counts[3]
-                      ? `${data.counts[3]} dependencies are waiting on someone else. Check the next follow-up.`
-                      : "No active dependencies are recorded."}
-                  </li>
-                </ul>
-                <p className="brief-disclosure">
-                  A live summary of your records.
-                </p>
-              </section>
-              <button
-                className="panel-link"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("command:cora", {
-                      detail:
-                        "Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?",
-                    }),
-                  )
-                }
-              >
-                Ask Cora for perspective <Icon name="arrow" />
-              </button>
-            </div>
-            <div className="day-context">
-              {" "}
               <section className="day-panel focus-panel">
                 {heading("focus", "Focus today", "Set focus", "task")}
                 <div className="focus-composition">
@@ -421,70 +331,96 @@ export function WorkDay({
                   <span>—</span> One intentional step at a time.
                 </p>
               </section>
-              <section className="day-panel projects-panel">
-                {heading(
-                  "project",
-                  "Projects at a glance",
-                  "View all",
-                  "project",
-                )}
-                {data.projects.length ? (
-                  <ul className="project-glance">
-                    {data.projects.map((item) => (
-                      <li key={item.id}>
-                        <span
-                          className={`status-dot ${item.status === "On Hold" ? "on-hold" : ""}`}
-                        />
-                        <button
-                          className="row-title"
-                          onClick={() => onOpen(item)}
-                        >
-                          {item.title}
-                          <small>
-                            Updated {displayDate(null, item.updated_at)}
-                          </small>
-                        </button>
-                        <span className="status-pill">{item.status}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  empty(
-                    "project",
-                    "Good work needs a home.",
-                    "Add a project to connect your tasks, decisions, and next steps.",
+              <section className="day-panel brief-panel">
+                {heading("flag", "Command brief", "Open Journal", "journal")}
+                <p className="brief-source">
+                  FROM YOUR SAVED WORK <span>·</span>{" "}
+                  {new Intl.DateTimeFormat("en-US", {
+                    timeZone: "America/New_York",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  }).format(now)}
+                </p>
+                <ul className="brief-list">
+                  <li>
+                    {data.focus.length
+                      ? `${data.focus.length} priorities selected. Start with “${data.focus[0]!.title}”.`
+                      : "Your focus is open. Choose one priority to give today a direction."}
+                  </li>
+                  <li>
+                    {data.counts[1]
+                      ? `${data.counts[1]} tasks are due today or earlier. Review what needs your attention.`
+                      : "No tasks are due today or overdue."}
+                  </li>
+                  <li>
+                    {data.counts[3]
+                      ? `${data.counts[3]} dependencies are waiting on someone else. Check the next follow-up.`
+                      : "No active dependencies are recorded."}
+                  </li>
+                </ul>
+                <p className="brief-disclosure">
+                  A live summary of your records.
+                </p>
+              </section>
+              <button
+                className="panel-link"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("command:cora", {
+                      detail:
+                        "Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?",
+                    }),
                   )
-                )}
-              </section>
-              <section className="day-panel learning-panel">
-                {heading(
-                  "learning",
-                  "Keep learning",
-                  "View learning",
-                  "learning",
-                )}
-                {data.learning.length
-                  ? rows(data.learning)
+                }
+              >
+                Ask Cora for perspective <Icon name="arrow" />
+              </button>
+            </div>
+            <div className="day-context">
+              {" "}
+              <CalendarPanel key={date} client={client} date={date} />
+              <section className="day-panel reminders-panel">
+                {heading("bell", "Reminders", "All reminders", "reminder")}
+                {ready.length
+                  ? rows(ready.slice(0, 10))
                   : empty(
-                      "learning",
-                      "Follow your curiosity.",
-                      "Pick up a course, article, or idea. Track the learning that moves your work forward.",
+                      "bell",
+                      "Nothing needs a nudge.",
+                      "Reminders stay here until you complete, dismiss, or snooze them.",
                     )}
+                {snoozed.length > 0 && (
+                  <details>
+                    <summary>Snoozed ({snoozed.length})</summary>
+                    {rows(snoozed.slice(0, 5))}
+                  </details>
+                )}
+                {ready.length > 10 && (
+                  <p className="small muted">
+                    {ready.length - 10} more active reminders in this view. Open
+                    All reminders.
+                  </p>
+                )}
+                {data.counts[2]! > 100 && (
+                  <p className="small muted">
+                    Oldest 100 open reminders loaded. Open All reminders for the
+                    rest.
+                  </p>
+                )}
               </section>
-              <section className="capture-prompt">
-                <Mark />
-                <p className="eyebrow">THOUGHT → ACTION</p>
-                <h2>Don’t lose the thought.</h2>
-                <p>Capture now. Make sense of it later.</p>
-                <button
-                  onClick={() =>
-                    window.dispatchEvent(new Event("command:capture"))
-                  }
-                >
-                  Capture a thought
-                  <Icon name="arrow" />
-                </button>
-                <div className="capture-orbits" aria-hidden="true" />
+              <section className="day-panel waiting-panel">
+                {heading("clock", "Waiting on", "Manage waiting", "waiting")}
+                {data.waiting.length
+                  ? rows(data.waiting.slice(0, 10))
+                  : empty(
+                      "clock",
+                      "No loose ends here.",
+                      "Track a dependency and a follow-up date when work is in someone else’s hands.",
+                    )}
+                {data.counts[3]! > 10 && (
+                  <p className="small muted">
+                    Showing up to ten. Open Manage waiting for all dependencies.
+                  </p>
+                )}
               </section>
             </div>{" "}
           </div>

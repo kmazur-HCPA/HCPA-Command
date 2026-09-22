@@ -829,3 +829,23 @@ describe("Teams consent and bounded retrieval", () => {
     );
   });
 });
+
+describe('Work Day calendar endpoint',()=>{
+ it('returns a minimal owner-scoped agenda and excludes cancellations and declined events',async()=>{
+  rows=[stored()];
+  const event={id:'event-1',subject:'Leadership sync',start:{dateTime:'2026-09-22T13:00:00.0000000',timeZone:'UTC'},end:{dateTime:'2026-09-22T14:30:00.0000000',timeZone:'UTC'},body:'private notes',attendees:[{emailAddress:{address:'private@example.test'}}]};
+  graphResponse={value:[event,{...event,id:'cancelled',isCancelled:true},{...event,id:'declined',responseStatus:{response:'declined'}}]};
+  const response=await handleMicrosoft(request('calendar?date=2026-09-22&days=1'),server);
+  expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toBe('no-store');
+  const agenda=await response.json();expect(agenda.events).toEqual([{id:'event-1',subject:'Leadership sync',start:'2026-09-22T13:00:00.000Z',end:'2026-09-22T14:30:00.000Z',allDay:false,durationMinutes:90}]);
+  expect(JSON.stringify(agenda)).not.toContain('private');
+  expect(graphCalls[0]?.searchParams.get('startDateTime')).toBe('2026-09-22T04:00:00.000Z');
+  expect((await handleMicrosoft(request('calendar?date=2026-09-22','GET',other),server)).status).toBe(409);
+  active=false;expect((await handleMicrosoft(request('calendar?date=2026-09-22'),server)).status).toBe(403);
+ });
+ it('rejects malformed dates and unsupported ranges before reading Outlook',async()=>{
+  rows=[stored()];
+  for(const query of ['date=2026-02-30','date=bad','date=2026-09-22&days=31'])expect((await handleMicrosoft(request('calendar?'+query),server)).status).toBe(400);
+  expect(graphCalls).toHaveLength(0);
+ });
+});

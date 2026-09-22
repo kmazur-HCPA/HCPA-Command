@@ -81,11 +81,9 @@ export async function workDay(client:AppClient,date:string) {
    base().eq('kind','task').lte('due_date',date).not('status','in','(Complete,Cancelled)').order('due_date').limit(30),
    base().eq('kind','reminder').in('status',['Active','Snoozed']).order('created_at',{ascending:true}).limit(100),
    base().eq('kind','waiting').eq('status','Active').order('due_date',{nullsFirst:false}).limit(30),
-   base().eq('kind','project').in('status',['Active','On Hold']).order('updated_at',{ascending:false}).limit(4),
-   base().eq('kind','learning').eq('status','In Progress').order('updated_at',{ascending:false}).limit(3),
   ])
   if(results.some(r=>r.error))throw new Error('Work Day could not be loaded. Reconnect and retry.')
-  return {focus:results[0]!.data!,due:results[1]!.data!,reminders:results[2]!.data!,waiting:results[3]!.data!,projects:results[4]!.data!,learning:results[5]!.data!,counts:results.map(r=>r.count??r.data!.length)}
+  return {focus:results[0]!.data!,due:results[1]!.data!,reminders:results[2]!.data!,waiting:results[3]!.data!,counts:results.map(r=>r.count??r.data!.length)}
  })
 }
 
