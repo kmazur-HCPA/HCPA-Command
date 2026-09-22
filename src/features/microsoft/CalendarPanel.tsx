@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { Icon } from "../../ui/Icon";
-import { eventDuration, type CalendarAgenda } from "./calendar";
+import { eventDuration, workWeekRange, type CalendarAgenda } from "./calendar";
 const zone = "America/New_York";
 const dateLabel = (iso: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -23,8 +23,8 @@ export function CalendarPanel({
   client: AppClient;
   date: string;
 }) {
-  const [days, setDays] = useState(1),
-    [retry, setRetry] = useState(0),
+  const week = workWeekRange(date);
+  const [retry, setRetry] = useState(0),
     [data, setData] = useState<CalendarAgenda | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true);
@@ -42,7 +42,7 @@ export function CalendarPanel({
         if (session.error || !session.data.session)
           throw new Error("Sign in again to see your calendar.");
         const response = await fetch(
-          `/api/microsoft/calendar?date=${date}&days=${days}`,
+          `/api/microsoft/calendar?date=${date}&range=workweek`,
           {
             headers: {
               Authorization: `Bearer ${session.data.session.access_token}`,
@@ -92,7 +92,7 @@ export function CalendarPanel({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [client, date, days, retry]);
+  }, [client, date, retry]);
   return (
     <section
       className="day-panel calendar-panel"
@@ -112,16 +112,7 @@ export function CalendarPanel({
         </button>
       </div>
       <div className="calendar-controls">
-        <label>
-          Calendar range
-          <select
-            value={days}
-            onChange={(e) => { setData(null); setError(""); setDays(Number(e.target.value)); }}
-          >
-            <option value={1}>Today</option>
-            <option value={7}>Next 7 days</option>
-          </select>
-        </label>
+        <span className="small">{dateLabel(week.start)} – {dateLabel(new Date(Date.parse(week.end) - 1).toISOString())}</span>
         <span className="small muted">Outlook · Eastern time</span>
       </div>
       {loading && (
@@ -135,7 +126,7 @@ export function CalendarPanel({
         </p>
       )}
       {data && !data.events.length && (
-        <p className="small muted">No events in this calendar range.</p>
+        <p className="small muted">No events this work week.</p>
       )}
       {data && data.events.length > 0 && (
         <ul className="calendar-agenda">

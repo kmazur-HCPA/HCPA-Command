@@ -776,7 +776,7 @@ test('Work Day gives tasks more room and shows calendar, reminders and waiting o
  await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-dark.png',fullPage:true});
  await page.getByRole('button',{name:'Switch color theme'}).click();
  await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-light.png',fullPage:true});
- await page.getByRole('combobox',{name:'Calendar range'}).selectOption('7');
+ await expect(page.getByRole('combobox',{name:'Calendar range'})).toHaveCount(0);
  await expect(page.locator('.calendar-panel')).toContainText('Leadership sync');
  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
  await page.setViewportSize({width:390,height:844});

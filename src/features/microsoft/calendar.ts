@@ -13,7 +13,7 @@ export type CalendarAgenda = {
   retrievedAt: string;
 };
 export function agendaRange(date: string, days = 1) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || ![1, 7].includes(days))
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || ![1, 5, 7].includes(days))
     throw new Error("Choose a valid calendar date and range.");
   const instant = new Date(`${date}T12:00:00Z`);
   if (
@@ -26,6 +26,12 @@ export function agendaRange(date: string, days = 1) {
     start: fromLocalDateTime(`${date}T00:00`),
     end: fromLocalDateTime(`${instant.toISOString().slice(0, 10)}T00:00`),
   };
+}
+export function workWeekRange(date: string) {
+  agendaRange(date); // Validate before doing calendar arithmetic.
+  const monday = new Date(`${date}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
+  return agendaRange(monday.toISOString().slice(0, 10), 5);
 }
 export function calendarInstant(value: unknown): string {
   if (!value || typeof value !== "object")

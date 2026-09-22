@@ -1,6 +1,7 @@
 import { createMicrosoftReader } from "./tools";
 import {
   agendaRange,
+  workWeekRange,
   calendarInstant,
   type CalendarEvent,
 } from "../../../../src/features/microsoft/calendar";
@@ -222,7 +223,7 @@ export async function handleMicrosoft(
       const params = new URL(request.url).searchParams;
       let range: { start: string; end: string };
       try {
-        range = agendaRange(
+        range = params.get("range") === "workweek" ? workWeekRange(params.get("date") ?? "") : agendaRange(
           params.get("date") ?? "",
           Number(params.get("days") ?? "1"),
         );
