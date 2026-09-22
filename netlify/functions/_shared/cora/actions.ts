@@ -1,3 +1,4 @@
+import { validEmail, validPhone } from "../../../../src/features/people/model";
 import { fields as detailFields } from "../../../../src/features/lab/fields";
 import type { AppClient } from "../../../../src/platform/supabase";
 import {
@@ -101,6 +102,10 @@ export function validateFields(kind: Kind, value: unknown): Partial<WorkInput> {
         const spec = detailFields[kind]?.find(f => f.key === name);
         if (!spec || content && spec.options && !spec.options.includes(content)) valid = false;
       }
+    }
+    if(key==='details' && valid && kind==='person') {
+      const d=v as Record<string,string>;
+      if(!validEmail(d.email??'')||!validPhone(d.phone??'')||!validPhone(d.mobile??'')||(d.department??'').length>240||(d.location??'').length>240)valid=false;
     }
     if (!valid) throw new Error(`Invalid or unsupported field: ${key}.`);
   }

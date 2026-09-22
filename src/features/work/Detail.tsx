@@ -23,12 +23,12 @@ export function Detail({client,userId,id,onClose}:{client:AppClient;userId:strin
  function saved(){setEditing(false);setCreateTask(false);setOffset(0);setHistoryOffset(0);setRevision(v=>v+1)}
  return <section><button onClick={onClose}>Back to list</button>{error&&<p role="alert" className="error-message">{error}</p>}{!item&&!error&&<p role="status">Loading record…</p>}{item&&<>
   <div className="section-heading"><div><p className="eyebrow">{item.kind}{item.archived?' · Archived':''}</p><h1 tabIndex={-1}>{item.title}</h1></div><button onClick={()=>setEditing(true)}>Edit</button></div>
-  <p className="record-meta">{item.status} · {item.priority} · {displayDate(item.due_date,item.remind_at)}</p>
+  {item.kind!=='person'&&<p className="record-meta">{item.status} · {item.priority} · {displayDate(item.due_date,item.remind_at)}</p>}
   {item.kind==='journal'&&<p>{item.entry_type} · {displayDate(null,item.created_at)}</p>}
   <p className="full-text">{item.body||'No notes yet.'}</p>
   {item.tags.length>0&&<p className="muted">Tags · {item.tags.join(', ')}</p>}
   {(item.kind==='project'||item.kind==='initiative')&&<dl className="context-summary"><dt>Goals</dt><dd>{item.goals||'Not set'}</dd><dt>Current state</dt><dd>{item.current_state||'Not set'}</dd><dt>Next milestone</dt><dd>{item.next_milestone||'Not set'}</dd></dl>}
-  {item.kind==='person'&&<p>{item.person_role} · {item.organization}</p>}
+  {item.kind==='person'&&<p className="directory-role">{[item.person_role,item.organization].filter(Boolean).join(' · ')}</p>}
   <LabSummary item={item}/>
   {item.kind==='library'&&<Originals client={client} item={item}/>}
   <p><a href={`/?record=${item.id}`}>Permanent link to this record</a></p>

@@ -68,6 +68,18 @@ async function setup(page: Page) {
           .filter((h) => h.item_id === p.get("item_id")?.slice(3))
           .reverse(),
       });
+    if(url.pathname.endsWith('/rpc/directory_people')){
+      const input=request.postDataJSON(),q=input.query_text.toLowerCase();
+      return route.fulfill({json:rows.filter(row=>row.kind==='person'&&row.archived===input.show_archived&&JSON.stringify([row.title,row.person_role,row.organization,row.details,row.body]).toLowerCase().includes(q)).sort((a,b)=>a.title.localeCompare(b.title)).slice(input.page_offset,input.page_offset+51).map(row=>({...row,notes_excerpt:row.body.slice(0,240)}))});
+    }
+    if(url.pathname.endsWith('/rpc/import_people')){
+      if(control.failWrites)return route.fulfill({status:503,json:{message:'Synthetic failure'}});
+      const contacts=request.postDataJSON().contacts;let created=0,skipped=0;
+      for(const c of contacts){if(rows.some(row=>row.kind==='person'&&(row.id===c.id||c.email&&row.details.email?.toLowerCase()===c.email.toLowerCase()||row.title.toLowerCase()===c.name.toLowerCase()&&row.organization.toLowerCase()===c.organization.toLowerCase()))){skipped++;continue;}
+      rows.push({...newItem('person',uid),id:c.id,title:c.name,person_role:c.job_title,organization:c.organization,body:c.notes,original_body:c.notes,details:{email:c.email,phone:c.phone,mobile:c.mobile,department:c.department,location:c.location},version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});created++;}
+      if(control.loseAck){control.loseAck=false;return route.abort('failed');}
+      return route.fulfill({json:{created,skipped,results:[]}});
+    }
     if (url.pathname.endsWith('/rpc/swap_work_order')) {
       if(control.failWrites)return route.fulfill({status:503,json:{message:'Synthetic failure'}});
       const input=request.postDataJSON();
@@ -701,4 +713,45 @@ test('compact project groups reorder persistently, complete safely and show all 
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/compact-tasks-mobile.png',animations:'disabled'});
+});
+
+test('People directory supports contact fields, CSV preview, failed acknowledgement retry and mobile contact links',async({page})=>{
+ const {rows,control}=await setup(page);
+ await page.getByRole('button',{name:'People',exact:true}).click();
+ await page.getByRole('button',{name:'New person',exact:true}).click();
+ await page.getByLabel('Full name',{exact:true}).fill('Alex Chen');
+ await page.getByLabel('Job title',{exact:true}).fill('GIS Manager');
+ await page.getByLabel('Organization',{exact:true}).fill('HCPA');
+ await page.getByLabel('Email',{exact:true}).fill('alex@example.org');
+ await page.getByLabel('Phone',{exact:true}).fill('813-555-0100');
+ await page.getByLabel('Notes',{exact:true}).fill('GIS liaison');
+ await expect(page.getByLabel('Due date',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Save',exact:true}).click();
+ await expect(page.getByRole('link',{name:'alex@example.org',exact:true})).toHaveAttribute('href','mailto:alex%40example.org');
+ await page.getByRole('button',{name:'Import CSV',exact:true}).click();
+ const modal=page.getByRole('dialog',{name:'Import people',exact:true});
+ const csv='Name,Email,Job Title,Organization,Phone,Notes\nAlex Chen,alex@example.org,Manager,HCPA,,Duplicate\nMorgan Reed,morgan@example.org,Analyst,HCPA,813-555-0111,"Comma, and notes"\nInvalid,bad,Analyst,HCPA,,Invalid email';
+ await modal.getByLabel('Choose CSV').setInputFiles({name:'contacts.csv',mimeType:'text/csv',buffer:Buffer.from(csv)});
+ await expect(modal.getByRole('button',{name:'Import 1 contacts',exact:true})).toBeEnabled();
+ await expect(modal.getByRole('region',{name:'Contact import preview'})).toContainText('Matches an existing contact');
+ await expect(modal).toContainText('Invalid email address');
+ expect(rows.filter(row=>row.kind==='person')).toHaveLength(1);
+ control.loseAck=true;
+ await modal.getByRole('button',{name:'Import 1 contacts',exact:true}).click();
+ await expect(modal.getByRole('alert')).toContainText('Import was not confirmed');
+ await modal.getByRole('button',{name:'Import 1 contacts',exact:true}).click();
+ await expect(modal.getByRole('status')).toContainText('already present');
+ expect(rows.filter(row=>row.kind==='person')).toHaveLength(2);
+ await modal.getByRole('button',{name:'Done',exact:true}).click();
+ await page.getByRole('searchbox',{name:'Search directory'}).fill('0111');
+ await expect(page.getByRole('button',{name:'Morgan Reed',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Alex Chen',exact:true})).toHaveCount(0);
+ await page.getByRole('searchbox',{name:'Search directory'}).fill('');
+ await page.setViewportSize({width:820,height:1180});
+ await expect(page.getByRole('button',{name:'Alex Chen',exact:true})).toBeVisible();
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ await page.screenshot({path:'test-results/people-ipad.png',animations:'disabled'});
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/people-mobile.png',animations:'disabled'});
 });

@@ -1,5 +1,7 @@
+import {contactFields} from "../people/model"
 export type Field = {key:string;label:string;type:string;options?:string[]}
 export const fields:Record<string,Field[]> = {
+  person: [...contactFields],
   "learning": [
     {
       "key": "provider",

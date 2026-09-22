@@ -33,6 +33,27 @@ describe('Work record integrity and authorization', () => {
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
 
+  it('imports contacts atomically, deduplicates retries and archived matches, and isolates directory search',async()=>{
+    await authenticate(owner);
+    const contact={id:crypto.randomUUID(),name:'Alex Chen',email:'alex@example.org',job_title:'GIS Manager',organization:'HCPA',phone:'813-555-0100',mobile:'',department:'Technology',location:'Tampa',notes:'GIS liaison'};
+    const call=(contacts:unknown[])=>db.query<{r:{created:number;skipped:number}}>('select public.import_people($1::jsonb) r',[JSON.stringify(contacts)]);
+    expect((await call([contact])).rows[0]!.r).toMatchObject({created:1,skipped:0});
+    expect((await call([contact])).rows[0]!.r).toMatchObject({created:0,skipped:1});
+    expect((await db.query("select * from public.directory_people('555-0100',false,0)")).rows).toHaveLength(1);
+    expect((await db.query("select * from public.search_work('alex@example.org','person')")).rows).toHaveLength(1);
+    await db.query('update public.work_items set archived=true where id=$1',[contact.id]);
+    expect((await call([{...contact,id:crypto.randomUUID(),email:'ALEX@example.org'}])).rows[0]!.r).toMatchObject({created:0,skipped:1});
+    expect((await db.query("select * from public.directory_people('liaison',true,0)")).rows).toHaveLength(1);
+    await db.exec('savepoint bad_import');
+    await expect(call([{...contact,id:crypto.randomUUID(),name:'New Person',email:'new@example.org'},{...contact,id:crypto.randomUUID(),name:'Bad',email:'invalid'}])).rejects.toThrow(/Invalid contact/);
+    await db.exec('rollback to savepoint bad_import');
+    expect((await db.query("select id from public.work_items where title='New Person'")).rows).toHaveLength(0);
+    await db.exec('reset role');await authenticate(other);
+    expect((await db.query("select * from public.directory_people('',true,0)")).rows).toHaveLength(0);
+    // An identical email in another private workspace is not a match or a disclosure.
+    expect((await call([{...contact,id:crypto.randomUUID()}])).rows[0]!.r).toMatchObject({created:1,skipped:0});
+  });
+
   it('creates every authorized Cora kind once and rejects cross-owner links, edits and browser calls',async()=>{
     const make=(user:string,kind:string,request:string,fields:Record<string,unknown>)=>directRecordInput(user,{kind,request_id:request,fields_json:JSON.stringify(fields)});
     let taskId='';

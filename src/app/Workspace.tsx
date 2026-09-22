@@ -1,3 +1,4 @@
+import { Directory } from "../features/people/Directory";
 import {WorkdayReviews} from "../features/reviews/WorkdayReviews";
 import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -356,6 +357,8 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
             id={recordId}
             onClose={closeRecord}
           />
+        ) : page === "person" ? (
+          <Directory client={client} userId={user.id} onOpen={openRecord} revision={workRevision}/>
         ) : page === "lab" ? (
           <Lab client={client} userId={user.id} onOpen={openRecord} />
         ) : page !== "workspace" && page !== "settings" ? (
