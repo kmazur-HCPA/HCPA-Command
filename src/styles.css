@@ -1910,3 +1910,7 @@ summary {
  .work-day .task-scroll-region { min-height:300px; max-height:70vh; }
 }
 @media(min-width:1150px) { .cora-open .work-day .day-grid { grid-template-columns:1fr; } }
+
+.header-new-task { display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; flex-shrink:0; min-height:44px; }
+.header-new-task svg { width:18px; height:18px; }
+@media(max-width:1100px) { .header-new-task span { display:none; } .header-new-task { width:44px; padding:10px; } }

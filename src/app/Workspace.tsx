@@ -6,6 +6,7 @@ import type { AppClient } from "../platform/supabase";
 import { readPreferences, saveTheme } from "../services/account";
 import type { Preferences, Theme } from "../services/account";
 import { signOut } from "../services/auth";
+import { Editor } from "../features/work/Editor";
 import { Detail } from "../features/work/Detail";
 import type { Kind, WorkItem } from "../features/work/model";
 import { Icon, Mark } from "../ui/Icon";
@@ -38,6 +39,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
   const [cora,setCora]=useState(!!initialConversation),[coraLoaded,setCoraLoaded]=useState(!!initialConversation),[coraPrompt,setCoraPrompt]=useState('');
   const openCora=(prompt='')=>{setCoraLoaded(true);setCora(true);if(prompt)setCoraPrompt(prompt)};
   const [capture, setCapture] = useState(false);
+  const [newTask, setNewTask] = useState(false);
   const [palette, setPalette] = useState(false),
     [more, setMore] = useState(false);
   const moreDialog = useRef<HTMLDialogElement>(null);
@@ -238,6 +240,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           <span>Search or jump to anything…</span>
           <kbd>⌘ K</kbd>
         </button>
+        <button className="header-new-task" aria-label="Create new task" title="Create new task" onClick={() => setNewTask(true)}><Icon name="plus" /><span>New task</span></button>
         <div className="header-date">
           <Icon name="clock" />
           <span>
@@ -457,6 +460,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           onClose={() => setPalette(false)}
         />
       )}
+      {newTask && <Editor client={client} userId={user.id} kind="task" onClose={() => setNewTask(false)} onSaved={() => { setNewTask(false); setWorkRevision(v => v + 1); }} />}
       {capture && (
         <Capture
           client={client}
