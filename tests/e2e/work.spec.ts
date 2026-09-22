@@ -786,3 +786,30 @@ test('Work Day gives tasks more room and shows calendar, reminders and waiting o
  await expect(page.locator('.calendar-panel')).toContainText('Calendar temporarily unavailable');
  await expect(page.getByRole('button',{name:'Work item 1',exact:true})).toBeVisible();
 });
+
+test('returning from another app keeps Tasks and the unsaved editor mounted while access is rechecked',async({page})=>{
+ await setup(page);
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'New task',exact:true}).click();
+ await page.getByLabel('Title',{exact:true}).fill('Keep my place');
+ await page.getByRole('textbox',{name:'Notes',exact:true}).fill('Information collected from another app');
+ let finishCheck:()=>void=()=>{};
+ const held=new Promise<void>(resolve=>{finishCheck=resolve;});
+ let requests=0;
+ await page.route('**/rest/v1/app_memberships*',async route=>{requests++;await held;await route.fulfill({json:{user_id:uid,active:true}});});
+ await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+ await expect.poll(()=>requests).toBeGreaterThan(0);
+ await expect(page.getByRole('dialog',{name:'New task',exact:true})).toBeVisible();
+ await expect(page.getByLabel('Title',{exact:true})).toHaveValue('Keep my place');
+ finishCheck();
+ await expect(page.getByRole('textbox',{name:'Notes',exact:true})).toHaveValue('Information collected from another app');
+ await page.getByRole('button',{name:'Close editor',exact:true}).click();
+ await page.reload();
+ await expect(page.getByRole('heading',{name:'Tasks',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'New task',exact:true}).click();
+ await expect(page.getByLabel('Title',{exact:true})).toHaveValue('Keep my place');
+ await page.route('**/rest/v1/app_memberships*',route=>route.fulfill({json:{user_id:uid,active:false}}));
+ await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+ await expect(page.getByRole('heading',{name:'Access is not enabled.'})).toBeVisible();
+ await expect(page.getByRole('dialog',{name:'New task',exact:true})).toHaveCount(0);
+});

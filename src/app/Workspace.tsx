@@ -25,7 +25,10 @@ const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").t
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
   const [page, setPage] = useState<"workspace" | "settings" | "lab" | Kind>(
-    new URLSearchParams(location.search).get("page") === "settings" ? "settings" : "workspace",
+    () => {
+      const requested = new URLSearchParams(location.search).get("page");
+      return [...navigation.map(item => item.page), "reminder", "waiting"].includes(requested ?? "") ? requested as "workspace" | "settings" | "lab" | Kind : "workspace";
+    },
   );
   const [initialConversation] = useState(() => {
     const value = new URLSearchParams(location.search).get('coraConversation');
@@ -69,16 +72,17 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
   );
   function openRecord(item: Pick<WorkItem, "id">) {
     setRecordId(item.id);
-    history.replaceState(null, "", `/?record=${item.id}`);
+    history.replaceState(null, "", `/?page=${page}&record=${item.id}`);
   }
   function closeRecord() {
     setRecordId(null);
-    history.replaceState(null, "", "/");
+    history.replaceState(null, "", page === "workspace" ? "/" : `/?page=${page}`);
   }
   function navigate(next: "workspace" | "settings" | "lab" | Kind) {
     setMore(false);
     closeRecord();
     setPage(next);
+    history.replaceState(null, "", next === "workspace" ? "/" : `/?page=${next}`);
     window.scrollTo({ top: 0 });
     requestAnimationFrame(() =>
       document.querySelector<HTMLElement>("#main h1")?.focus(),

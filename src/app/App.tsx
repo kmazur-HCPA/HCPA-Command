@@ -14,7 +14,7 @@ export function App({ client }: { client: AppClient }) {
     try { await signOut(client) }
     catch { setLogoutError('Sign-out failed. Please check your connection and retry.') }
   }
-  if (access.kind === 'ready') return <Suspense fallback={<main className="workspace-content" aria-busy="true"><p role="status">Opening your workspace…</p></main>}><Workspace client={client} user={access.user} /></Suspense>
+  if (access.kind === 'ready') return <Suspense fallback={<main className="workspace-content" aria-busy="true"><p role="status">Opening your workspace…</p></main>}><Workspace key={access.user.id} client={client} user={access.user} /></Suspense>
   return <main id="main" className="entry-layout"><div className="entry-brand"><span className="brand"><span aria-hidden="true">/</span> COMMAND</span><p>Attention. Context. Action.</p></div>
     {access.kind === 'signed-out' && <AuthForm client={client} />}
     {access.kind === 'recovery' && <AuthForm client={client} recovering />}

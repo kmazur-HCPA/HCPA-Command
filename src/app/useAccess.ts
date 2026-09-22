@@ -18,7 +18,8 @@ export function useAccess(client: AppClient, attempt: number) {
     let recovering = window.location.pathname === '/auth/reset'
     async function check() {
       const ticket = ++generation
-      setState({ kind: 'loading' })
+      // Keep same-user workspace/editor state during background revalidation.
+      setState(previous => previous.kind === 'ready' && !recovering ? previous : { kind: 'loading' })
       try {
         const { data: { session }, error } = await client.auth.getSession()
         if (error) throw new Error('Your sign-in link or session is unavailable. Please sign in again.')
@@ -32,6 +33,8 @@ export function useAccess(client: AppClient, attempt: number) {
           if (alive && ticket === generation) setState({ kind: 'signed-out' })
           return
         }
+        if (!alive || ticket !== generation) return
+        setState(previous => previous.kind === 'ready' && previous.user.id === session.user.id && !recovering ? previous : { kind: 'loading' })
         const user = await verifyAccess(client)
         if (alive && ticket === generation) setState(user ? { kind: recovering ? 'recovery' : 'ready', user } : { kind: 'denied' })
       } catch (error) {
@@ -39,7 +42,7 @@ export function useAccess(client: AppClient, attempt: number) {
       }
     }
     // Do not await auth methods inside the auth event callback: Supabase holds its auth lock there.
-    const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') recovering = true
       if (event === 'SIGNED_OUT') {
         generation++
@@ -47,6 +50,8 @@ export function useAccess(client: AppClient, attempt: number) {
         window.history.replaceState(null, '', '/')
         if (alive) setState({ kind: 'signed-out' })
       } else if (event !== 'INITIAL_SESSION') {
+        generation++ // Invalidate any check started before this auth event.
+        if (alive) setState(previous => previous.kind === 'ready' && previous.user.id === session?.user.id && !recovering ? previous : { kind: 'loading' })
         queueMicrotask(() => { if (alive) void check() })
       }
     })
