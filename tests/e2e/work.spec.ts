@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { newItem } from "../../src/features/work/model";
@@ -67,6 +68,14 @@ async function setup(page: Page) {
           .filter((h) => h.item_id === p.get("item_id")?.slice(3))
           .reverse(),
       });
+    if (url.pathname.endsWith('/rpc/swap_work_order')) {
+      if(control.failWrites)return route.fulfill({status:503,json:{message:'Synthetic failure'}});
+      const input=request.postDataJSON();
+      const a=rows.find(r=>r.id===input.first_id),b=rows.find(r=>r.id===input.second_id);
+      if(!a||!b||a.version!==input.first_version||b.version!==input.second_version)return route.fulfill({status:409,json:{message:'Conflict'}});
+      [a.sort_order,b.sort_order]=[b.sort_order,a.sort_order];a.version++;b.version++;
+      return route.fulfill({status:204});
+    }
     if (url.pathname.endsWith("/rpc/convert_reminder")) {
       const input = request.postDataJSON(),
         r = rows.find((r) => r.id === input.reminder_id)!;
@@ -164,6 +173,8 @@ async function setup(page: Page) {
         return route.abort("failed");
       }
     }
+    if (method === "GET" && p.get('order')?.startsWith('sort_order'))
+      selected.sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)||a.id.localeCompare(b.id));
     if (method === "GET")
       selected = selected.slice(
         Number(p.get("offset") ?? 0),
@@ -207,7 +218,8 @@ test("create a task, choose a priority, edit, and complete it", async ({
       .getByRole("button", { name: "Review architecture" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
-  await page.getByRole("button", { name: "Complete", exact: true }).click();
+  await page.getByRole("button", { name: "Complete Review architecture", exact: true }).click();
+  await page.getByRole("combobox",{name:"Filter status",exact:true}).selectOption("Complete");
   await expect(page.locator(".record-meta")).toContainText("Complete");
 });
 test("capture survives failed save and reload, then a lost acknowledgement produces one entry", async ({
@@ -302,6 +314,7 @@ test("reminder remains visible after its due time and converts explicitly", asyn
   await expect(
     page.getByRole("button", { name: "Call vendor", exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Actions for Call vendor", {exact:true}).click();
   await page
     .getByRole("button", { name: "Convert to task", exact: true })
     .click();
@@ -639,3 +652,53 @@ test('workspace export downloads a complete portable archive',async({page})=>{
  expect(snapshot.counts.work_items).toBe(2);expect(snapshot.work_items[1].project_id).toBe(snapshot.work_items[0].id)
  await expect(page.getByRole('status').filter({hasText:'Export ready:'})).toContainText('2 records and 0 verified originals')
 })
+
+
+test('compact project groups reorder persistently, complete safely and show all open Work Day tasks',async({page})=>{
+ await page.setViewportSize({width:820,height:1180});
+ const {rows,control}=await setup(page);
+ const seed=(kind:WorkItem['kind'],title:string,extra:Partial<WorkItem>={})=>{
+  const row:WorkItem={...newItem(kind,uid),title,version:1,original_body:'',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null,sort_order:rows.length+1,...extra};rows.push(row);return row;
+ };
+ const a=seed('project','Alpha'),b=seed('project','Beta');
+ seed('task','First task',{project_id:a.id});seed('task','Second task',{project_id:a.id});seed('task','Future task',{project_id:b.id,due_date:'2099-01-01'});
+ seed('reminder','Remember the review');seed('waiting','Waiting for the vendor');
+ for(let i=0;i<52;i++)seed('task',`Unassigned ${i}`);
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await expect(page.locator('.task-group-title').first()).toContainText('Alpha');
+ await page.getByRole('button',{name:'Move Second task up',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Alpha',exact:true}).locator('.record-title').first()).toHaveText('Second task');
+ await page.getByRole('button',{name:'Move Beta up',exact:true}).click();
+ await expect(page.locator('.task-group-title').first()).toContainText('Beta');
+ await page.reload();
+ await expect(page.locator('.task-group-title').first()).toContainText('Beta');
+ await expect(page.getByRole('region',{name:'Alpha',exact:true}).locator('.record-title').first()).toHaveText('Second task');
+ control.failWrites=true;
+ await page.getByRole('button',{name:'Complete Second task',exact:true}).click();
+ await expect(page.getByRole('alert')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Second task',exact:true})).toBeVisible();
+ control.failWrites=false;
+ await page.getByRole('button',{name:'Complete Second task',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Second task',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Work Day',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Future task',exact:true})).toBeVisible();
+ await expect(page.locator('.reminders-panel + .waiting-panel')).toBeVisible();
+ const radarBox=await page.locator('.reminders-panel').boundingBox(),waitingBox=await page.locator('.waiting-panel').boundingBox();
+ expect(waitingBox!.y-radarBox!.y-radarBox!.height).toBeLessThan(24);
+ const scroller=page.getByRole('region',{name:'Scrollable tasks',exact:true});
+ expect(await scroller.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+ await page.getByRole('button',{name:'Load more tasks',exact:true}).click();
+ await expect(scroller.getByRole('button',{name:'Unassigned 51',exact:true})).toHaveCount(1);
+ await scroller.evaluate(el=>el.scrollTop=0);
+ await page.screenshot({path:'test-results/compact-ipad-dark.png',fullPage:true,animations:'disabled'});
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Switch color theme'}).click();
+ await expect(page.getByRole('button',{name:'Future task',exact:true})).toBeVisible();
+ await expect(page.getByRole('status').filter({hasText:'Loading'})).toHaveCount(0);
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ expect((await page.locator('.compact-list > li').first().boundingBox())!.height).toBeLessThan(80);
+ await page.screenshot({path:'test-results/compact-tasks-light.png',animations:'disabled'});
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/compact-tasks-mobile.png',animations:'disabled'});
+});

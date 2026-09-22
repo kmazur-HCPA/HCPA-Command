@@ -1,13 +1,14 @@
 import type { AppClient } from '../platform/supabase'
 import { measured } from '../platform/telemetry'
 import type { Kind, WorkInput, WorkItem } from '../features/work/model'
-const summaryColumns='id,user_id,kind,title,status,priority,due_date,remind_at,snoozed_until,converted_task_id,completed_at,archived,version,created_at,updated_at,project_id,initiative_id,person_id,task_id,source_entry_id,entry_type,tags,organization,person_role,focus_slot,learning_id,program_id,use_case_id,experiment_id,decision_id' as const
-export type WorkFilter = {kind?:Kind; search?:string; status?:string; priority?:string; archived?:boolean; offset?:number; projectId?:string;personId?:string;initiativeId?:string;sourceId?:string;taskId?:string;entryType?:string;tag?:string;learningId?:string;programId?:string;useCaseId?:string;experimentId?:string;decisionId?:string}
+const summaryColumns='sort_order,id,user_id,kind,title,status,priority,due_date,remind_at,snoozed_until,converted_task_id,completed_at,archived,version,created_at,updated_at,project_id,initiative_id,person_id,task_id,source_entry_id,entry_type,tags,organization,person_role,focus_slot,learning_id,program_id,use_case_id,experiment_id,decision_id' as const
+export type WorkFilter = {kind?:Kind; search?:string; status?:string; priority?:string; archived?:boolean; offset?:number; openOnly?:boolean; projectId?:string;personId?:string;initiativeId?:string;sourceId?:string;taskId?:string;entryType?:string;tag?:string;learningId?:string;programId?:string;useCaseId?:string;experimentId?:string;decisionId?:string}
 export async function listWork(client:AppClient, filter:WorkFilter) {
  return measured('work.read',async()=>{
-  let q=client.from('work_items').select(summaryColumns).eq('archived',filter.archived??false).order('created_at',{ascending:false}).order('id').range(filter.offset??0,(filter.offset??0)+49)
+  let q=client.from('work_items').select(summaryColumns).eq('archived',filter.archived??false).order(filter.kind==='task'||filter.kind==='project'?'sort_order':'created_at',{ascending:filter.kind==='task'||filter.kind==='project'}).order('id').range(filter.offset??0,(filter.offset??0)+49)
   for(const [key,column] of [['learningId','learning_id'],['programId','program_id'],['useCaseId','use_case_id'],['experimentId','experiment_id'],['decisionId','decision_id']] as const)if(filter[key])q=q.eq(column,filter[key]!)
   if(filter.kind)q=q.eq('kind',filter.kind)
+  if(filter.openOnly)q=q.not('status','in','(Complete,Cancelled,Dismissed)')
   if(filter.search)q=q.textSearch('search_vector',filter.search,{type:'websearch',config:'english'})
   if(filter.projectId)q=q.eq('project_id',filter.projectId)
   if(filter.personId)q=q.eq('person_id',filter.personId)
@@ -97,4 +98,18 @@ export async function patchWork(client:AppClient,item:Pick<WorkItem,'id'|'versio
   if(current&&matchesWorkFields(current,patch))return current
   throw new Error('The change was not saved or this record changed elsewhere. Reload before retrying.')
  })
+}
+
+export async function projectDirectory(client:AppClient) {
+ const rows:Pick<WorkItem,'id'|'title'|'archived'|'version'|'sort_order'>[]=[];
+ // Small metadata pages, including archived projects so linked tasks keep their context.
+ for(let offset=0;;offset+=500) {
+  const {data,error}=await client.from('work_items').select('id,title,archived,version,sort_order').eq('kind','project').order('sort_order').order('id').range(offset,offset+499);
+  if(error)throw new Error('Project groups could not be loaded. Retry.');
+  rows.push(...data);if(data.length<500)return rows;
+ }
+}
+export async function swapWorkOrder(client:AppClient,a:Pick<WorkItem,'id'|'version'>,b:Pick<WorkItem,'id'|'version'>) {
+ const {error}=await client.rpc('swap_work_order',{first_id:a.id,second_id:b.id,first_version:a.version,second_version:b.version});
+ if(error)throw new Error('Order was not confirmed. Reload the list before retrying; another device may have changed it.');
 }

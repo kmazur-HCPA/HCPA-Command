@@ -370,6 +370,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           <>
             {page === "workspace" ? (
               <WorkDay
+                userId={user.id}
                 client={client}
                 revision={workRevision}
                 onOpen={openRecord}

@@ -4,6 +4,7 @@ export const priorities = ['Critical','High','Normal','Low'] as const
 export type Kind = 'task' | 'reminder' | 'project' | 'initiative' | 'person' | 'journal' | 'waiting' | 'learning' | 'program' | 'use_case' | 'experiment' | 'library'
 export const entryTypes = ['Capture','Thought','Idea','Research','Decision','Meeting','Learning','Experiment','Observation','Progress','Problem','Opportunity'] as const
 export type WorkItem = {
+  sort_order?:number;
   details:Record<string,string>;learning_id:string|null;program_id:string|null;use_case_id:string|null;experiment_id:string|null;decision_id:string|null;
   focus_slot:number|null;project_id:string|null;initiative_id:string|null;person_id:string|null;task_id:string|null;source_entry_id:string|null;
   entry_type:string;tags:string[];goals:string;current_state:string;next_milestone:string;organization:string;person_role:string;search_vector?:string;
@@ -12,7 +13,7 @@ export type WorkItem = {
   completed_at:string|null; converted_task_id:string|null; archived:boolean; version:number; created_at:string; updated_at:string;
 }
 export type WorkSummary = Omit<WorkItem,'body'|'original_body'|'goals'|'current_state'|'next_milestone'|'search_vector'|'details'>
-export type WorkInput = Omit<WorkItem,'original_body'|'version'|'created_at'|'updated_at'|'completed_at'|'search_vector'>
+export type WorkInput = Omit<WorkItem,'original_body'|'version'|'created_at'|'updated_at'|'completed_at'|'search_vector'|'sort_order'>
 export const labels:Record<Kind,string> = { task:'Tasks', reminder:'Reminders',project:'Projects',initiative:'Initiatives',person:'People',journal:'Journal',waiting:'Waiting On',learning:'Learning',program:'AI Program',use_case:'Use Case Registry',experiment:'Experiments',library:'Library' }
 export function statuses(kind:Kind): readonly string[] { return kind==='learning'?['Saved','Planned','In Progress','Complete','Abandoned']:kind==='use_case'?['Idea','Researching','Proposed','Approved','Pilot','Production','Rejected','Retired']:kind==='experiment'?['Planned','In Progress','Complete','Abandoned']:kind==='library'?['Recorded']:kind==='task'?taskStatuses:kind==='reminder'?reminderStatuses:kind==='journal'?['Recorded']:kind==='person'?['Active']:kind==='waiting'?['Active','Complete']:['Active','On Hold','Complete'] }
 export function newItem(kind:Kind,userId:string): WorkInput {
@@ -23,6 +24,6 @@ export function effectiveStatus(item: Pick<WorkItem,'status'|'snoozed_until'>, n
 }
 
 export function toInput(item:WorkItem): WorkInput {
- const {original_body,version,created_at,updated_at,completed_at,search_vector,...input}=item
- void original_body;void version;void created_at;void updated_at;void completed_at;void search_vector;return input
+ const {original_body,version,created_at,updated_at,completed_at,search_vector,sort_order,...input}=item
+ void original_body;void version;void created_at;void updated_at;void completed_at;void search_vector;void sort_order;return input
 }

@@ -1,4 +1,5 @@
-import {WorkdayReviews} from "../reviews/WorkdayReviews";
+import { WorkList } from "./WorkList";
+import { WorkdayReviews } from "../reviews/WorkdayReviews";
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { workDay, patchWork } from "../../services/work";
@@ -8,11 +9,13 @@ import { displayDate, today } from "./dates";
 import { Icon, Mark } from "../../ui/Icon";
 export function WorkDay({
   client,
+  userId,
   revision,
   onOpen,
   onNavigate,
 }: {
   client: AppClient;
+  userId: string;
   revision: number;
   onOpen: (item: Pick<WorkItem, "id">) => void;
   onNavigate: (kind: Kind) => void;
@@ -25,7 +28,7 @@ export function WorkDay({
     [now, setNow] = useState(() => Date.now()),
     [busy, setBusy] = useState<string | null>(null),
     [notice, setNotice] = useState("");
-  const refreshMinute = Math.floor(now/60000);
+  const refreshMinute = Math.floor(now / 60000);
   const date = today(new Date(now)),
     hour = Number(
       new Intl.DateTimeFormat("en-US", {
@@ -61,13 +64,6 @@ export function WorkDay({
     snoozed =
       data?.reminders.filter((r) => effectiveStatus(r, now) === "Snoozed") ??
       [];
-  const tasks = data
-    ? [
-        ...new Map(
-          [...data.focus, ...data.due].map((row) => [row.id, row]),
-        ).values(),
-      ].slice(0, 8)
-    : [];
   async function complete(item: WorkSummary) {
     if (busy) return;
     setBusy(item.id);
@@ -253,64 +249,21 @@ export function WorkDay({
             <div className="day-main">
               {" "}
               <section className="day-panel priority-panel">
-                {heading("task", "Priority tasks", "All tasks", "task")}
-                {tasks.length ? (
-                  <ul className="priority-list">
-                    {tasks.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          className="completion-control"
-                          disabled={!!busy}
-                          aria-label={`Complete ${item.title}`}
-                          onClick={() => void complete(item)}
-                        >
-                          {busy === item.id ? (
-                            <span className="loading-dot" />
-                          ) : (
-                            <Icon name="check" />
-                          )}
-                        </button>
-                        <div>
-                          <button
-                            className="row-title"
-                            onClick={() => onOpen(item)}
-                          >
-                            {item.title}
-                          </button>
-                          <p className="record-meta">
-                            {item.focus_slot
-                              ? `Priority ${item.focus_slot} · `
-                              : ""}
-                            {item.status} · {displayDate(item.due_date)}
-                          </p>
-                        </div>
-                        <span
-                          className={`priority-pill priority-${item.priority.toLowerCase()}`}
-                        >
-                          {item.priority === "Critical" ||
-                          item.priority === "High" ? (
-                            <Icon name="flag" />
-                          ) : null}
-                          {item.priority}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  empty(
-                    "task",
-                    "A clear starting point.",
-                    "Choose your next task and give it a priority slot. Your focus starts here.",
-                  )
-                )}
+                {heading("task", "Tasks", "All tasks", "task")}
+                <WorkList
+                  client={client}
+                  userId={userId}
+                  kind="task"
+                  embedded
+                  revision={revision + retry + refreshMinute}
+                  onOpen={onOpen}
+                  onChanged={() => setRetry((v) => v + 1)}
+                />
                 <div className="panel-footer">
-                  <span>
-                    {data.counts[1] ?? 0} tasks due · up to 8 shown with chosen
-                    priorities first
-                  </span>
+                  <span>All open tasks · grouped by project</span>
                   <button onClick={() => onNavigate("task")}>
-                    Choose tasks
-                    <Icon name="plus" />
+                    Manage tasks
+                    <Icon name="arrow" />
                   </button>
                 </div>
               </section>
@@ -339,6 +292,22 @@ export function WorkDay({
                   <p className="small muted">
                     Oldest 100 open reminders loaded. Open All reminders for the
                     rest.
+                  </p>
+                )}
+              </section>
+              <section className="day-panel waiting-panel">
+                {heading("clock", "Waiting on", "Manage waiting", "waiting")}
+                {data.waiting.length
+                  ? rows(data.waiting.slice(0, 4))
+                  : empty(
+                      "clock",
+                      "No loose ends here.",
+                      "Track a dependency and a follow-up date when work is in someone else’s hands.",
+                    )}
+                {data.counts[3]! > 4 && (
+                  <p className="small muted">
+                    Showing up to four. Open Manage waiting for all
+                    dependencies.
                   </p>
                 )}
               </section>
@@ -373,23 +342,19 @@ export function WorkDay({
                   A live summary of your records.
                 </p>
               </section>
-              <button className="panel-link" onClick={()=>window.dispatchEvent(new CustomEvent("command:cora",{detail:"Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?"}))}>Ask Cora for perspective <Icon name="arrow"/></button>
-              <section className="day-panel waiting-panel">
-                {heading("clock", "Waiting on", "Manage waiting", "waiting")}
-                {data.waiting.length
-                  ? rows(data.waiting.slice(0, 4))
-                  : empty(
-                      "clock",
-                      "No loose ends here.",
-                      "Track a dependency and a follow-up date when work is in someone else’s hands.",
-                    )}
-                {data.counts[3]! > 4 && (
-                  <p className="small muted">
-                    Showing up to four. Open Manage waiting for all
-                    dependencies.
-                  </p>
-                )}
-              </section>
+              <button
+                className="panel-link"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("command:cora", {
+                      detail:
+                        "Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?",
+                    }),
+                  )
+                }
+              >
+                Ask Cora for perspective <Icon name="arrow" />
+              </button>
             </div>
             <div className="day-context">
               {" "}
@@ -523,7 +488,7 @@ export function WorkDay({
               </section>
             </div>{" "}
           </div>
-          <WorkdayReviews client={client}/>
+          <WorkdayReviews client={client} />
           <footer className="day-footer">
             <span>COMMAND / YOUR DAY, WITH INTENTION</span>
             <span>FOCUS · ORGANIZE · EXPLORE · DO</span>

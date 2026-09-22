@@ -1534,7 +1534,7 @@ summary {
   }
   .day-grid {
     grid-template-columns: 1fr;
-    grid-template-areas: "focus" "priority" "radar" "projects" "brief" "learning" "waiting" "capture";
+    grid-template-areas: "focus" "priority" "radar" "waiting" "projects" "brief" "learning" "capture";
     gap: 16px;
   }
   .day-stats {
@@ -1746,7 +1746,7 @@ summary {
     display: contents;
   }
   .day-grid {
-    grid-template-areas: "focus" "priority" "radar" "projects" "brief" "learning" "waiting" "capture";
+    grid-template-areas: "focus" "priority" "radar" "waiting" "projects" "brief" "learning" "capture";
   }
 }
 .search-filters { margin:0; padding:0 20px; border-bottom:1px solid var(--border); }
@@ -1788,3 +1788,49 @@ summary {
 .microsoft-prompts{margin-top:1.5rem;display:grid;gap:.6rem}
 .microsoft-prompts button{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:.8rem}
 .cora-panel details a{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.6rem;color:inherit;text-decoration:underline}
+
+/* Compact workspace lists share touch targets and hierarchy across every module. */
+.work-list-view .section-heading { margin-bottom: 18px; }
+.work-list-view .section-heading h1 { margin: 0; }
+.work-list-view .section-heading .eyebrow { margin: 0 0 8px; }
+.work-list-view .section-heading > button { display: flex; align-items: center; gap: 8px; }
+.work-list-view .filters { gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.compact-list { display: block; margin: 0; border-top: 1px solid var(--border); }
+.compact-list > li { display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 7px 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; }
+.compact-list > li:hover { background: var(--raised); }
+.compact-list .record-title { font-size: 14px; font-weight: 600; min-height: 28px; }
+.record-main { flex: 1; min-width: 0; }
+.record-main .record-meta { margin: 2px 0; font-size: 11px; }
+.record-kind-icon { width: 44px; min-width: 44px; display: grid; place-items: center; color: var(--muted); }
+.compact-list .is-complete .record-title { color: var(--muted); }
+.order-controls { display: inline-flex; flex-shrink: 0; }
+.order-controls button { width: 44px; height: 44px; min-width: 44px; padding: 11px; border: 0; background: transparent; }
+.order-controls button:disabled { opacity: .28; }
+.row-actions-menu { position: relative; flex-shrink: 0; margin: 0; }
+.row-actions-menu > summary { width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; list-style: none; color: var(--muted); }
+.row-actions-menu > summary::-webkit-details-marker { display: none; }
+.row-actions-menu[open] { align-self: flex-start; }
+.row-actions-menu .record-actions { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 0; padding: 6px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; }
+.row-actions-menu .record-actions button { text-align: left; min-height: 44px; white-space: nowrap; }
+.task-group { margin: 10px 0 20px; }
+.task-group-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 46px; background: var(--raised); padding: 0 8px; }
+.task-group-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.task-group-title .icon { width: 16px; flex-shrink: 0; }
+.task-group-title span { color: var(--muted); font-size: 10px; font-weight: 400; }
+.task-scroll-region { max-height: 460px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.embedded-work-list .task-group:first-child { margin-top: 0; }
+.embedded-work-list .compact-list > li { gap: 5px; padding-left: 0; padding-right: 0; }
+.embedded-work-list .priority-pill { display: none; }
+.list-notice { font-size: 12px; color: var(--text); margin: 8px 0; }
+.load-more { display: block; margin: 12px auto; }
+.list-count { margin-top: 16px; }
+.completion-control:focus-visible .icon { opacity: 1; }
+@media (max-width: 700px) {
+ .work-list-view .filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .compact-list > li { gap: 4px; padding-inline: 0; flex-wrap: wrap; }
+ .compact-list .priority-pill { display: none; }
+ .compact-list .record-main { flex-basis: calc(100% - 192px); }
+ .row-actions-menu[open] { flex-basis: 100%; }
+ .row-actions-menu[open] > summary { margin-left: auto; }
+ .task-scroll-region { max-height: 420px; }
+}

@@ -32,6 +32,24 @@ describe('Work record integrity and authorization', () => {
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
 
+  it('swaps only owned same-group records atomically and rejects stale or cross-owner orders',async()=>{
+    const insert=async(user:string,kind:string,title:string,project:string|null=null)=>(await db.query<{id:string;sort_order:number}>("insert into public.work_items(user_id,kind,title,status,project_id) values($1,$2,$3,$4,$5) returning id,sort_order",[user,kind,title,kind==='task'?'Inbox':'Active',project])).rows[0]!;
+    const p=await insert(owner,'project','Project'),q=await insert(owner,'project','Other project');
+    const a=await insert(owner,'task','A',p.id),b=await insert(owner,'task','B',p.id),c=await insert(owner,'task','C',q.id),foreign=await insert(other,'task','Foreign');
+    await authenticate(owner);
+    await db.query('select public.swap_work_order($1,$2,1,1)',[a.id,b.id]);
+    expect((await db.query<{sort_order:number;version:number}>('select sort_order,version from public.work_items where id=$1',[a.id])).rows[0]).toEqual({sort_order:b.sort_order,version:2});
+    for(const [target,version] of [[b.id,1],[c.id,1],[foreign.id,1]] as const){
+      await db.exec('savepoint invalid_order');
+      await expect(db.query('select public.swap_work_order($1,$2,2,$3)',[a.id,target,version])).rejects.toThrow();
+      await db.exec('rollback to savepoint invalid_order');
+    }
+    expect((await db.query<{version:number}>('select version from public.work_items where id=$1',[a.id])).rows[0]!.version).toBe(2);
+    await db.query('select public.swap_work_order($1,$2,1,1)',[p.id,q.id]);
+    expect((await db.query<{sort_order:number}>('select sort_order from public.work_items where id=$1',[p.id])).rows[0]!.sort_order).toBe(q.sort_order);
+    expect((await db.query<{allowed:boolean}>("select has_function_privilege('anon','public.swap_work_order(uuid,uuid,integer,integer)','EXECUTE') allowed")).rows[0]!.allowed).toBe(false);
+  });
+
   it('automatic reminder writes require consent, deduplicate resolved sources and remain owner isolated',async()=>{
     await db.query('insert into public.cora_review_preferences(user_id,automatic_reminders) values($1,true),($2,false)',[owner,other]);
     const call=()=>db.query<{r:{id:string;created:boolean}}>("select public.cora_create_reminder($1,$2,'Follow up','Evidence','2026-09-22',null) r",[owner,'a'.repeat(64)]);
