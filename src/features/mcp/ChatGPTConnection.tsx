@@ -77,7 +77,7 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
       <h2 id="chatgpt-title">Cora in ChatGPT</h2>
       <p className="muted">
         Connect your private Cora agent to live Command, Outlook, Calendar and
-        Teams context. Record and reminder changes open here for your confirmation. Messages
+        Teams context. Requested tasks, reminders, people, projects, initiatives, journal and AI Lab records save directly. Edits to existing records open here for confirmation. Messages
         and meetings cannot be changed.
       </p>
       {!loaded && !error && <p role="status">Checking connection…</p>}

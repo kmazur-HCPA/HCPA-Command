@@ -1,3 +1,4 @@
+import type { Kind } from "../../../../src/features/work/model";
 import { automaticTools, automaticTool } from "./automatic";
 import { prepareRecord } from "./actions";
 import OpenAI from "openai";
@@ -43,7 +44,7 @@ export async function runCora({
     ? createTeamsReader(store, turn.user_id, microsoft, signal, sources)
     : undefined;
   let proposal: CoraProposal | null = null;
-  const createdReminders: string[] = [];
+  const createdRecords: string[] = [];
   const audit = async (
     tool: string,
     args: Record<string, unknown>,
@@ -112,7 +113,7 @@ export async function runCora({
         content:
           previous.response.slice(0, 3000) +
           (previous.action_status === "created"
-            ? `\nVerified Command receipt: action on record ${previous.task_id} was saved after user confirmation.`
+            ? `\nVerified Command receipt: action on record ${previous.task_id} was saved successfully.`
             : ""),
       },
     );
@@ -176,7 +177,9 @@ export async function runCora({
               ...automaticTools.filter(
                 (t) =>
                   t.type === "function" &&
-                  t.function.name === "create_reminder",
+                  ["create_reminder", "create_record"].includes(
+                    t.function.name,
+                  ),
               ),
               ...microsoftTools,
               ...teamsTools,
@@ -186,7 +189,9 @@ export async function runCora({
               ...automaticTools.filter(
                 (t) =>
                   t.type === "function" &&
-                  t.function.name === "create_reminder",
+                  ["create_reminder", "create_record"].includes(
+                    t.function.name,
+                  ),
               ),
             ],
         parallel_tool_calls: false,
@@ -248,11 +253,11 @@ export async function runCora({
           status: "complete",
           action_status: proposal
             ? "proposed"
-            : createdReminders.length
+            : createdRecords.length
               ? "created"
               : "none",
-          ...(createdReminders.length && !proposal
-            ? { task_id: createdReminders[0] }
+          ...(createdRecords.length && !proposal
+            ? { task_id: createdRecords[0] }
             : {}),
           finished_at: new Date().toISOString(),
         })
@@ -263,7 +268,7 @@ export async function runCora({
         .single();
       if (saved.error)
         throw new Error(
-          "Cora could not save this conversation. Check Command for any saved reminders before retrying.",
+          "Cora could not save this conversation. Check Command for any saved records before retrying.",
         );
       const active = await client
         .from("app_memberships")
@@ -287,7 +292,7 @@ export async function runCora({
         args = JSON.parse(call.function.arguments) as Record<string, unknown>;
         if (!args || typeof args !== "object" || Array.isArray(args))
           throw new Error("Invalid tool arguments.");
-        if (call.function.name === "create_reminder") {
+        if (["create_reminder", "create_record"].includes(call.function.name)) {
           const receipt = await automaticTool(
             store,
             turn.user_id,
@@ -296,11 +301,13 @@ export async function runCora({
           );
           result = receipt;
           if ("id" in receipt) {
-            createdReminders.push(receipt.id);
+            createdRecords.push(receipt.id);
             sources.set(receipt.id, {
               id: receipt.id,
-              title: String(args.title),
-              kind: "reminder",
+              title:
+                "title" in receipt ? String(receipt.title) : String(args.title),
+              kind:
+                "kind" in receipt ? (String(receipt.kind) as Kind) : "reminder",
             });
           }
         } else if (call.function.name === "prepare_record") {
@@ -355,12 +362,13 @@ export async function runCora({
             ? { source: "microsoft", parameters_recorded: false }
             : args,
           {
-            state:
-              call.function.name === "create_reminder"
-                ? "saved"
-                : call.function.name.startsWith("prepare_")
-                  ? "proposed_not_saved"
-                  : "read",
+            state: ["create_reminder", "create_record"].includes(
+              call.function.name,
+            )
+              ? "saved"
+              : call.function.name.startsWith("prepare_")
+                ? "proposed_not_saved"
+                : "read",
           },
           true,
         );
@@ -386,6 +394,6 @@ export async function runCora({
     }
   }
   throw new Error(
-    "Cora reached the tool limit. Please narrow the question. Check Command for any saved reminders before retrying.",
+    "Cora reached the tool limit. Please narrow the question. Check Command for any saved records before retrying.",
   );
 }

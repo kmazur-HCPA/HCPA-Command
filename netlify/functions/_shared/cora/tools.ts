@@ -61,7 +61,7 @@ export const tools = [
   ),
   definition(
     "prepare_record",
-    'Prepare a reviewed create/update/convert action for any Command record. No write occurs until confirmed. Update only requested fields. For convert, kind=reminder and fields_json="{}". For create use null record_id and expected_version. Read current record before update. fields_json is a JSON object with editable fields: title, body, status, priority, due_date (YYYY-MM-DD or null), remind_at and snoozed_until (ISO timestamp WITH timezone or null), archived, focus_slot (task 1-3 or null), tags (string array), entry_type, goals, current_state, next_milestone, organization, person_role, details (string-valued object), project_id, initiative_id, person_id, task_id, source_entry_id, learning_id, program_id, use_case_id, experiment_id, decision_id (UUID or null). For reminder snooze set status=Snoozed and snoozed_until; dismiss=Dismissed, complete=Complete. Tomorrow without a time means due_date only; do not invent a time. Preserve all existing details when editing details. Detail field definitions: ' +
+    'Prepare a reviewed update/convert action or a creation not supported by direct tools. For new Tasks, People, Projects, Initiatives, Journal and AI Lab records use create_record; for new reminders use create_reminder. No write occurs until confirmed. Update only requested fields. For convert, kind=reminder and fields_json="{}". For create use null record_id and expected_version. Read current record before update. fields_json is a JSON object with editable fields: title, body, status, priority, due_date (YYYY-MM-DD or null), remind_at and snoozed_until (ISO timestamp WITH timezone or null), archived, focus_slot (task 1-3 or null), tags (string array), entry_type, goals, current_state, next_milestone, organization, person_role, details (string-valued object), project_id, initiative_id, person_id, task_id, source_entry_id, learning_id, program_id, use_case_id, experiment_id, decision_id (UUID or null). For reminder snooze set status=Snoozed and snoozed_until; dismiss=Dismissed, complete=Complete. Tomorrow without a time means due_date only; do not invent a time. Preserve all existing details when editing details. Detail field definitions: ' +
       JSON.stringify(detailFields),
     {
       operation: { type: "string", enum: ["create", "update", "convert"] },
@@ -103,7 +103,7 @@ export const tools = [
   ),
   definition(
     "prepare_task",
-    "Prepare one task for user review; this does not save it.",
+    "Legacy reviewed task proposal. For new requested tasks use create_record instead, which saves immediately.",
     {
       title: { type: "string" },
       due_date: {

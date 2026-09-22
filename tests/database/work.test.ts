@@ -1,3 +1,4 @@
+import { directRecordInput, directKinds } from '../../netlify/functions/_shared/cora/create'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 import { readFile,readdir } from 'node:fs/promises'
@@ -31,6 +32,27 @@ describe('Work record integrity and authorization', () => {
   beforeEach(async () => { await db.exec('begin') })
   afterEach(async () => { await db.exec('rollback') })
   afterAll(async () => { await db.close() })
+
+  it('creates every authorized Cora kind once and rejects cross-owner links, edits and browser calls',async()=>{
+    const make=(user:string,kind:string,request:string,fields:Record<string,unknown>)=>directRecordInput(user,{kind,request_id:request,fields_json:JSON.stringify(fields)});
+    let taskId='';
+    for(const kind of directKinds){
+      const record=make(owner,kind,owner,{title:'Direct '+kind,body:'Keep my words.\nSecond line.'});
+      // Each record gets a distinct retry identity, even when kinds differ.
+      record.id=crypto.randomUUID();
+      const call=()=>db.query<{r:{saved:boolean;created:boolean;id:string}}>('select public.cora_create_record($1,$2::jsonb) r',[owner,JSON.stringify(record)]);
+      expect((await call()).rows[0]!.r).toMatchObject({saved:true,created:true,id:record.id});
+      expect((await call()).rows[0]!.r).toMatchObject({saved:true,created:false,id:record.id});
+      expect((await db.query<{original_body:string}>('select original_body from public.work_items where id=$1',[record.id])).rows[0]!.original_body).toBe(record.body);
+      if(kind==='task')taskId=record.id;
+    }
+    const foreignProject=(await db.query<{id:string}>("insert into public.work_items(user_id,kind,title,status) values($1,'project','Foreign','Active') returning id",[other])).rows[0]!.id;
+    const invalid=[make(owner,'task',other,{title:'Cross owner',project_id:foreignProject}),{...make(owner,'task',other,{title:'Edit attempt'}),id:taskId},make(unapproved,'task',other,{title:'Unapproved'})];
+    for(const record of invalid){await db.exec('savepoint bad_create');await expect(db.query('select public.cora_create_record($1,$2::jsonb)',[record.user_id,JSON.stringify(record)])).rejects.toThrow();await db.exec('rollback to savepoint bad_create');}
+    expect((await db.query<{title:string}>('select title from public.work_items where id=$1',[taskId])).rows[0]!.title).toBe('Direct task');
+    await authenticate(owner);
+    await expect(db.query('select public.cora_create_record($1,$2::jsonb)',[owner,JSON.stringify(make(owner,'task',other,{title:'Browser'}))])).rejects.toThrow(/permission denied/);
+  });
 
   it('swaps only owned same-group records atomically and rejects stale or cross-owner orders',async()=>{
     const insert=async(user:string,kind:string,title:string,project:string|null=null)=>(await db.query<{id:string;sort_order:number}>("insert into public.work_items(user_id,kind,title,status,project_id) values($1,$2,$3,$4,$5) returning id,sort_order",[user,kind,title,kind==='task'?'Inbox':'Active',project])).rows[0]!;

@@ -54,7 +54,7 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const r = new Request(input, init),
         u = new URL(r.url);
-      requests.push(r);
+      requests.push(r.clone());
       queries.push(u);
       if (u.pathname.endsWith("/cora_mcp_connections"))
         return Response.json(
@@ -70,6 +70,7 @@ beforeEach(() => {
         );
       if (u.pathname.endsWith("/app_memberships"))
         return Response.json({ active });
+      if(u.pathname.endsWith('/cora_create_record')) { const body=await r.json();return Response.json({id:body.p_record.id,saved:true,created:true}); }
       if (u.pathname.endsWith("/cora_begin")) {
         const input = await r.json();
         return Response.json({
@@ -139,7 +140,7 @@ describe("Private ChatGPT MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(20);
+    expect(list.result.tools).toHaveLength(21);
     expect(
       list.result.tools
         .filter(
@@ -147,7 +148,7 @@ describe("Private ChatGPT MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task", "create_reminder", "record_workday_review"]);
+    ).toEqual(["prepare_record", "prepare_task", "create_record", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
   });
   it("reads only the token owner and audits the tool call without writing work", async () => {
@@ -277,4 +278,13 @@ it('prepares a date-only reminder through MCP without writing work records', asy
  expect(value.result.isError).not.toBe(true);
  expect(prepared).toMatchObject({type:'record',kind:'reminder',fields:{due_date:'2026-09-22'}});
  expect(requests.some(r=>new URL(r.url).pathname.endsWith('/work_items')&&r.method!=='GET')).toBe(false);
+});
+
+it('direct creation uses the verified MCP owner and returns a saved receipt without a proposal',async()=>{
+ const value=await result(await handleMcp(req({jsonrpc:'2.0',id:11,method:'tools/call',params:{name:'create_record',arguments:{kind:'person',request_id:owner,fields_json:JSON.stringify({title:'Example Person',organization:'HCPA'})}}}),cfg,'test'));
+ const receipt=JSON.parse(value.result.content[0].text).data;
+ expect(receipt).toMatchObject({saved:true,created:true,kind:'person'});
+ expect(receipt).not.toHaveProperty('review_url');expect(prepared).toBeNull();
+ const write=requests.find(r=>r.url.endsWith('/rpc/cora_create_record'))!;
+ expect(await write.clone().json()).toMatchObject({p_user:owner,p_record:{user_id:owner,kind:'person'}});
 });

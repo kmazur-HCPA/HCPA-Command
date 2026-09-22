@@ -1,3 +1,4 @@
+import { createRecord, createRecordDefinition } from "./create";
 import { createHash } from "node:crypto";
 import type { AppClient } from "../../../../src/platform/supabase";
 import {
@@ -7,6 +8,7 @@ import {
 import { validateFields } from "./actions";
 import { definition } from "../microsoft/tools";
 export const automaticTools = [
+  createRecordDefinition,
   definition(
     "get_workday_reviews",
     "Read the five most recent review receipts to establish the last successful review and any missed/partial coverage.",
@@ -98,6 +100,7 @@ export async function automaticTool(
     if (r.error) throw new Error("Review history unavailable.");
     return { reviews: r.data };
   }
+  if (name === "create_record") return createRecord(store,userId,args);
   const pref = await store
     .from("cora_review_preferences")
     .select("automatic_reminders")
