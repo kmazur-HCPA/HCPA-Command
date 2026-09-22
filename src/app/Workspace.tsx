@@ -240,7 +240,6 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           <span>Search or jump to anything…</span>
           <kbd>⌘ K</kbd>
         </button>
-        <button className="header-new-task" aria-label="Create new task" title="Create new task" onClick={() => setNewTask(true)}><Icon name="plus" /><span>New task</span></button>
         <div className="header-date">
           <Icon name="clock" />
           <span>
@@ -267,6 +266,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
         >
           <Icon name="sun" />
         </button>
+        <button className="header-new-task" aria-label="Create new task" title="Create new task" onClick={() => setNewTask(true)}><Icon name="task" /><span>New task</span></button>
         <button className="cora-entry" onClick={()=>openCora()} aria-expanded={cora}><Mark/><span>Ask Cora</span></button>
         <button className="capture-button" onClick={() => setCapture(true)}>
           <Icon name="plus" />
