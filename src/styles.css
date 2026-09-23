@@ -1817,7 +1817,7 @@ summary {
 .task-group-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
 .task-group-title .icon { width: 16px; flex-shrink: 0; }
 .task-group-title span { color: var(--muted); font-size: 10px; font-weight: 400; }
-.task-scroll-region { max-height: 460px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.task-scroll-region { max-height: 460px; overflow-y: auto; scrollbar-gutter: stable; }
 .embedded-work-list .task-group:first-child { margin-top: 0; }
 .embedded-work-list .compact-list > li { gap: 5px; padding-left: 0; padding-right: 0; }
 .embedded-work-list .priority-pill { display: none; }
