@@ -17,6 +17,8 @@ import {
   entryTypes,
 } from "./model";
 import { displayDate } from "./dates";
+import { Detail } from "./Detail";
+import { TaskMetadata } from "./TaskMetadata";
 import { Editor } from "./Editor";
 import { Icon } from "../../ui/Icon";
 
@@ -54,6 +56,7 @@ export function WorkList({
     [busy, setBusy] = useState<string | null>(null),
     [notice, setNotice] = useState("");
   const [editor, setEditor] = useState<WorkItem | "new" | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 30000);
@@ -197,7 +200,7 @@ export function WorkList({
         return (
           <li
             key={item.id}
-            className={item.status === "Complete" ? "is-complete" : ""}
+            className={`${kind === "task" ? "task-row" : ""} ${item.status === "Complete" ? "is-complete" : ""}`}
           >
             {canComplete ? (
               <button
@@ -221,10 +224,10 @@ export function WorkList({
               </span>
             )}
             <div className="record-main">
-              <button className="record-title" onClick={() => onOpen(item)}>
+              <button className="record-title" onClick={() => kind === "task" ? setDetailId(item.id) : onOpen(item)}>
                 {item.title}
               </button>
-              <p className="record-meta">
+              {kind === "task" ? <TaskMetadata item={item} now={now} /> : <p className="record-meta">
                 {kind === "person" ? (
                   [item.person_role, item.organization]
                     .filter(Boolean)
@@ -238,9 +241,9 @@ export function WorkList({
                     {kind === "journal" && ` · ${item.entry_type}`}
                   </>
                 )}
-              </p>
+              </p>}
             </div>
-            {kind !== "person" && (
+            {kind !== "person" && kind !== "task" && (
               <span
                 className={`priority-pill priority-${item.priority.toLowerCase()}`}
               >
@@ -258,8 +261,8 @@ export function WorkList({
                 •••
               </summary>
               <div className="record-actions">
-                <button disabled={!!busy} onClick={() => void edit(item)}>Edit</button>
-                <button onClick={() => onOpen(item)}>Open details</button>
+                {kind !== "task" && <button disabled={!!busy} onClick={() => void edit(item)}>Edit</button>}
+                {kind !== "task" && <button onClick={() => onOpen(item)}>Open details</button>}
                 {kind === "reminder" &&
                   !["Complete", "Dismissed"].includes(item.status) && (
                     <>
@@ -522,6 +525,7 @@ export function WorkList({
             : ""}
         </p>
       )}
+      {detailId && <Detail key={detailId} modal client={client} userId={userId} id={detailId} onClose={() => setDetailId(null)} onChanged={() => { refresh(); onChanged?.(); }} />}
       {editor && (
         <Editor
           client={client}

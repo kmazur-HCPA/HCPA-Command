@@ -1918,3 +1918,35 @@ summary {
 .workspace-header .header-new-task { background:var(--surface); border:1px solid var(--orange); border-radius:10px; font-weight:600; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--orange) 10%, transparent); }
 .workspace-header .header-new-task svg { color:var(--orange); }
 .workspace-header .header-new-task:hover { background:color-mix(in srgb, var(--orange) 12%, var(--surface)); }
+
+/* Shared task metadata remains visible in Work Day, Tasks, and narrow layouts. */
+.task-metadata { display:flex; flex-wrap:wrap; align-items:start; gap:8px 24px; margin:6px 0 2px; }
+.task-metadata > div { min-width:80px; }
+.task-metadata dt { font-size:10px; font-weight:600; color:var(--muted); margin-bottom:4px; }
+.task-metadata dd { margin:0; font-size:12px; font-weight:500; line-height:24px; }
+.task-badge { display:inline-block; padding:0 8px; border-radius:5px; background:var(--raised); border:1px solid var(--border); line-height:22px; }
+.task-badge.priority-high,.task-badge.priority-critical { color:var(--orange); border-color:currentColor; }
+.task-status-in-progress { border-color:var(--orange); }
+.task-due-overdue dd { color:var(--error); font-weight:650; }
+.task-due-today dd { font-weight:650; }
+.compact-list > .task-row { padding-block:5px; min-height:64px; align-items:center; }
+.task-row .task-metadata { gap:4px 12px; margin:2px 0 0; align-items:center; }
+.task-row .task-metadata > div { min-width:0; }
+.task-row .task-metadata dt { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.task-row .task-metadata dd { line-height:20px; }
+.task-row .task-badge { padding:0 6px; line-height:18px; }
+.task-group { margin-bottom:12px; }
+.task-row .record-title:hover { text-decoration:underline; text-underline-offset:3px; }
+.task-row .row-actions-menu[open] { align-self:center; }
+.task-row .row-actions-menu .record-actions { position:absolute; right:0; bottom:100%; z-index:2; box-shadow:0 4px 16px #0003; }
+.task-dialog-close { display:flex; justify-content:flex-end; }
+.task-detail-dialog .section-heading { margin-top:8px; align-items:start; }
+.task-detail-dialog h1 { font-size:24px; overflow-wrap:anywhere; }
+@media(max-width:700px) {
+ .compact-list > .task-row { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:4px; }
+ .task-row .record-main { grid-column:2; }
+ .task-row > .order-controls { grid-column:2; grid-row:2; justify-self:end; }
+ .task-row > .order-controls button { width:32px; min-width:32px; height:32px; min-height:32px; padding:7px; }
+ .task-row > .row-actions-menu { grid-column:3; grid-row:1; }
+ .task-metadata { gap:8px 16px; }
+}

@@ -233,7 +233,7 @@ test("create a task, choose a priority, edit, and complete it", async ({
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await page.getByRole("button", { name: "Complete Review architecture", exact: true }).click();
   await page.getByRole("combobox",{name:"Filter status",exact:true}).selectOption("Complete");
-  await expect(page.locator(".record-meta")).toContainText("Complete");
+  await expect(page.locator(".task-metadata")).toContainText("Complete");
 });
 test("capture survives failed save and reload, then a lost acknowledgement produces one entry", async ({
   page,
@@ -331,7 +331,7 @@ test("reminder remains visible after its due time and converts explicitly", asyn
   await page
     .getByRole("button", { name: "Convert to task", exact: true })
     .click();
-  await expect(page.locator(".record-meta")).toContainText("Complete");
+  await expect(page.locator(".task-metadata")).toContainText("Complete");
   expect(rows.filter((r) => r.kind === "task")).toHaveLength(1);
 });
 test("conflicting edits preserve the draft until the saved version is reviewed", async ({
@@ -812,4 +812,46 @@ test('returning from another app keeps Tasks and the unsaved editor mounted whil
  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
  await expect(page.getByRole('heading',{name:'Access is not enabled.'})).toBeVisible();
  await expect(page.getByRole('dialog',{name:'New task',exact:true})).toHaveCount(0);
+});
+
+
+test('task metadata and same-dialog editing work on Work Day and Tasks', async ({page}) => {
+ const {rows,control}=await setup(page);
+ rows.push({...newItem('task',uid),title:'Review rollout',priority:'High',status:'In Progress',due_date:'2020-01-01',body:'Check deployment notes',original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ for (const destination of ['Work Day','Tasks']) {
+  await page.getByRole('button',{name:destination,exact:true}).click();
+  const row=page.locator('.task-row').filter({hasText:'Review rollout'});
+  await expect(row.locator('.task-metadata')).toContainText('High');
+  await expect(row.locator('.task-metadata')).toContainText('In Progress');
+  await expect(row.locator('.task-metadata')).toContainText('Jan 1, 2020 · Overdue');
+  await row.getByRole('button',{name:'Review rollout',exact:true}).click();
+  const dialog=page.getByRole('dialog');
+  await expect(dialog).toHaveCount(1);
+  await expect(dialog).toContainText('Check deployment notes');
+  await dialog.evaluate(el=>el.setAttribute('data-dialog-instance','original'));
+  await dialog.getByRole('button',{name:'Edit',exact:true}).click();
+  await expect(dialog).toHaveAttribute('data-dialog-instance','original');
+  await expect(dialog.getByLabel('Title',{exact:true})).toHaveValue('Review rollout');
+  await dialog.getByRole('combobox',{name:'Priority',exact:true}).selectOption('Critical');
+  control.failWrites=true;
+  await dialog.getByRole('button',{name:'Save',exact:true}).click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  control.failWrites=false;
+  await dialog.getByRole('button',{name:'Save',exact:true}).click();
+  await expect(dialog.getByRole('button',{name:'Edit',exact:true})).toBeVisible();
+  await expect(dialog.locator('.task-metadata')).toContainText('Critical');
+  await dialog.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.keyboard.press('Escape');
+  await expect(dialog.getByRole('button',{name:'Edit',exact:true})).toBeVisible();
+  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(row.locator('.task-metadata')).toContainText('Critical');
+  rows[0]!.priority='High';
+ }
+ await page.setViewportSize({width:390,height:844});
+ await expect(page.locator('.task-metadata')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/task-metadata-mobile.png',fullPage:true});
 });

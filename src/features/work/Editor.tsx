@@ -8,7 +8,7 @@ import { useDraftGuard } from './useDraftGuard'
 import { LabFields } from '../lab/LabFields'
 import { LinkPicker } from './LinkPicker'
 import { fromLocalDateTime, localDateTime } from './dates'
-export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:AppClient;userId:string;kind:Kind;item?:WorkItem;seed?:Partial<WorkInput>;onClose:()=>void;onSaved:(item:WorkItem)=>void}) {
+export function Editor({client,userId,kind,item,seed,onClose,onSaved,embedded=false}:{client:AppClient;userId:string;kind:Kind;item?:WorkItem;seed?:Partial<WorkInput>;embedded?:boolean;onClose:()=>void;onSaved:(item:WorkItem)=>void}) {
  const key=item?`edit:${item.id}`:`new:${kind}${seed?.source_entry_id?`:${seed.source_entry_id}`:''}`
  const [initial]=useState(()=>{
   const base=item?{...newItem(kind,userId),...toInput(item)}:{...newItem(kind,userId),...seed}
@@ -28,8 +28,16 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
  const [busy,setBusy]=useState(false)
  useDraftGuard(initial.recovered||JSON.stringify(input)!==JSON.stringify(initial.input))
  const dialog=useRef<HTMLDialogElement>(null)
+ const form=useRef<HTMLFormElement>(null)
  const saving=useRef(false)
  useEffect(()=>{dialog.current?.showModal()},[])
+ useEffect(()=>{
+  if(!embedded)return
+  const parent=form.current?.closest("dialog")
+  function cancel(event:Event){event.preventDefault();event.stopPropagation();if(!busy&&(localSafe||confirm("This draft is not saved locally. Copy your writing before closing. Close anyway?")))onClose()}
+  parent?.addEventListener("cancel",cancel)
+  return()=>parent?.removeEventListener("cancel",cancel)
+ },[embedded,busy,localSafe,onClose])
  function change(patch:Partial<WorkInput>) {
   const next={...input,...patch};setInput(next)
   try{if(initial.error)throw new Error('Preserve unreadable draft');draftStore(localStorage,userId).save(key,JSON.stringify({input:next,version:expectedVersion}));setDraftStatus('Draft saved on this device.');setLocalSafe(true);setError('')}
@@ -46,8 +54,7 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
  }
  function close(){if(localSafe||confirm('This draft is not saved locally. Copy your writing before closing. Close anyway?'))onClose()}
  function discard(){if(window.confirm('Discard this local draft? Saved records will not be deleted.')){try{draftStore(localStorage,userId).discard(key);onClose()}catch{setError('The draft could not be removed.')}}}
- return <dialog ref={dialog} className="record-dialog" aria-labelledby="editor-title" onCancel={event=>{event.preventDefault();if(!busy)close()}}>
-  <form onSubmit={event=>void submit(event)}><div className="dialog-heading"><h2 id="editor-title">{item?'Edit':'New'} {kind}</h2><button type="button" disabled={busy} onClick={close} aria-label="Close editor">×</button></div>
+ const content = <form ref={form} onSubmit={event=>void submit(event)}><div className="dialog-heading"><h2 id="editor-title">{item?'Edit':'New'} {kind}</h2><button type="button" disabled={busy} onClick={close} aria-label="Close editor">×</button></div>
    <label>{kind==='person'?'Full name':'Title'}<input autoFocus required maxLength={240} value={input.title} onChange={e=>change({title:e.target.value})} disabled={busy}/></label>
    {kind==='task'&&<LinkPicker client={client} kind="project" label="Project" value={input.project_id} disabled={busy} onChange={id=>change({project_id:id})}/>}
    <label>Notes<textarea rows={7} maxLength={50000} value={input.body} onChange={e=>change({body:e.target.value})} disabled={busy}/></label>
@@ -78,5 +85,5 @@ export function Editor({client,userId,kind,item,seed,onClose,onSaved}:{client:Ap
    <p role="status" className="muted small">{draftStatus}</p>{error&&<p role="alert" className="error-message">{error}</p>}
    <div className="actions"><button className="save-button" disabled={busy} type="submit">{busy?'Saving…':'Save'}</button><button type="button" disabled={busy} onClick={close}>Close · keep draft</button><button type="button" disabled={busy} onClick={discard}>Discard draft</button></div>
   </form>
- </dialog>
+ return embedded ? content : <dialog ref={dialog} className="record-dialog" aria-labelledby="editor-title" onCancel={event=>{event.preventDefault();if(!busy)close()}}>{content}</dialog>
 }
