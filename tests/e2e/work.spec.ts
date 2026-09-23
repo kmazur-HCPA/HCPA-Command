@@ -920,7 +920,7 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await page.setViewportSize({width:1600,height:1100});
  await page.clock.setFixedTime(new Date('2026-09-23T17:00:00Z'));
  await setup(page);
- let reviews=[{id:'old',user_id:uid,status:'complete',started_at:'2026-09-22T15:00:00Z',finished_at:'2026-09-22T15:01:00Z',summary:'At a glance\nProtect time for the parcel rollout.\n\nTop three priorities\n1. Validate parcel output before rollout.\n2. Prepare the vendor scope.\n\nNext moves\nFinish validation, then prepare tomorrow’s questions.\n\nFollow-ups\nConfirm the vendor’s next checkpoint.'},{id:'failed',user_id:uid,status:'failed',started_at:'2026-09-23T15:00:00Z',finished_at:'2026-09-23T15:01:00Z',summary:'Provider unavailable'}];
+ let reviews=[{id:'old',user_id:uid,status:'complete',started_at:'2026-09-22T15:00:00Z',finished_at:'2026-09-22T15:01:00Z',summary:'Now: The parcel rollout needs validation.\n\nNext: Validate parcel output before rollout, then prepare tomorrow’s vendor questions.'},{id:'failed',user_id:uid,status:'failed',started_at:'2026-09-23T15:00:00Z',finished_at:'2026-09-23T15:01:00Z',summary:'Provider unavailable'}];
  await page.route('**/rest/v1/cora_workday_reviews*',r=>{
   const p=new URL(r.request().url()).searchParams;
   let selected=[...reviews].sort((a,b)=>b.started_at.localeCompare(a.started_at));
@@ -933,19 +933,21 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await page.getByRole('button',{name:'Work Day',exact:true}).click();
  const brief=page.getByRole('region',{name:'Command brief',exact:true});
  await expect(brief).toContainText('Validate parcel output');
- await expect(brief).toContainText('From an earlier day');
+ await expect(brief).toContainText('Previous day’s brief');
  await expect(brief).toContainText('The latest review failed');
  expect((await brief.boundingBox())!.y).toBeLessThan((await page.locator('.day-stats').boundingBox())!.y);
  await page.route('**/api/cora/chat',async r=>{
   expect(r.request().postDataJSON().context.page).toBe('command-brief');
-  reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'At a glance\nMake the parcel rollout your next move.\n\nTop three priorities\n1. Validate two subdivisions.\n\nCoverage\nCalendar is unavailable; capacity is not confirmed.'},...reviews];
+  reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'Next: Make the parcel rollout your next move. Validate two subdivisions before proceeding.\n\nCalendar is unavailable; check it before reserving focus time.'},...reviews];
   await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{}})+'\n'});
  });
  await brief.getByRole('button',{name:'Update brief',exact:true}).click();
  await expect(brief).toContainText('Make the parcel rollout your next move.');
- await expect(brief).toContainText('Partial coverage');
- await expect(brief).not.toContainText('From an earlier day');
+ await expect(brief).toContainText('Limited context');
+ await expect(brief).not.toContainText('Previous day’s brief');
  await expect(brief.getByRole('button',{name:'Update brief',exact:true})).toBeEnabled();
+ expect((await brief.boundingBox())!.height).toBeLessThan(300);
+ await page.screenshot({path:'test-results/brief-current-compact.png'});
  await page.route('**/api/cora/chat',r=>r.fulfill({status:503,json:{message:'Cora temporarily unavailable'}}));
  await brief.getByRole('button',{name:'Update brief',exact:true}).click();
  await expect(brief.getByRole('alert')).toContainText('Cora temporarily unavailable');
@@ -955,4 +957,27 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/command-brief-mobile.png',fullPage:true});
+});
+
+
+test('Command Brief contains oversized legacy reviews without displacing the task list',async({page})=>{
+ await page.setViewportSize({width:1600,height:1100});
+ await setup(page);
+ const review={id:'legacy',user_id:uid,status:'partial',started_at:new Date().toISOString(),finished_at:new Date().toISOString(),summary:'Partial workday review completed. Checked: '+('Long review of every task and meeting. https://outlook.office.com/very-long-source-link '.repeat(60))};
+ await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[review]}));
+ await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:true}}));
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Work Day',exact:true}).click();
+ const brief=page.getByRole('region',{name:'Command brief',exact:true});
+ await expect(brief).toContainText('A detailed review is saved in history');
+ await expect(brief.locator('.command-brief-copy')).toHaveCount(0);
+ expect((await brief.boundingBox())!.height).toBeLessThan(280);
+ expect((await page.locator('.priority-panel').boundingBox())!.y).toBeLessThan(750);
+ await page.screenshot({path:'test-results/brief-legacy-compact.png'});
+ await page.setViewportSize({width:390,height:844});
+ expect((await brief.boundingBox())!.height).toBeLessThan(340);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await brief.getByText('Review history',{exact:true}).click();
+ await brief.locator('.brief-history > details > summary').click();
+ expect((await brief.locator('.brief-history-copy').boundingBox())!.height).toBeLessThanOrEqual(220);
 });

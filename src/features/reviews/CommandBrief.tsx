@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { AppClient } from '../../platform/supabase';
 import { Icon } from '../../ui/Icon';
 import { chat } from '../cora/service';
-import { briefInstructions, briefIsOld, briefSections, latestBrief, type Review } from './brief';
+import { briefInstructions, briefIsOld, isCompactBrief, latestBrief, type Review } from './brief';
 const stamp = (value:string) => new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 // Only verified-format Command record links are interactive; never render model HTML.
 function BriefLine({text,onOpen}:{text:string;onOpen:(item:{id:string})=>void}) {
+ const label=/^(Now|Next|Watch):\s*/i.exec(text);
+ if(label)return <><strong>{label[1]}:</strong> <BriefLine text={text.slice(label[0].length)} onOpen={onOpen}/></>;
  const parts=text.split(/(\[[^\]\n]+\]\(\/\?record=[a-f0-9-]{36}\))/gi);
  return <>{parts.map((part,i)=>{
   const link=/^\[([^\]]+)\]\(\/\?record=([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\)$/i.exec(part);
@@ -53,26 +55,23 @@ export function CommandBrief({client,onOpen}:{client:AppClient;onOpen:(item:{id:
   finally{controller.current=null;if(mounted.current){setGenerating(false);setRetry(v=>v+1)}}
  }
  const brief=latestBrief(reviews), latest=reviews[0];
- const sections=brief?briefSections(brief.summary):[];
+ const compact=brief ? isCompactBrief(brief.summary) : false;
  return <section className="day-panel command-brief" aria-labelledby="command-brief-title">
   <div className="command-brief-heading">
-   <div><p className="eyebrow">CORA / YOUR WORKDAY</p><h2 id="command-brief-title"><Icon name="flag"/> Command brief</h2></div>
+   <div><h2 id="command-brief-title"><Icon name="flag"/> Command brief</h2></div>
    <button disabled={generating||enabled!==true||loading} onClick={()=>void generate()}>{generating?'Cora is preparing your brief…':'Update brief'}</button>
   </div>
-  <p className="brief-byline">{brief?`Prepared by Cora · ${stamp(brief.finished_at??brief.started_at)}`:'Cora’s priorities and next actions, grounded in Command.'}</p>
-  {brief&&briefIsOld(brief,now)&&<p className="brief-state">From an earlier day — today’s brief has not been saved yet.</p>}
-  {brief?.status==='partial'&&<p className="brief-state">Partial coverage — review the gaps noted by Cora.</p>}
+  <p className="brief-byline">{brief?`Prepared by Cora · ${stamp(brief.finished_at??brief.started_at)}`:'What matters right now.'}</p>
+  {brief&&briefIsOld(brief,now)&&<p className="brief-state">Previous day’s brief. Update for current context.</p>}
+  {brief?.status==='partial'&&<p className="brief-state">Limited context.</p>}
   {enabled===false&&<p className="brief-state">Brief updates are paused. Enable automatic reviews in Settings to resume.</p>}
   {latest?.status==='running'&&<p role="status">{now-Date.parse(latest.started_at)>1800000?'The latest review may have been interrupted.':'Cora is reviewing your day.'} {brief?'Showing the last saved brief.':''}</p>}
   {latest?.status==='failed'&&<p className="brief-state">The latest review failed. {brief?'Showing the last saved brief.':'No brief is available yet.'}</p>}
   {loading&&<p role="status">Loading Command Brief…</p>}
   {(error||generationError)&&<p role="alert" className="error-message">{error||generationError} <button onClick={()=>setRetry(v=>v+1)}>Reload brief</button></p>}
   {!loading&&!brief&&!error&&<p className="brief-empty">No saved Cora brief yet. {enabled?'Choose Update brief to prepare one from your current work.':'Your brief will appear here after a completed review.'}</p>}
-  {brief&&<div className="command-brief-sections">{sections.map((section,index)=><section key={index} className={section.title==='Top three priorities'?'brief-priorities':''}>
-   {section.title&&<h3>{section.title}</h3>}
-   {section.title==='Top three priorities'?<ol>{section.lines.map((line,i)=><li key={i}><BriefLine text={line.replace(/^\d+[.)]\s*/, '')} onOpen={onOpen}/></li>)}</ol>:section.lines.map((line,i)=><p key={i}><BriefLine text={line} onOpen={onOpen}/></p>)}
-  </section>)}</div>}
-  <div className="command-brief-footer"><span>Weekday review schedule · 6:45 AM, 9 AM, 11 AM, 1 PM and 3 PM Eastern</span><span>Recommended priorities · Your chosen focus stays separate</span></div>
-  {reviews.length>0&&<details className="brief-history"><summary>Review history</summary>{reviews.slice(0,5).map(review=><details key={review.id}><summary>{stamp(review.started_at)} · {review.status}</summary><p className="full-text">{review.summary||'No finished summary recorded.'}</p></details>)}</details>}
+  {brief&&compact&&<div className="command-brief-copy">{brief.summary.split(/\n/).filter(line=>line.trim()).map((line,index)=><p key={index}><BriefLine text={line} onOpen={onOpen}/></p>)}</div>}
+  {brief&&!compact&&<p className="brief-empty">A detailed review is saved in history. Choose Update brief for a short, current check-in.</p>}
+  {reviews.length>0&&<details className="brief-history"><summary>Review history</summary>{reviews.slice(0,5).map(review=><details key={review.id}><summary>{stamp(review.started_at)} · {review.status}</summary><p className="full-text brief-history-copy" tabIndex={0}>{review.summary||'No finished summary recorded.'}</p></details>)}</details>}
  </section>;
 }

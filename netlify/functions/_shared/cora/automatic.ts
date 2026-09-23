@@ -1,4 +1,4 @@
-import { briefInstructions } from "../../../../src/features/reviews/brief";
+import { briefInstructions, isCompactBrief } from "../../../../src/features/reviews/brief";
 import { createRecord, createRecordDefinition } from "./create";
 import { createHash } from "node:crypto";
 import type { AppClient } from "../../../../src/platform/supabase";
@@ -29,7 +29,7 @@ export const automaticTools = [
   ),
   definition(
     "record_workday_review",
-    briefInstructions + '\nRecord a workday review in Command. Begin with status=running, summary="", and a new UUID run_id. Reuse that run_id to finish with complete/partial/failed and a concise summary of coverage, reminders, suggested priorities, Waiting On changes and source gaps. No emails or Teams messages are sent. These are observations, not changes to existing work records.',
+    briefInstructions + '\nRecord a workday review in Command. Begin with status=running, summary="", and a new UUID run_id. Reuse that run_id to finish with complete/partial/failed and only the compact current-state check-in as summary. Complete and partial summaries must satisfy the word, character and paragraph limits above. Keep run diagnostics out of the brief.',
     {
       run_id: { type: "string" },
       status: {
@@ -144,6 +144,9 @@ export async function automaticTool(
     args.summary.length > 6000
   )
     throw new Error("Invalid review receipt.");
+  if (["complete", "partial"].includes(String(args.status)) && !isCompactBrief(args.summary)) {
+    throw new Error("Rewrite the Command Brief as a current-state check-in: at most 120 words, 1000 characters and 3 short paragraphs. One or two next priorities only. No raw URLs, review logs or task inventories. Reuse the same run_id.");
+  }
   if (args.status === "running") {
     const r = await store
       .from("cora_workday_reviews")

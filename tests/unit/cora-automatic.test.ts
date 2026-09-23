@@ -54,3 +54,14 @@ describe("automatic reminder boundary", () => {
     ).rejects.toThrow("paused");
   });
 });
+
+it('rejects a report at the review write boundary before persisting it',async()=>{
+ vi.stubGlobal('fetch',async(input:RequestInfo|URL)=>{
+  const path=new URL(String(input)).pathname;
+  if(path.endsWith('app_memberships'))return Response.json({active:true});
+  if(path.endsWith('cora_review_preferences'))return Response.json({automatic_reminders:true});
+  throw new Error('Unexpected write');
+ });
+ const client=createClient<Database>('https://fixture.supabase.co','fixture');
+ await expect(automaticTool(client,owner,'record_workday_review',{run_id:owner,status:'complete',summary:'word '.repeat(121)})).rejects.toThrow('Rewrite the Command Brief');
+});
