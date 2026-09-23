@@ -331,7 +331,7 @@ test("reminder remains visible after its due time and converts explicitly", asyn
   await page
     .getByRole("button", { name: "Convert to task", exact: true })
     .click();
-  await expect(page.locator(".task-metadata")).toContainText("Complete");
+  await expect(page.locator(".record-meta")).toContainText("Complete");
   expect(rows.filter((r) => r.kind === "task")).toHaveLength(1);
 });
 test("conflicting edits preserve the draft until the saved version is reviewed", async ({
@@ -758,6 +758,7 @@ test('People directory supports contact fields, CSV preview, failed acknowledgem
 });
 
 test('Work Day gives tasks more room and shows calendar, reminders and waiting on in both themes',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
  await page.setViewportSize({width:1600,height:1100});
  const {rows}=await setup(page);
  for(let i=0;i<24;i++)rows.push({...newItem('task',uid),title:`Work item ${i+1}`,original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
@@ -840,7 +841,7 @@ test('task metadata and same-dialog editing work on Work Day and Tasks', async (
   control.failWrites=false;
   await dialog.getByRole('button',{name:'Save',exact:true}).click();
   await expect(dialog.getByRole('button',{name:'Edit',exact:true})).toBeVisible();
-  await expect(dialog.locator('.task-metadata')).toContainText('Critical');
+  await expect(dialog.getByRole('combobox',{name:'Priority',exact:true})).toHaveValue('Critical');
   await dialog.getByRole('button',{name:'Edit',exact:true}).click();
   await page.keyboard.press('Escape');
   await expect(dialog.getByRole('button',{name:'Edit',exact:true})).toBeVisible();
@@ -854,4 +855,104 @@ test('task metadata and same-dialog editing work on Work Day and Tasks', async (
  await expect(page.locator('.task-metadata')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/task-metadata-mobile.png',fullPage:true});
+});
+
+
+test('task details save priority, due date and status directly and recover from failed writes',async({page})=>{
+ const {rows,control}=await setup(page);
+ rows.push({...newItem('task',uid),title:'Quick changes',body:'Keep these notes',original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Quick changes',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Task details',exact:true});
+ const priority=dialog.getByRole('combobox',{name:'Priority',exact:true});
+ const status=dialog.getByRole('combobox',{name:'Status',exact:true});
+ const due=dialog.getByLabel('Due date',{exact:true});
+ await expect(priority).toHaveValue('Normal');
+ await priority.selectOption('High');
+ await expect(dialog.getByRole('status')).toHaveText('Saved');
+ await due.fill('2026-12-15');await dialog.getByRole('heading',{name:'Quick changes',exact:true}).click();
+ await expect(dialog.getByRole('status')).toHaveText('Saved');
+ await expect.poll(()=>rows[0]!.due_date).toBe('2026-12-15');
+ control.failWrites=true;
+ await status.selectOption('Waiting');
+ await expect(dialog.getByRole('alert')).toBeVisible();
+ await expect(status).toHaveValue('Inbox');
+ control.failWrites=false;
+ await status.selectOption('In Progress');
+ await expect(dialog.getByRole('status')).toHaveText('Saved');
+ await due.fill('');await dialog.getByRole('heading',{name:'Quick changes',exact:true}).click();
+ await expect.poll(()=>rows[0]!.due_date).toBeNull();
+ await expect(dialog.getByRole('status')).toHaveText('Saved');
+ expect(rows[0]!.body).toBe('Keep these notes');
+ await dialog.getByRole('button',{name:'Edit',exact:true}).click();
+ await expect(page.getByRole('combobox',{name:'Priority',exact:true})).toHaveValue('High');
+ await page.getByRole('button',{name:'Close editor',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ await page.screenshot({path:'test-results/task-quick-edit-mobile.png'});
+ await dialog.getByRole('button',{name:'Close task details',exact:true}).click();
+ await expect(page.locator('.task-row')).toContainText('In Progress');
+});
+
+
+test('Work Day calendar hides past events and removes meetings as they end',async({page})=>{
+ await page.clock.install({time:new Date('2026-09-23T15:00:00Z')});
+ await setup(page);
+ await page.route('**/api/microsoft/calendar?**',r=>r.fulfill({json:{events:[
+  {id:'past',subject:'Monday meeting',start:'2026-09-21T13:00:00Z',end:'2026-09-21T14:00:00Z',allDay:false,durationMinutes:60},
+  {id:'earlier',subject:'Earlier today',start:'2026-09-23T13:00:00Z',end:'2026-09-23T14:00:00Z',allDay:false,durationMinutes:60},
+  {id:'ongoing',subject:'Current meeting',start:'2026-09-23T14:00:00Z',end:'2026-09-23T15:01:00Z',allDay:false,durationMinutes:61},
+  {id:'future',subject:'Tomorrow meeting',start:'2026-09-24T13:00:00Z',end:'2026-09-24T14:00:00Z',allDay:false,durationMinutes:60},
+ ],truncated:false,retrievedAt:new Date().toISOString()}}));
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Work Day',exact:true}).click();
+ const panel=page.locator('.calendar-panel');
+ await expect(panel).toContainText('Current meeting');
+ await expect(panel).toContainText('Tomorrow meeting');
+ await expect(panel).not.toContainText('Monday meeting');
+ await expect(panel).not.toContainText('Earlier today');
+ await page.clock.fastForward(90000);
+ await expect(panel).not.toContainText('Current meeting');
+ await expect(panel).toContainText('Tomorrow meeting');
+});
+
+test('Command Brief leads Work Day, keeps the last usable review, and refreshes from Cora',async({page})=>{
+ await page.setViewportSize({width:1600,height:1100});
+ await page.clock.setFixedTime(new Date('2026-09-23T17:00:00Z'));
+ await setup(page);
+ let reviews=[{id:'old',user_id:uid,status:'complete',started_at:'2026-09-22T15:00:00Z',finished_at:'2026-09-22T15:01:00Z',summary:'At a glance\nProtect time for the parcel rollout.\n\nTop three priorities\n1. Validate parcel output before rollout.\n2. Prepare the vendor scope.\n\nNext moves\nFinish validation, then prepare tomorrow’s questions.\n\nFollow-ups\nConfirm the vendor’s next checkpoint.'},{id:'failed',user_id:uid,status:'failed',started_at:'2026-09-23T15:00:00Z',finished_at:'2026-09-23T15:01:00Z',summary:'Provider unavailable'}];
+ await page.route('**/rest/v1/cora_workday_reviews*',r=>{
+  const p=new URL(r.request().url()).searchParams;
+  let selected=[...reviews].sort((a,b)=>b.started_at.localeCompare(a.started_at));
+  if(p.has('status'))selected=selected.filter(row=>['complete','partial'].includes(row.status));
+  if(p.has('started_at'))selected=selected.filter(row=>row.started_at>=p.get('started_at')!.slice(4));
+  return r.fulfill({json:selected.slice(0,Number(p.get('limit')??5))});
+ });
+ await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:true}}));
+ await page.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Work Day',exact:true}).click();
+ const brief=page.getByRole('region',{name:'Command brief',exact:true});
+ await expect(brief).toContainText('Validate parcel output');
+ await expect(brief).toContainText('From an earlier day');
+ await expect(brief).toContainText('The latest review failed');
+ expect((await brief.boundingBox())!.y).toBeLessThan((await page.locator('.day-stats').boundingBox())!.y);
+ await page.route('**/api/cora/chat',async r=>{
+  expect(r.request().postDataJSON().context.page).toBe('command-brief');
+  reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'At a glance\nMake the parcel rollout your next move.\n\nTop three priorities\n1. Validate two subdivisions.\n\nCoverage\nCalendar is unavailable; capacity is not confirmed.'},...reviews];
+  await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{}})+'\n'});
+ });
+ await brief.getByRole('button',{name:'Update brief',exact:true}).click();
+ await expect(brief).toContainText('Make the parcel rollout your next move.');
+ await expect(brief).toContainText('Partial coverage');
+ await expect(brief).not.toContainText('From an earlier day');
+ await expect(brief.getByRole('button',{name:'Update brief',exact:true})).toBeEnabled();
+ await page.route('**/api/cora/chat',r=>r.fulfill({status:503,json:{message:'Cora temporarily unavailable'}}));
+ await brief.getByRole('button',{name:'Update brief',exact:true}).click();
+ await expect(brief.getByRole('alert')).toContainText('Cora temporarily unavailable');
+ await expect(brief).toContainText('Make the parcel rollout your next move.');
+ expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
+ await page.screenshot({path:'test-results/command-brief-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/command-brief-mobile.png',fullPage:true});
 });

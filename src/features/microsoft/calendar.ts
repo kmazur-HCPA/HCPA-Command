@@ -51,3 +51,8 @@ export function eventDuration(minutes: number) {
     rest = minutes % 60;
   return hours ? `${hours}h${rest ? ` ${rest}m` : ""}` : `${rest} min`;
 }
+
+// Keep meetings in progress and all-day events until their exclusive end time.
+export function upcomingEvents(events: CalendarEvent[], now: number) {
+  return events.filter(event => Date.parse(event.end) > now);
+}

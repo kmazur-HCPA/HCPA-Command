@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { Icon } from "../../ui/Icon";
-import { eventDuration, workWeekRange, type CalendarAgenda } from "./calendar";
+import { eventDuration, upcomingEvents, type CalendarAgenda } from "./calendar";
 const zone = "America/New_York";
 const dateLabel = (iso: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -23,7 +23,13 @@ export function CalendarPanel({
   client: AppClient;
   date: string;
 }) {
-  const week = workWeekRange(date);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(update, 30000);
+    document.addEventListener("visibilitychange", update);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", update); };
+  }, []);
   const [retry, setRetry] = useState(0),
     [data, setData] = useState<CalendarAgenda | null>(null),
     [error, setError] = useState(""),
@@ -93,6 +99,7 @@ export function CalendarPanel({
       document.removeEventListener("visibilitychange", visible);
     };
   }, [client, date, retry]);
+  const events = upcomingEvents(data?.events ?? [], now);
   return (
     <section
       className="day-panel calendar-panel"
@@ -112,7 +119,7 @@ export function CalendarPanel({
         </button>
       </div>
       <div className="calendar-controls">
-        <span className="small">{dateLabel(week.start)} – {dateLabel(new Date(Date.parse(week.end) - 1).toISOString())}</span>
+        <span className="small">Today onward · This work week</span>
         <span className="small muted">Outlook · Eastern time</span>
       </div>
       {loading && (
@@ -125,12 +132,12 @@ export function CalendarPanel({
           {error}
         </p>
       )}
-      {data && !data.events.length && (
-        <p className="small muted">No events this work week.</p>
+      {data && !events.length && (
+        <p className="small muted">No upcoming events this work week.</p>
       )}
-      {data && data.events.length > 0 && (
+      {data && events.length > 0 && (
         <ul className="calendar-agenda">
-          {data.events.map((event) => (
+          {events.map((event) => (
             <li key={event.id}>
               <div className="calendar-event-time">
                 <span>{dateLabel(event.start)}</span>

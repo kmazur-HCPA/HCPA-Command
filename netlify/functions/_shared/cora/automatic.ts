@@ -1,3 +1,4 @@
+import { briefInstructions } from "../../../../src/features/reviews/brief";
 import { createRecord, createRecordDefinition } from "./create";
 import { createHash } from "node:crypto";
 import type { AppClient } from "../../../../src/platform/supabase";
@@ -28,7 +29,7 @@ export const automaticTools = [
   ),
   definition(
     "record_workday_review",
-    'Record a workday review in Command. Begin with status=running, summary="", and a new UUID run_id. Reuse that run_id to finish with complete/partial/failed and a concise summary of coverage, reminders, suggested priorities, Waiting On changes and source gaps. No emails or Teams messages are sent. These are observations, not changes to existing work records.',
+    briefInstructions + '\nRecord a workday review in Command. Begin with status=running, summary="", and a new UUID run_id. Reuse that run_id to finish with complete/partial/failed and a concise summary of coverage, reminders, suggested priorities, Waiting On changes and source gaps. No emails or Teams messages are sent. These are observations, not changes to existing work records.',
     {
       run_id: { type: "string" },
       status: {
@@ -98,7 +99,7 @@ export async function automaticTool(
       .order("started_at", { ascending: false })
       .limit(5);
     if (r.error) throw new Error("Review history unavailable.");
-    return { reviews: r.data };
+    return { reviews: r.data, current_time: new Date().toISOString(), command_brief_instructions: briefInstructions };
   }
   if (name === "create_record") return createRecord(store,userId,args);
   const pref = await store

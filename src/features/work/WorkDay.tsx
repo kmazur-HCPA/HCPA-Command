@@ -1,5 +1,5 @@
 import { WorkList } from "./WorkList";
-import { WorkdayReviews } from "../reviews/WorkdayReviews";
+import { CommandBrief } from "../reviews/CommandBrief";
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { workDay, patchWork } from "../../services/work";
@@ -194,6 +194,7 @@ export function WorkDay({
           <span className="loading-orbit" /> Bringing your day into focus…
         </div>
       )}
+      <CommandBrief client={client} onOpen={onOpen} />
       {data && (
         <>
           <div className="day-stats">
@@ -269,7 +270,7 @@ export function WorkDay({
                 </div>
               </section>
               <section className="day-panel focus-panel">
-                {heading("focus", "Focus today", "Set focus", "task")}
+                {heading("focus", "Your chosen focus", "Set focus", "task")}
                 <div className="focus-composition">
                   <div className="focus-orbit" aria-hidden="true">
                     <svg viewBox="0 0 120 120">
@@ -331,50 +332,6 @@ export function WorkDay({
                   <span>—</span> One intentional step at a time.
                 </p>
               </section>
-              <section className="day-panel brief-panel">
-                {heading("flag", "Command brief", "Open Journal", "journal")}
-                <p className="brief-source">
-                  FROM YOUR SAVED WORK <span>·</span>{" "}
-                  {new Intl.DateTimeFormat("en-US", {
-                    timeZone: "America/New_York",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  }).format(now)}
-                </p>
-                <ul className="brief-list">
-                  <li>
-                    {data.focus.length
-                      ? `${data.focus.length} priorities selected. Start with “${data.focus[0]!.title}”.`
-                      : "Your focus is open. Choose one priority to give today a direction."}
-                  </li>
-                  <li>
-                    {data.counts[1]
-                      ? `${data.counts[1]} tasks are due today or earlier. Review what needs your attention.`
-                      : "No tasks are due today or overdue."}
-                  </li>
-                  <li>
-                    {data.counts[3]
-                      ? `${data.counts[3]} dependencies are waiting on someone else. Check the next follow-up.`
-                      : "No active dependencies are recorded."}
-                  </li>
-                </ul>
-                <p className="brief-disclosure">
-                  A live summary of your records.
-                </p>
-              </section>
-              <button
-                className="panel-link"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent("command:cora", {
-                      detail:
-                        "Give me a concise Command Brief. What needs my attention today, what is waiting on others, and which project needs a closer look?",
-                    }),
-                  )
-                }
-              >
-                Ask Cora for perspective <Icon name="arrow" />
-              </button>
             </div>
             <div className="day-context">
               {" "}
@@ -424,7 +381,6 @@ export function WorkDay({
               </section>
             </div>{" "}
           </div>
-          <WorkdayReviews client={client} />
           <footer className="day-footer">
             <span>COMMAND / YOUR DAY, WITH INTENTION</span>
             <span>FOCUS · ORGANIZE · EXPLORE · DO</span>

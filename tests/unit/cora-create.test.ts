@@ -72,3 +72,35 @@ it.each(directKinds)('site Cora saves %s directly and returns a refreshable rece
  expect(events.find(event=>event.type==='complete')).toMatchObject({turn:{action_status:'created',proposal:null,task_id:expected.id,sources:[{id:expected.id,kind,title:'Follow up'}]}});
  expect(audits.find(a=>a.tool==='create_record')).toMatchObject({success:true,result:{state:'saved'}});
 });
+
+it('brief mode publishes a saved review but rejects work mutations even if the model requests one',async()=>{
+ const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Update my brief',context:{page:'command-brief',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
+ const writes:Record<string,unknown>[]=[];
+ const audits:Record<string,unknown>[]=[];
+ vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
+  const request=new Request(input,init),url=new URL(request.url);
+  if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
+  if(url.pathname.endsWith('/work_items')){expect(request.method).toBe('GET');return Response.json([],{headers:{'content-range':'0-0/0'}});}
+  if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:true});
+  if(url.pathname.endsWith('/cora_workday_reviews')){
+   if(request.method==='GET')return Response.json([]);
+   writes.push(await request.json());return Response.json(request.method==='POST'?[{id:owner}]:{id:owner});
+  }
+  if(url.pathname.endsWith('/cora_activity')){audits.push(await request.json());return new Response(null,{status:201});}
+  if(url.pathname.endsWith('/cora_turns'))return request.method==='PATCH'?Response.json({...turn,...await request.json()}):Response.json([]);
+  throw new Error('Unexpected request '+url.pathname);
+ });
+ const calls=[['get_workday_reviews',{}],['record_workday_review',{run_id:owner,status:'running',summary:''}],['create_record',args],['record_workday_review',{run_id:owner,status:'partial',summary:'At a glance\nNo active work found.\n\nCoverage\nCalendar unavailable.'}]] as const;
+ let round=0;
+ const provider={chat:{completions:{create:async(input:{tools:{type:string;function:{name:string}}[]})=>{
+  const names=input.tools.map(t=>t.function.name);
+  expect(names).toContain('record_workday_review');expect(names).not.toContain('create_record');expect(names).not.toContain('prepare_record');expect(names).not.toContain('search_outlook_mail');
+  const call=calls[round++];return(async function*(){yield {choices:[{delta:call?{tool_calls:[{index:0,id:'call-'+round,type:'function',function:{name:call[0],arguments:JSON.stringify(call[1])}}]}:{content:'Brief saved.'}}]};})();
+ }}}} as unknown as OpenAI;
+ const client=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
+ const events:CoraEvent[]=[];
+ await runCora({client,store:client,turn,provider,model:'fixture',signal:new AbortController().signal,emit:event=>events.push(event)});
+ expect(writes).toHaveLength(2);expect(writes[1]).toMatchObject({status:'partial',summary:expect.stringContaining('At a glance')});
+ expect(audits.find(a=>a.tool==='create_record')).toMatchObject({success:false});
+ expect(events.find(event=>event.type==='complete')).toMatchObject({turn:{action_status:'none',proposal:null}});
+});

@@ -1950,3 +1950,30 @@ summary {
  .task-row > .row-actions-menu { grid-column:3; grid-row:1; }
  .task-metadata { gap:8px 16px; }
 }
+
+.task-quick-fields { display:grid; grid-template-columns:1fr 1.25fr 1.2fr; gap:12px; }
+.task-quick-fields label { min-width:0; font-size:12px; }
+.task-quick-fields select,.task-quick-fields input { width:100%; min-width:0; }
+@media(max-width:500px) { .task-quick-fields { grid-template-columns:1fr; gap:10px; } }
+
+.command-brief { margin:0 0 20px; border-top:3px solid var(--orange); padding:24px 28px; }
+.command-brief-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.command-brief-heading .eyebrow { margin:0 0 8px; color:var(--orange); }
+.command-brief-heading h2 { display:flex; align-items:center; gap:10px; font-size:24px; margin:0; }
+.brief-byline { color:var(--muted); font-size:12px; margin:12px 0 20px; }
+.command-brief-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 36px; }
+.command-brief-sections > section { min-width:0; }
+.command-brief-sections h3 { font-size:13px; color:var(--orange); margin:0 0 10px; }
+.command-brief-sections p,.command-brief-sections li { font-size:14px; line-height:1.65; margin:0 0 8px; overflow-wrap:anywhere; }
+.command-brief-sections ol { padding-left:22px; margin:0; }
+.command-brief-sections .brief-priorities { grid-column:1/-1; padding:18px; background:var(--raised); border-radius:10px; }
+.brief-record-link { display:inline; color:var(--text); text-decoration:underline; text-underline-offset:3px; border:0; background:none; padding:0; min-height:24px; font:inherit; text-align:left; }
+.command-brief-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px 20px; margin-top:18px; padding-top:14px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); }
+.brief-state { color:var(--orange); font-size:12px; }
+.brief-history { font-size:12px; margin-top:14px; }
+.brief-history > details { margin:10px 0; }
+@media(max-width:700px) {
+ .command-brief { padding:20px 16px; }
+ .command-brief-heading { align-items:start; flex-direction:column; }
+ .command-brief-sections { grid-template-columns:1fr; gap:16px; }
+}

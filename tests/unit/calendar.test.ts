@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   agendaRange,
+  upcomingEvents,
   workWeekRange,
   calendarInstant,
   eventDuration,
@@ -23,4 +24,18 @@ it("uses Eastern calendar boundaries across spring and fall clock changes", () =
 it('shows the whole Monday to Friday week including on weekends and across years',()=>{
  for(const day of ['2026-09-21','2026-09-23','2026-09-26','2026-09-27'])expect(workWeekRange(day)).toEqual({start:'2026-09-21T04:00:00.000Z',end:'2026-09-26T04:00:00.000Z'});
  expect(workWeekRange('2027-01-01')).toEqual({start:'2026-12-28T05:00:00.000Z',end:'2027-01-02T05:00:00.000Z'});
+});
+
+it('hides ended events while preserving ongoing, all-day and future events',()=>{
+ const now=Date.parse('2026-09-23T15:00:00Z');
+ const event=(id:string,start:string,end:string,allDay=false)=>({id,subject:id,start,end,allDay,durationMinutes:60});
+ const events=[
+  event('Monday','2026-09-21T13:00:00Z','2026-09-21T14:00:00Z'),
+  event('ended just now','2026-09-23T14:00:00Z','2026-09-23T15:00:00Z'),
+  event('in progress','2026-09-23T14:30:00Z','2026-09-23T15:30:00Z'),
+  event('today all day','2026-09-23T04:00:00Z','2026-09-24T04:00:00Z',true),
+  event('tomorrow','2026-09-24T13:00:00Z','2026-09-24T14:00:00Z'),
+ ];
+ expect(upcomingEvents(events,now).map(event=>event.id)).toEqual(['in progress','today all day','tomorrow']);
+ expect(upcomingEvents(events,Date.parse('2026-09-25T00:00:00Z'))).toEqual([]);
 });
