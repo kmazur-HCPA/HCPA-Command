@@ -1964,7 +1964,8 @@ summary {
 .command-brief-copy p { font-size:14px; line-height:1.5; margin:0 0 7px; overflow-wrap:anywhere; }
 .brief-record-link { display:inline; color:var(--text); text-decoration:underline; text-underline-offset:3px; border:0; background:none; padding:0; min-height:24px; font:inherit; text-align:left; }
 .command-brief .brief-state,.command-brief > [role="status"] { color:var(--muted); font-size:11px; margin:4px 0; }
-.brief-history { font-size:11px; margin-top:8px; color:var(--muted); }
+.brief-history { font-size:11px; margin:8px 0 0; color:var(--muted); }
+.brief-history > summary { padding:8px 0; min-height:44px; }
 .brief-history > details { margin:8px 0; }
 .brief-history-copy { max-height:220px; overflow:auto; overflow-wrap:anywhere; color:var(--text); }
 .command-brief .brief-empty { font-size:13px; margin:8px 0; }
@@ -1976,10 +1977,10 @@ summary {
 
 
 /* A single compact overview keeps the brief beside its supporting counts. */
-.day-overview { display:grid; grid-template-columns:minmax(0,3fr) minmax(220px,1fr); gap:16px; align-items:start; margin-bottom:18px; }
+.day-overview { display:grid; grid-template-columns:minmax(0,3fr) minmax(220px,1fr); gap:16px; align-items:stretch; margin-bottom:18px; }
 .day-overview.brief-only { grid-template-columns:minmax(0,1fr); }
 .day-overview .command-brief { margin:0; min-width:0; }
-.day-overview .day-stats { grid-template-columns:minmax(0,1fr); gap:8px; margin:0; }
+.day-overview .day-stats { grid-template-columns:minmax(0,1fr); grid-auto-rows:1fr; gap:8px; margin:0; }
 .day-overview .stat-card { padding:10px 12px; gap:10px; align-items:center; min-height:52px; }
 .day-overview .stat-card > .icon { width:18px; height:18px; margin:0; flex-shrink:0; }
 .day-overview .stat-card > span { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:1; }
