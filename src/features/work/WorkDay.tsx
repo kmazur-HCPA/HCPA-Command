@@ -194,10 +194,9 @@ export function WorkDay({
           <span className="loading-orbit" /> Bringing your day into focus…
         </div>
       )}
-      <CommandBrief client={client} onOpen={onOpen} />
-      {data && (
-        <>
-          <div className="day-stats">
+      <div className={`day-overview${data ? "" : " brief-only"}`}>
+        <CommandBrief client={client} onOpen={onOpen} />
+        {data && <div className="day-stats">
             {(
               [
                 [
@@ -246,7 +245,10 @@ export function WorkDay({
                 <Icon name="arrow" className="stat-arrow" />
               </button>
             ))}
-          </div>
+          </div>}
+      </div>
+      {data && (
+        <>
           <div className="day-grid">
             <div className="day-main">
               {" "}

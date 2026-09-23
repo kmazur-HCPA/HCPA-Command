@@ -935,7 +935,10 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await expect(brief).toContainText('Validate parcel output');
  await expect(brief).toContainText('Previous day’s brief');
  await expect(brief).toContainText('The latest review failed');
- expect((await brief.boundingBox())!.y).toBeLessThan((await page.locator('.day-stats').boundingBox())!.y);
+ const briefBox=(await brief.boundingBox())!,statsBox=(await page.locator('.day-stats').boundingBox())!;
+ await expect.poll(async()=>Math.abs((await brief.boundingBox())!.y-(await page.locator('.day-stats').boundingBox())!.y)).toBeLessThan(2);
+ expect(statsBox.x).toBeGreaterThan(briefBox.x+briefBox.width);
+ expect(briefBox.width/statsBox.width).toBeCloseTo(3,0);
  await page.route('**/api/cora/chat',async r=>{
   expect(r.request().postDataJSON().context.page).toBe('command-brief');
   reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'Next: Make the parcel rollout your next move. Validate two subdivisions before proceeding.\n\nCalendar is unavailable; check it before reserving focus time.'},...reviews];

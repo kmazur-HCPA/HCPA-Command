@@ -1973,3 +1973,25 @@ summary {
  .command-brief-heading { flex-wrap:wrap; }
  .command-brief-heading h2 { font-size:16px; }
 }
+
+
+/* A single compact overview keeps the brief beside its supporting counts. */
+.day-overview { display:grid; grid-template-columns:minmax(0,3fr) minmax(220px,1fr); gap:16px; align-items:start; margin-bottom:18px; }
+.day-overview.brief-only { grid-template-columns:minmax(0,1fr); }
+.day-overview .command-brief { margin:0; min-width:0; }
+.day-overview .day-stats { grid-template-columns:minmax(0,1fr); gap:8px; margin:0; }
+.day-overview .stat-card { padding:10px 12px; gap:10px; align-items:center; min-height:52px; }
+.day-overview .stat-card > .icon { width:18px; height:18px; margin:0; flex-shrink:0; }
+.day-overview .stat-card > span { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:1; }
+.day-overview .stat-label { font-size:12px; }
+.day-overview .stat-card strong { font-size:21px; margin:0; white-space:nowrap; }
+.day-overview .stat-card small { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.day-overview .stat-card .stat-arrow { display:none; }
+@media(max-width:1100px) {
+ .day-overview { grid-template-columns:minmax(0,1fr); gap:12px; }
+ .day-overview .day-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(min-width:1150px) {
+ .cora-open .day-overview { grid-template-columns:minmax(0,1fr); }
+ .cora-open .day-overview .day-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
