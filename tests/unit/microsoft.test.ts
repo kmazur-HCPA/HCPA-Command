@@ -839,7 +839,7 @@ describe('Work Day calendar endpoint',()=>{
   expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toBe('no-store');
   const agenda=await response.json();expect(agenda.events).toEqual([{id:'event-1',subject:'Leadership sync',start:'2026-09-22T13:00:00.000Z',end:'2026-09-22T14:30:00.000Z',allDay:false,durationMinutes:90}]);
   expect(JSON.stringify(agenda)).not.toContain('private');
-  expect(graphCalls[0]?.searchParams.get('startDateTime')).toBe('2026-09-21T04:00:00.000Z');
+  expect(graphCalls[0]?.searchParams.get('startDateTime')).toBe('2026-09-22T04:00:00.000Z');
   expect(graphCalls[0]?.searchParams.get('endDateTime')).toBe('2026-09-26T04:00:00.000Z');
   expect((await handleMicrosoft(request('calendar?date=2026-09-22','GET',other),server)).status).toBe(409);
   active=false;expect((await handleMicrosoft(request('calendar?date=2026-09-22'),server)).status).toBe(403);

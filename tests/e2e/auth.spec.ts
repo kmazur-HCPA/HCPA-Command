@@ -393,7 +393,6 @@ test('automatic reminders refresh the workspace without a confirmation card and 
  await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
  await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{id:userId,user_id:userId,conversation_id:userId,message:'Remind me tomorrow',context:{page:'workspace',recordId:null},response:'Saved your reminder for tomorrow.',sources:[],proposal:null,task_id:userId,status:'complete',action_status:'created',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}})+'\n'}));
  await login(page);
- await expect(page.locator('.command-brief-copy').getByText('Email checked; Teams temporarily unavailable.')).toBeVisible();
  await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});
  await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Remind me tomorrow');await panel.getByRole('button',{name:'Send to Cora'}).click();
  await expect(panel.getByText('Saved your reminder for tomorrow.')).toBeVisible();await expect(panel.getByRole('button',{name:'Confirm changes'})).toHaveCount(0);

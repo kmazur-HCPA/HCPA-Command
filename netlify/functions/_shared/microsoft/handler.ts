@@ -247,23 +247,30 @@ export async function handleMicrosoft(
         truncated: boolean;
         retrieved_at: string;
       };
+      // One malformed Outlook entry is skipped rather than hiding the calendar.
       const events: CalendarEvent[] = result.records
         .filter((row) => !row.isCancelled && row.responseStatus !== "declined")
-        .map((row) => {
-          const start = calendarInstant(row.start),
-            end = calendarInstant(row.end);
-          const durationMinutes = Math.round(
-            (Date.parse(end) - Date.parse(start)) / 60000,
-          );
-          if (durationMinutes < 0) throw new Error("Invalid event duration");
-          return {
-            id: String(row.id),
-            subject: String(row.subject || "Untitled event"),
-            start,
-            end,
-            allDay: row.isAllDay === true,
-            durationMinutes,
-          };
+        .flatMap((row) => {
+          try {
+            const start = calendarInstant(row.start),
+              end = calendarInstant(row.end);
+            const durationMinutes = Math.round(
+              (Date.parse(end) - Date.parse(start)) / 60000,
+            );
+            if (durationMinutes < 0) return [];
+            return [
+              {
+                id: String(row.id),
+                subject: String(row.subject || "Untitled event"),
+                start,
+                end,
+                allDay: row.isAllDay === true,
+                durationMinutes,
+              },
+            ];
+          } catch {
+            return [];
+          }
         });
       return Response.json(
         {

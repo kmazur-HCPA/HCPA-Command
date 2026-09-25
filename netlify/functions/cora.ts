@@ -42,6 +42,5 @@ export const config: Config = {
     "/api/cora/chat",
     "/api/cora/history",
     "/api/cora/action",
-    "/api/cora/brief",
   ],
 };

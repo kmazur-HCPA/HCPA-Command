@@ -1,5 +1,4 @@
 import { WorkList } from "./WorkList";
-import { CommandBrief } from "../reviews/CommandBrief";
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { workDay, patchWork } from "../../services/work";
@@ -194,9 +193,8 @@ export function WorkDay({
           <span className="loading-orbit" /> Bringing your day into focus…
         </div>
       )}
-      <div className={`day-overview${data ? "" : " brief-only"}`}>
-        <CommandBrief client={client} onOpen={onOpen} />
-        {data && <div className="day-stats">
+      {data && <div className="day-overview">
+        <div className="day-stats">
             {(
               [
                 [
@@ -245,8 +243,8 @@ export function WorkDay({
                 <Icon name="arrow" className="stat-arrow" />
               </button>
             ))}
-          </div>}
-      </div>
+          </div>
+      </div>}
       {data && (
         <>
           <div className="day-grid">

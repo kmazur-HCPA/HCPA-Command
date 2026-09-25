@@ -916,71 +916,25 @@ test('Work Day calendar hides past events and removes meetings as they end',asyn
  await expect(panel).toContainText('Tomorrow meeting');
 });
 
-test('Command Brief leads Work Day, keeps the last usable review, and refreshes from Cora',async({page})=>{
+test('Work Day opens with one row of counts the width of the panels below, then tasks',async({page})=>{
  await page.setViewportSize({width:1600,height:1100});
- await page.clock.setFixedTime(new Date('2026-09-23T17:00:00Z'));
  await setup(page);
- let reviews=[{id:'old',user_id:uid,status:'complete',started_at:'2026-09-22T15:00:00Z',finished_at:'2026-09-22T15:01:00Z',summary:'Now: The parcel rollout needs validation.\n\nNext: Validate parcel output before rollout, then prepare tomorrow’s vendor questions.'},{id:'failed',user_id:uid,status:'failed',started_at:'2026-09-23T15:00:00Z',finished_at:'2026-09-23T15:01:00Z',summary:'Provider unavailable'}];
- await page.route('**/rest/v1/cora_workday_reviews*',r=>{
-  const p=new URL(r.request().url()).searchParams;
-  let selected=[...reviews].sort((a,b)=>b.started_at.localeCompare(a.started_at));
-  if(p.has('status'))selected=selected.filter(row=>['complete','partial'].includes(row.status));
-  if(p.has('started_at'))selected=selected.filter(row=>row.started_at>=p.get('started_at')!.slice(4));
-  return r.fulfill({json:selected.slice(0,Number(p.get('limit')??5))});
- });
- await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:true}}));
  await page.getByRole('button',{name:'Tasks',exact:true}).click();
  await page.getByRole('button',{name:'Work Day',exact:true}).click();
- const brief=page.getByRole('region',{name:'Command brief',exact:true});
- await expect(brief).toContainText('Validate parcel output');
- await expect(brief).toContainText('Previous day’s brief');
- await expect(brief).toContainText('The latest review failed');
- const briefBox=(await brief.boundingBox())!,statsBox=(await page.locator('.day-stats').boundingBox())!;
- await expect.poll(async()=>Math.abs((await brief.boundingBox())!.y-(await page.locator('.day-stats').boundingBox())!.y)).toBeLessThan(2);
- expect(statsBox.x).toBeGreaterThan(briefBox.x+briefBox.width);
- expect(briefBox.width/statsBox.width).toBeCloseTo(3,0);
- await page.route('**/api/cora/brief',async r=>{
-  expect(r.request().method()).toBe('POST');
-  reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'Next: Make the parcel rollout your next move. Validate two subdivisions before proceeding.\n\nCalendar is unavailable; check it before reserving focus time.'},...reviews];
-  await r.fulfill({json:{state:'saved',status:'partial',summary:reviews[0]!.summary}});
- });
- await brief.getByRole('button',{name:'Update brief',exact:true}).click();
- await expect(brief).toContainText('Make the parcel rollout your next move.');
- await expect(brief).toContainText('Limited context');
- await expect(brief).not.toContainText('Previous day’s brief');
- await expect(brief.getByRole('button',{name:'Update brief',exact:true})).toBeEnabled();
- expect((await brief.boundingBox())!.height).toBeLessThan(300);
- await page.screenshot({path:'test-results/brief-current-compact.png'});
- await page.route('**/api/cora/brief',r=>r.fulfill({status:503,json:{message:'Cora temporarily unavailable'}}));
- await brief.getByRole('button',{name:'Update brief',exact:true}).click();
- await expect(brief.getByRole('alert')).toContainText('Cora temporarily unavailable');
- await expect(brief).toContainText('Make the parcel rollout your next move.');
+ const stats=page.locator('.day-stats'),grid=page.locator('.day-grid'),tasks=page.locator('.priority-panel');
+ await expect(stats.locator('.stat-card')).toHaveCount(4);
+ await expect(page.getByRole('region',{name:'Command brief'})).toHaveCount(0);
+ await page.waitForFunction(()=>document.getAnimations().every(a=>a.playState!=='running'));
+ const s=(await stats.boundingBox())!,g=(await grid.boundingBox())!,t=(await tasks.boundingBox())!;
+ expect(Math.abs(s.x-g.x)).toBeLessThan(2);
+ expect(Math.abs(s.width-g.width)).toBeLessThan(2);
+ // Cards arrive with a short staggered animation; compare settled positions.
+ await expect.poll(async()=>new Set((await stats.locator('.stat-card').evaluateAll(els=>els.map(el=>Math.round(el.getBoundingClientRect().top))))).size).toBe(1);
+ expect(t.y).toBeGreaterThan(s.y+s.height);
+ expect(t.y-(s.y+s.height)).toBeLessThan(40);
  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
- await page.screenshot({path:'test-results/command-brief-desktop.png',fullPage:true});
+ await page.screenshot({path:'test-results/work-day-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:'test-results/command-brief-mobile.png',fullPage:true});
-});
-
-
-test('Command Brief contains oversized legacy reviews without displacing the task list',async({page})=>{
- await page.setViewportSize({width:1600,height:1100});
- await setup(page);
- const review={id:'legacy',user_id:uid,status:'partial',started_at:new Date().toISOString(),finished_at:new Date().toISOString(),summary:'Partial workday review completed. Checked: '+('Long review of every task and meeting. https://outlook.office.com/very-long-source-link '.repeat(60))};
- await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[review]}));
- await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:true}}));
- await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'Work Day',exact:true}).click();
- const brief=page.getByRole('region',{name:'Command brief',exact:true});
- await expect(brief).toContainText('A detailed review is saved in history');
- await expect(brief.locator('.command-brief-copy')).toHaveCount(0);
- expect((await brief.boundingBox())!.height).toBeLessThan(280);
- expect((await page.locator('.priority-panel').boundingBox())!.y).toBeLessThan(750);
- await page.screenshot({path:'test-results/brief-legacy-compact.png'});
- await page.setViewportSize({width:390,height:844});
- expect((await brief.boundingBox())!.height).toBeLessThan(340);
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await brief.getByText('Review history',{exact:true}).click();
- await brief.locator('.brief-history > details > summary').click();
- expect((await brief.locator('.brief-history-copy').boundingBox())!.height).toBeLessThanOrEqual(220);
+ await page.screenshot({path:'test-results/work-day-mobile.png',fullPage:true});
 });

@@ -1,6 +1,6 @@
 # Cora on Claude
 
-Cora now lives in Claude, on the web, in Claude Desktop and in Claude Code, and replaces the private ChatGPT agent. It uses Kevin's existing HCPA Claude subscription: no Anthropic API account, no API key and no new vendor account. Command stays the source of truth, and its boundaries are unchanged: owner-only data, row-level security, reviewed edits and read-only Microsoft 365.
+Kevin's assistant now lives in Claude, where it is called **CMD**. It works on the web, in Claude Desktop and in Claude Code, and replaces the private ChatGPT agent and its schedules. It uses Kevin's existing HCPA Claude subscription: no Anthropic API account, no API key and no new vendor account. Command stays the source of truth, and its boundaries are unchanged: owner-only data, row-level security, reviewed edits and read-only Microsoft 365.
 
 ## The pieces
 
@@ -8,8 +8,8 @@ Cora now lives in Claude, on the web, in Claude Desktop and in Claude Code, and 
 | --- | --- | --- |
 | **Command connector** | Claude custom connector → `https://cmd.hillspafl.gov/api/mcp` | Command's existing MCP tools: read every record kind, save authorized new records, prepare reviewed edits, read Outlook and Teams through Command, save brief receipts. |
 | **Connector sign-in** | Supabase Auth OAuth 2.1 server + `cmd.hillspafl.gov/oauth/consent` | Kevin signs in with his normal Command account and approves Claude. No token to paste or rotate. |
-| **Cora skill** | `.claude/skills/cora/` (`SKILL.md`, `brief.md`) | Cora's voice, evidence and trust rules, Kevin's standing write authorizations, routines (attention, meeting prep, capture, weekly review) and the brief procedure. |
-| **Brief routines** | Claude Code routines (Anthropic cloud) | Run the Command Brief on weekdays at 6:45 AM, 9 AM, 11 AM, 1 PM and 3 PM Eastern and save it to Work Day. They run while Kevin's computer is off. |
+| **CMD skill** | `.claude/skills/cmd/` (`SKILL.md`, `brief.md`) | The assistant's name in Claude is **CMD**. Voice, evidence and trust rules, Kevin's standing write authorizations, workflows (attention, meeting prep, capture, weekly review) and the on-request brief procedure. |
+| **Claude Project** | claude.ai Project with the Command and Microsoft 365 connectors and the CMD skill | Where Kevin works with CMD: ask for a Command Brief, capture reminders and tasks, prep meetings. Everything is on request and in real time; nothing is scheduled. |
 
 The Microsoft 365 connector already in Kevin's Claude can also be used for Outlook, Calendar and Teams. Command's own read-only Microsoft tools remain available through the Command connector.
 
@@ -36,31 +36,29 @@ Steps marked **Kevin** change production settings or accounts. Nothing in this c
    - Apply migration `20260925160000_cora_mcp_oauth.sql`, which adds the server-only reservation function.
 2. **Deploy** this branch after CI passes. It adds the consent page, the discovery document and OAuth support on `/api/mcp`.
 3. **Kevin, Claude (org owner):** add a custom connector named "Command" with URL `https://cmd.hillspafl.gov/api/mcp`. Keep it limited to Kevin, if that option is available. Connect it, sign in to Command, choose **Allow**. Confirm Settings in Command lists it under Signed-in apps.
-4. **Kevin, Claude:** upload the skill. Zip the folder (`cd .claude/skills && zip -r ~/Desktop/cora.zip cora`) and add it under Claude's Skills settings. Claude Code already picks it up inside this repository.
-5. **Test in Claude:** "What needs my attention today?", "Remind me tomorrow to follow up on the website" (check Reminders in Command), and "Update my Command Brief" (check Work Day).
-6. **Create the brief routines** in Claude Code (`/schedule`), weekdays. Suggested routine prompt: *"Use the cora skill. Run the scheduled Command Brief procedure in .claude/skills/cora/brief.md now, using the Command connector."* Check each of these when creating them:
-   - The routine can use the Command connector.
-   - Times are Eastern and stay correct across daylight-saving changes. Routines may convert times to UTC, so recheck in November and March.
-   - The routine run allowance covers 25 runs a week.
-   Two routines can cover the slots: 6:45 AM, and 9, 11, 1 and 3 on the hour.
+4. **Kevin, Claude:** upload the skill. Remove any older "cora" skill first. Zip the folder (`cd .claude/skills && zip -r ~/Desktop/cmd.zip cmd`) and add it under Claude's Skills settings. Claude Code already picks it up inside this repository.
+5. **Test in Claude:** "CMD, what needs my attention today?", "Remind me tomorrow to follow up on the website" (check Reminders in Command), and "Give me my Command Brief."
+6. **Create a Claude Project** (for example "Command") with the Command and Microsoft 365 connectors enabled and the CMD skill on. Optionally add a one-line project instruction: "You are CMD; use the cmd skill."
 7. **Retire ChatGPT:** delete the five ChatGPT automations and the private Command Cora app/agent, then revoke the old ChatGPT token in Command Settings (Personal token → Revoke).
-8. **Verify** the first scheduled receipt in Settings → Cora workday reviews.
 
 ## Inside Command
 
-- The Command Brief card, review history and the pause switch are unchanged. Pausing reviews in Settings makes Command reject brief receipts and automatic reminders from every connected app.
-- The Cora panel and Update brief button inside Command need model access for Command's own server, which is not configured. They now say to use Cora in Claude. The Claude API engine and scheduled brief writer from the first part of this change stay dormant in the code (`netlify/functions/_shared/cora/`, `netlify/functions/cora-brief.ts`). They do nothing without `ANTHROPIC_API_KEY`. If model access is approved later, turn off the Claude routines first so briefs aren't written twice.
+Command is the data side: records, Work Day, the Outlook calendar panel and Settings.
+- **Work Day:** four count cards in one row, then Tasks, with Calendar, Reminders and Waiting On alongside. The Command Brief card was removed; briefs are requested from CMD in Claude and answered in the chat.
+- **Calendar panel:** shows today through Friday. On weekends it shows the coming work week. It previously started on Monday, so earlier days could use up the 75-entry limit before today's events loaded.
+- **Automatic reminders** in Settings is the standing consent for CMD to save the reminders you ask for without a confirmation card. Pausing it blocks those saves from every connected app.
+- **Cora panel inside Command:** it needs model access for Command's own server, which is not configured, and now says to use CMD in Claude. The Claude API engine remains in the code, dormant without `ANTHROPIC_API_KEY`. Scheduled briefs were removed.
 
 ## Boundaries that did not change
 
 - Microsoft 365 is read-only: no sending, replying, accepting or changing meetings.
 - Direct saves are limited to new reminders, tasks, people, projects, initiatives, journal entries and AI Lab records. Everything else is a review card that Kevin confirms in Command.
-- Brief receipts must pass Command's compact-brief rules (`isCompactBrief`). A unit test keeps `brief.md` identical to Command's rules.
+- A unit test keeps the brief rules in `brief.md` identical to Command's (`briefStyle`).
 - Data sent to Claude is the same data the ChatGPT agent received (Command records, calendar and, when asked, mail and Teams excerpts), handled under HCPA's Claude organization agreement. Command conversation history is not synchronized with Claude chats.
 
 ## Rollback
 
-Revoke the Claude connector in Command Settings and remove it from Claude, and delete or pause the routines. Turning off Supabase's OAuth server stops all connector sign-ins; the personal token keeps working. The added database function can stay. Do not delete audit or review history.
+Revoke the Claude connector in Command Settings and remove it from Claude. Turning off Supabase's OAuth server stops all connector sign-ins; the personal token keeps working. The added database function can stay. Do not delete audit or review history.
 
 ## Verification in this change
 
@@ -75,6 +73,5 @@ Revoke the Claude connector in Command Settings and remove it from Claude, and d
 - Not tested here:
   - A real Claude-to-Supabase sign-in, which needs the production OAuth server enabled.
   - Whether Claude sends an RFC 8707 `resource` parameter that Supabase accepts.
-  - Routine connector access and daylight-saving handling.
 
-  Check these in setup steps 3–6.
+  Check these in setup steps 3–5.

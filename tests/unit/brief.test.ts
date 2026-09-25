@@ -27,6 +27,6 @@ it('accepts short current-state check-ins and rejects reports and exposed URLs',
 // The Claude skill must carry the exact rules Command enforces for saved briefs.
 import { readFileSync } from 'node:fs';
 import { briefStyle } from '../../src/features/reviews/brief';
-it('keeps the Cora skill brief rules identical to Command', () => {
-  expect(readFileSync('.claude/skills/cora/brief.md', 'utf8')).toContain(briefStyle);
+it('keeps the CMD skill brief rules identical to Command', () => {
+  expect(readFileSync('.claude/skills/cmd/brief.md', 'utf8')).toContain(briefStyle);
 });

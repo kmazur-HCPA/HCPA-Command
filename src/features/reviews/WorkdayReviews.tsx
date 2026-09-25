@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
-import type { Database } from "../../data/database.types";
-type Review = Database["public"]["Tables"]["cora_workday_reviews"]["Row"];
+// Kevin's standing consent for connected apps (CMD in Claude) to save the
+// reminders he asks for without a confirmation card. Enforced in the database.
 export function WorkdayReviews({
   client,
   settings = false,
@@ -9,42 +9,22 @@ export function WorkdayReviews({
   client: AppClient;
   settings?: boolean;
 }) {
-  const [reviews, setReviews] = useState<Review[]>([]),
-    [enabled, setEnabled] = useState<boolean | null>(null),
+  const [enabled, setEnabled] = useState<boolean | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [now, setNow] = useState(() => Date.now());
+    [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
-    async function load() {
-      const [r, p] = await Promise.all([
-        client
-          .from("cora_workday_reviews")
-          .select("*")
-          .order("started_at", { ascending: false })
-          .limit(5),
-        client
-          .from("cora_review_preferences")
-          .select("automatic_reminders")
-          .maybeSingle(),
-      ]);
-      if (!active) return;
-      setNow(Date.now());
-      if (r.error || p.error) {
-        setError("Cora review status is unavailable.");
-        return;
-      }
-      setReviews(r.data);
-      setEnabled(p.data?.automatic_reminders ?? false);
-      setError("");
-    }
-    void load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 60000);
+    void client
+      .from("cora_review_preferences")
+      .select("automatic_reminders")
+      .maybeSingle()
+      .then((p) => {
+        if (!active) return;
+        if (p.error) setError("Automatic reminder status is unavailable.");
+        else setEnabled(p.data?.automatic_reminders ?? false);
+      });
     return () => {
       active = false;
-      clearInterval(timer);
     };
   }, [client]);
   async function toggle() {
@@ -68,15 +48,14 @@ export function WorkdayReviews({
     }
   }
   return (
-    <section className="settings-panel" aria-label="Cora workday reviews">
-      <h2>Cora workday reviews</h2>
-      <p>Monday–Friday · 6:45 AM, 9 AM, 11 AM, 1 PM and 3 PM · Eastern</p>
+    <section className="settings-panel" aria-label="Automatic reminders">
+      <h2>Automatic reminders</h2>
       <p>
         {enabled === null
           ? "Checking status…"
           : enabled
-            ? "Automatic reminders enabled. Priorities and Waiting On changes remain suggestions."
-            : "Automatic reviews and reminders paused."}
+            ? "Enabled. CMD can save reminders you ask for without a confirmation step."
+            : "Paused. Connected apps cannot save reminders automatically."}
       </p>
       {settings && (
         <>
@@ -89,31 +68,12 @@ export function WorkdayReviews({
               : "Enable automatic reminders"}
           </button>
           <p className="muted">
-            Cora prepares these briefs on a schedule in Claude and saves them
-            here. Pausing blocks new briefs and automatic reminders from every
-            connected app.
+            Applies to every connected app. Edits to existing records always
+            open here for confirmation.
           </p>
         </>
       )}
       {error && <p role="alert">{error}</p>}
-      {!reviews.length && !error && <p>No scheduled review recorded yet.</p>}
-      {reviews.map((r, i) => (
-        <details key={r.id} open={i === 0}>
-          <summary>
-            {new Date(r.started_at).toLocaleString("en-US", {
-              timeZone: "America/New_York",
-              timeZoneName: "short",
-            })}{" "}
-            ·{" "}
-            {r.status === "running" && now - Date.parse(r.started_at) > 1800000
-              ? "Interrupted or still running"
-              : r.status}
-          </summary>
-          <p style={{ whiteSpace: "pre-wrap" }}>
-            {r.summary || "Cora is reviewing available sources."}
-          </p>
-        </details>
-      ))}
     </section>
   );
 }

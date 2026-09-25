@@ -50,7 +50,6 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type {Database} from '../../src/data/database.types';
 import type {CoraEvent,CoraTurn} from '../../src/features/cora/model';
 import {runCora} from '../../netlify/functions/_shared/cora/engine';
-import {slotAt,slotRunId,verifiedLinks,writeBrief} from '../../netlify/functions/_shared/cora/brief';
 type Reply={text?:string;tool?:{name:string;input:unknown}};
 type Params={tools?:{name:string}[];messages:unknown[];system:unknown};
 // Mirrors the SDK surface the engine uses: beta.messages.stream/create + finalMessage.
@@ -108,56 +107,4 @@ it('site Cora rejects tools outside its request scope and returns the failure to
  expect(toolResult).toContain('"is_error":true');
  expect(audits.find(a=>a.tool==='record_workday_review')).toMatchObject({success:false});
  expect(events.find(event=>event.type==='complete')).toMatchObject({turn:{action_status:'none',proposal:null}});
-});
-
-describe('Command-owned brief',()=>{
- it('maps quarter-hour runs to Eastern weekday slots across daylight saving',()=>{
-  expect(slotAt(new Date('2026-09-25T10:45:00Z'))).toBe('06:45');
-  expect(slotAt(new Date('2026-12-01T11:58:00Z'))).toBe('06:45');
-  expect(slotAt(new Date('2026-12-01T20:00:00Z'))).toBe('15:00');
-  expect(slotAt(new Date('2026-09-25T13:20:00Z'))).toBeNull();
-  expect(slotAt(new Date('2026-09-26T13:00:00Z'))).toBeNull();
-  expect(slotRunId(owner,'2026-09-25','09:00')).toBe(slotRunId(owner,'2026-09-25','09:00'));
-  expect(slotRunId(owner,'2026-09-25','09:00')).not.toBe(slotRunId(other,'2026-09-25','09:00'));
- });
- it('keeps only record links Command supplied',()=>{
-  expect(verifiedLinks(`Next: [Parcel](/?record=${owner}) then [Fake](/?record=${other}).`,new Set([owner]))).toBe(`Next: [Parcel](/?record=${owner}) then Fake.`);
- });
- it('drafts without tools, rewrites an oversized draft and saves one partial receipt',async()=>{
-  const writes:{method:string;body:Record<string,unknown>}[]=[];
-  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
-   const request=new Request(input,init),url=new URL(request.url);
-   if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
-   if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:true});
-   if(url.pathname.endsWith('/work_items')){expect(request.method).toBe('GET');return Response.json([],{headers:{'content-range':'0-0/0'}});}
-   if(url.pathname.endsWith('/cora_workday_reviews')){
-    if(request.method==='GET')return Response.json(null);
-    writes.push({method:request.method,body:await request.json()});
-    return request.method==='POST'?Response.json([{id:owner}]):new Response(null,{status:204});
-   }
-   throw new Error('Unexpected request '+url.pathname);
-  });
-  const provider=fakeProvider((params,round)=>{expect(params.tools).toBeUndefined();return{text:round===0?'word '.repeat(150):'Now: Quiet morning.\n\nNext: Finish the parcel review before lunch.'};});
-  const store=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
-  const result=await writeBrief({store,userId:owner,provider,settings:{apiKey:'fixture'},signal:new AbortController().signal,runId:owner});
-  expect(result).toMatchObject({state:'saved',status:'partial',summary:expect.stringContaining('parcel review')});
-  expect(writes.map(w=>w.method)).toEqual(['POST','PATCH']);
-  expect(writes[1]!.body).toMatchObject({status:'partial'});
- });
- it('is a no-op when the slot already ran or reviews are paused',async()=>{
-  let paused=false;
-  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
-   const request=new Request(input,init),url=new URL(request.url);
-   if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
-   if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:!paused});
-   if(url.pathname.endsWith('/cora_workday_reviews')&&request.method==='POST')return Response.json([]);
-   throw new Error('Unexpected request '+url.pathname);
-  });
-  const provider=fakeProvider(()=>{throw new Error('Provider must not run');});
-  const store=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
-  const options={store,userId:owner,provider,settings:{apiKey:'fixture'},signal:new AbortController().signal,runId:owner};
-  expect(await writeBrief(options)).toMatchObject({state:'skipped',reason:'This brief already ran.'});
-  paused=true;
-  expect(await writeBrief(options)).toMatchObject({state:'skipped',reason:expect.stringContaining('paused')});
- });
 });

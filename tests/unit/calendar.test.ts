@@ -21,9 +21,11 @@ it("uses Eastern calendar boundaries across spring and fall clock changes", () =
   expect(eventDuration(90)).toBe("1h 30m");
 });
 
-it('shows the whole Monday to Friday week including on weekends and across years',()=>{
- for(const day of ['2026-09-21','2026-09-23','2026-09-26','2026-09-27'])expect(workWeekRange(day)).toEqual({start:'2026-09-21T04:00:00.000Z',end:'2026-09-26T04:00:00.000Z'});
- expect(workWeekRange('2027-01-01')).toEqual({start:'2026-12-28T05:00:00.000Z',end:'2027-01-02T05:00:00.000Z'});
+it('shows today through Friday, and the coming work week on weekends and across years',()=>{
+ expect(workWeekRange('2026-09-21')).toEqual({start:'2026-09-21T04:00:00.000Z',end:'2026-09-26T04:00:00.000Z'});
+ expect(workWeekRange('2026-09-25')).toEqual({start:'2026-09-25T04:00:00.000Z',end:'2026-09-26T04:00:00.000Z'});
+ for(const day of ['2026-09-26','2026-09-27'])expect(workWeekRange(day)).toEqual({start:'2026-09-28T04:00:00.000Z',end:'2026-10-03T04:00:00.000Z'});
+ expect(workWeekRange('2026-12-31')).toEqual({start:'2026-12-31T05:00:00.000Z',end:'2027-01-02T05:00:00.000Z'});
 });
 
 it('hides ended events while preserving ongoing, all-day and future events',()=>{
