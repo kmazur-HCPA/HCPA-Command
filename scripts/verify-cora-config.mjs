@@ -24,7 +24,8 @@ console.log(
   JSON.stringify({
     event: "cora_configuration",
     server_database_access: true,
-    provider_configured: !!process.env.OPENAI_API_KEY,
-    model: process.env.CORA_MODEL ?? "gpt-5.4-mini",
+    provider_configured: !!process.env.ANTHROPIC_API_KEY,
+    model: process.env.CORA_MODEL ?? "claude-opus-5",
+    effort: process.env.CORA_EFFORT ?? "medium",
   }),
 );

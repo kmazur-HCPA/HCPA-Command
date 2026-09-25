@@ -318,16 +318,17 @@ export function CoraPanel({
             <p className="eyebrow">A little perspective.</p>
             <h3>What needs your attention?</h3>
             <p>
-              I can connect your tasks, projects and loose ends. Start wherever
-              you are.
+              I can connect your tasks, reminders, projects, calendar, email and
+              Teams, and save what you ask for. Start wherever you are.
             </p>
             <div className="cora-suggestions">
               {[
                 context.recordId
                   ? "What's going on with this?"
                   : "What needs my attention today?",
-                "What tasks do I have open?",
+                "Prep me for my next meeting.",
                 "What's waiting on someone else?",
+                "What did I miss in email and Teams today?",
                 "Remind me tomorrow to follow up on the website.",
               ].map((text) => (
                 <button

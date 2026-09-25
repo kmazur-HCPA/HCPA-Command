@@ -42,6 +42,53 @@ export function storeClient(config: McpConfig, authorization?: string) {
     },
   );
 }
+// A grant is whoever the MCP request authenticates as, however it signed in.
+export type McpGrant = {
+  user_id: string;
+  id: string;
+  kind: "token" | "oauth";
+};
+const jwtPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const uuidPattern =
+  /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+// Accepts only OAuth access tokens issued to a registered client (client_id
+// claim), never an ordinary Command browser session. The Auth server check also
+// rejects tokens whose session or grant was revoked.
+export async function authorizeOAuth(
+  store: AppClient,
+  token: string,
+): Promise<McpGrant | null> {
+  if (token.length > 8192 || !jwtPattern.test(token)) return null;
+  const { data, error } = await store.auth.getUser(token);
+  if (error)
+    if (error.status && error.status < 500) return null;
+    else throw new Error("Connection verification unavailable.");
+  if (!data.user || data.user.is_anonymous) return null;
+  let claims: Record<string, unknown>;
+  try {
+    claims = JSON.parse(
+      Buffer.from(token.split(".")[1]!, "base64url").toString("utf8"),
+    );
+  } catch {
+    return null;
+  }
+  if (
+    claims.sub !== data.user.id ||
+    claims.role !== "authenticated" ||
+    typeof claims.client_id !== "string" ||
+    !uuidPattern.test(claims.client_id)
+  )
+    return null;
+  const member = await store
+    .from("app_memberships")
+    .select("active")
+    .eq("user_id", data.user.id)
+    .maybeSingle();
+  if (member.error) throw new Error("Connection verification unavailable.");
+  return member.data?.active
+    ? { user_id: data.user.id, id: claims.client_id, kind: "oauth" }
+    : null;
+}
 export async function authorize(store: AppClient, hash: string) {
   const { data, error } = await store
     .from("cora_mcp_connections")

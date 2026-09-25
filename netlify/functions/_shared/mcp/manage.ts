@@ -21,17 +21,17 @@ export async function manageMcp(request: Request, config: McpConfig) {
     return respond(403, { message: "Origin not allowed." });
   const auth = request.headers.get("authorization") ?? "";
   if (!/^Bearer [^\s]+$/i.test(auth) || auth.length > 8192)
-    return respond(401, { message: "Sign in to manage ChatGPT access." });
+    return respond(401, { message: "Sign in to manage connected apps." });
   // A Command session is required. An MCP token cannot create or rotate tokens.
   if (auth.slice(7).startsWith("cmd_mcp_"))
-    return respond(401, { message: "Sign in to manage ChatGPT access." });
+    return respond(401, { message: "Sign in to manage connected apps." });
   try {
     const client = storeClient(config, auth),
       store = storeClient(config);
     const result = await client.auth.getUser(auth.slice(7));
     const user = result.data.user;
     if (result.error || !user || user.is_anonymous)
-      return respond(401, { message: "Sign in to manage ChatGPT access." });
+      return respond(401, { message: "Sign in to manage connected apps." });
     const member = await client
       .from("app_memberships")
       .select("active")
@@ -81,7 +81,7 @@ export async function manageMcp(request: Request, config: McpConfig) {
     return respond(200, { token, expires_at: expires });
   } catch {
     return respond(503, {
-      message: "ChatGPT connection could not be updated. Please retry.",
+      message: "The connection could not be updated. Please retry.",
     });
   }
 }

@@ -23,3 +23,10 @@ it('accepts short current-state check-ins and rejects reports and exposed URLs',
  expect(isCompactBrief('Checked: 14 tasks and 45 emails.')).toBe(false);
  expect(isCompactBrief('Review https://outlook.office.com/long-link')).toBe(false);
 });
+
+// The Claude skill must carry the exact rules Command enforces for saved briefs.
+import { readFileSync } from 'node:fs';
+import { briefStyle } from '../../src/features/reviews/brief';
+it('keeps the Cora skill brief rules identical to Command', () => {
+  expect(readFileSync('.claude/skills/cora/brief.md', 'utf8')).toContain(briefStyle);
+});

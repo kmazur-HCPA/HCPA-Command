@@ -338,7 +338,7 @@ test('Cora streams, preserves page context, and creates a task only through its 
  await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('button',{name:'Ask Cora',exact:true})).toBeFocused()
 })
 
-test('ChatGPT connection shows a one-time token and revokes access',async({page})=>{
+test('Connected app token is shown once and can be revoked',async({page})=>{
  await mockBackend(page);
  let connection:Record<string,unknown>|null=null;
  await page.route('**/api/cora/connection/status',r=>r.fulfill({json:{connection}}));
@@ -346,17 +346,17 @@ test('ChatGPT connection shows a one-time token and revokes access',async({page}
  await page.route('**/api/cora/connection/revoke',r=>{connection=null;return r.fulfill({json:{revoked:true}})});
  await login(page);await expect(page.getByRole('heading',{name:'Work Day',exact:true})).toBeVisible();
  await page.goto('/?page=settings');
- await page.getByRole('button',{name:'Create ChatGPT token',exact:true}).click();
- const field=page.getByLabel('ChatGPT connection token');await expect(field).toHaveAttribute('type','password');await expect(field).toHaveValue('cmd_mcp_'+'a'.repeat(43));
+ await page.getByRole('button',{name:'Create connection token',exact:true}).click();
+ const field=page.getByLabel('Connection token');await expect(field).toHaveAttribute('type','password');await expect(field).toHaveValue('cmd_mcp_'+'a'.repeat(43));
  await page.getByRole('button',{name:'Hide token',exact:true}).click();await expect(field).toHaveCount(0);
- await page.getByRole('button',{name:'Revoke ChatGPT access',exact:true}).click();await expect(page.getByText('ChatGPT access revoked. Existing conversations remain.',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Create ChatGPT token',exact:true})).toBeVisible();
- expect((await new AxeBuilder({page}).include('[aria-labelledby="chatgpt-title"]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+ await page.getByRole('button',{name:'Revoke connected app access',exact:true}).click();await expect(page.getByText('Connected app access revoked. Existing conversations remain.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Create connection token',exact:true})).toBeVisible();
+ expect((await new AxeBuilder({page}).include('[aria-labelledby="connector-title"]').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
 });
-test('ChatGPT proposal link opens a review card and never automatically creates a task',async({page})=>{
+test('Connected app proposal link opens a review card and never automatically creates a task',async({page})=>{
  await mockBackend(page);let actions=0;
  const id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
- const turn={id,user_id:userId,conversation_id:id,message:'ChatGPT task proposal: Review integration',context:{page:'chatgpt',recordId:null},response:'Ready to add.',sources:[],proposal:{title:'Review integration',due_date:null,priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()};
+ const turn={id,user_id:userId,conversation_id:id,message:'Connected app proposal: Review integration',context:{page:'connector',recordId:null},response:'Ready to add.',sources:[],proposal:{title:'Review integration',due_date:null,priority:'Normal',project_id:null},task_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',status:'complete',action_status:'proposed',created_at:new Date().toISOString(),finished_at:new Date().toISOString()};
  await page.route('**/api/cora/history*',r=>r.fulfill({json:new URL(r.request().url()).searchParams.has('conversationId')?{turns:[turn]}:{conversations:[{id,title:turn.message}]}}));
  await page.route('**/api/cora/action',r=>{actions++;return r.fulfill({json:{taskId:turn.task_id,created:true}})});
  await login(page);await expect(page.getByRole('heading',{name:'Work Day',exact:true})).toBeVisible();
@@ -393,7 +393,7 @@ test('automatic reminders refresh the workspace without a confirmation card and 
  await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
  await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{id:userId,user_id:userId,conversation_id:userId,message:'Remind me tomorrow',context:{page:'workspace',recordId:null},response:'Saved your reminder for tomorrow.',sources:[],proposal:null,task_id:userId,status:'complete',action_status:'created',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}})+'\n'}));
  await login(page);
- await expect(page.getByText('Email checked; Teams temporarily unavailable.')).toBeVisible();
+ await expect(page.locator('.command-brief-copy').getByText('Email checked; Teams temporarily unavailable.')).toBeVisible();
  await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});
  await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Remind me tomorrow');await panel.getByRole('button',{name:'Send to Cora'}).click();
  await expect(panel.getByText('Saved your reminder for tomorrow.')).toBeVisible();await expect(panel.getByRole('button',{name:'Confirm changes'})).toHaveCount(0);

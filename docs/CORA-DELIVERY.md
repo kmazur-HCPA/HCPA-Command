@@ -1,5 +1,7 @@
 # Cora v0.1 — implementation and operating notes
 
+> **Superseded September 2026.** Cora now runs on Claude inside Command, and the ChatGPT agent is retired. See [Cora on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
+
 Kevin authorized the first Cora release through the September 21 implementation brief. This delivers the initial conversational, live-context and controlled task-creation milestone. It does not activate autonomous work, external systems, vector memory, voice or broad record editing.
 
 ## Experience

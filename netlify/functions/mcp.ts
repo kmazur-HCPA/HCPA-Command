@@ -1,5 +1,5 @@
 import type { Config, Context } from "@netlify/functions";
-import { handleMcp } from "./_shared/mcp/handler";
+import { handleMcp, protectedResource } from "./_shared/mcp/handler";
 import { manageMcp } from "./_shared/mcp/manage";
 import { microsoftConfig } from "./_shared/microsoft/config";
 export default async (request: Request, context: Context) => {
@@ -25,13 +25,18 @@ export default async (request: Request, context: Context) => {
     origin: env("COMMAND_ORIGIN") ?? "https://cmd.hillspafl.gov",
     microsoft: microsoftConfig(env),
   };
-  return new URL(request.url).pathname === "/api/mcp"
+  const path = new URL(request.url).pathname;
+  if (path.startsWith("/.well-known/oauth-protected-resource"))
+    return protectedResource(settings.origin, url);
+  return path === "/api/mcp"
     ? handleMcp(request, settings, context.requestId)
     : manageMcp(request, settings);
 };
 export const config: Config = {
   path: [
     "/api/mcp",
+    "/.well-known/oauth-protected-resource",
+    "/.well-known/oauth-protected-resource/api/mcp",
     "/api/cora/connection/status",
     "/api/cora/connection/create",
     "/api/cora/connection/revoke",

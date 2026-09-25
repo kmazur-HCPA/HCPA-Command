@@ -1,6 +1,6 @@
 # Command — Microsoft 365
 
-Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel to the signed-in user's default Outlook calendar, mailbox, and Teams context. The ChatGPT interface follows separately.
+Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel to the signed-in user's default Outlook calendar, mailbox, and Teams context. Cora on Claude and the scheduled Command Brief use this same connection; see [Cora on Claude](CORA-CLAUDE.md).
 
 ## Entra registration
 

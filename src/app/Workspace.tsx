@@ -21,7 +21,7 @@ import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
 
 const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
-const ChatGPTConnection=lazy(()=>import("../features/mcp/ChatGPTConnection").then(m=>({default:m.ChatGPTConnection})))
+const CoraConnection=lazy(()=>import("../features/mcp/CoraConnection").then(m=>({default:m.CoraConnection})))
 const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
@@ -419,7 +419,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                   </p>
                 </section>
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
-                <Suspense fallback={<p role="status">Loading ChatGPT connection…</p>}><ChatGPTConnection client={client}/></Suspense>
+                <Suspense fallback={<p role="status">Loading connected apps…</p>}><CoraConnection client={client}/></Suspense>
                 <WorkdayReviews client={client} settings/>
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />

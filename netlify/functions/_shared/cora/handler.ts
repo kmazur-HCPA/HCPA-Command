@@ -1,5 +1,7 @@
 import { applyRecord, validateRecordProposal } from "./actions";
-import OpenAI from "openai";
+import { randomUUID } from "node:crypto";
+import { createProvider } from "./provider";
+import { writeBrief } from "./brief";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../../../../src/data/database.types";
 import type {
@@ -8,7 +10,6 @@ import type {
 } from "../../../../src/features/cora/model";
 import { newItem } from "../../../../src/features/work/model";
 import { saveWork } from "../../../../src/services/work";
-import { identity } from "./identity";
 import { uuid, validateProposal } from "./tools";
 import { runCora } from "./engine";
 import type { MicrosoftConfig } from "../microsoft/config";
@@ -19,6 +20,7 @@ export type CoraConfig = {
   apiKey: string;
   baseURL?: string;
   model?: string;
+  effort?: string;
   microsoft?: MicrosoftConfig;
 };
 const headers = {
@@ -57,7 +59,12 @@ export async function handleCora(
     Response.json({ message, requestId }, { status, headers });
   const path = new URL(request.url).pathname;
   if (
-    !["/api/cora/chat", "/api/cora/history", "/api/cora/action"].includes(path)
+    ![
+      "/api/cora/chat",
+      "/api/cora/history",
+      "/api/cora/action",
+      "/api/cora/brief",
+    ].includes(path)
   )
     return respond(404, "Not found.");
   if (request.method !== (path.endsWith("history") ? "GET" : "POST"))
@@ -138,6 +145,36 @@ export async function handleCora(
         .range(offset, offset + 19);
       if (r.error) return respond(503, "Conversation history is unavailable.");
       return Response.json({ conversations: r.data }, { headers });
+    }
+    if (path.endsWith("brief")) {
+      // Same writer as the scheduled brief; one at a time per owner.
+      const recent = await store
+        .from("cora_workday_reviews")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "running")
+        .gte("started_at", new Date(Date.now() - 120000).toISOString())
+        .limit(1);
+      if (recent.error)
+        return respond(503, "The Command Brief is temporarily unavailable.");
+      if (recent.data.length)
+        return respond(409, "Cora is already preparing a brief. Check back in a moment.");
+      const result = await writeBrief({
+        store,
+        userId: user.id,
+        provider: createProvider(settings),
+        settings,
+        microsoft: settings.microsoft,
+        signal,
+        runId: randomUUID(),
+      });
+      if (result.state === "saved") return Response.json(result, { headers });
+      return respond(
+        result.state === "skipped" ? 409 : 502,
+        result.state === "skipped"
+          ? result.reason
+          : "Cora could not prepare the brief. The previous brief is still shown.",
+      );
     }
     if (!request.headers.get("content-type")?.startsWith("application/json"))
       return respond(415, "JSON required.");
@@ -285,12 +322,7 @@ export async function handleCora(
       );
     const turn = reserved.data.turn,
       encoder = new TextEncoder();
-    const provider = new OpenAI({
-      apiKey: settings.apiKey,
-      baseURL: settings.baseURL,
-      maxRetries: 0,
-      timeout: 40000,
-    });
+    const provider = createProvider(settings);
     const started = performance.now();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -324,7 +356,7 @@ export async function handleCora(
               store,
               turn,
               provider,
-              model: settings.model ?? identity.model,
+              settings,
               signal,
               emit,
               microsoft: settings.microsoft,

@@ -6,7 +6,7 @@ export default async (request: Request, context: Context) => {
   const url = env("SUPABASE_URL"),
     key = env("SUPABASE_PUBLISHABLE_KEY"),
     secret = env("SUPABASE_SECRET_KEY"),
-    apiKey = env("OPENAI_API_KEY"),
+    apiKey = env("ANTHROPIC_API_KEY"),
     deploy = env("CONTEXT");
   if (
     (deploy && !["production", "dev"].includes(deploy)) ||
@@ -18,7 +18,7 @@ export default async (request: Request, context: Context) => {
     return Response.json(
       {
         message:
-          "Cora is not configured yet. Your Command workspace is available.",
+          "Cora in Command is not turned on. Ask Cora in Claude instead; your Command workspace is available.",
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
@@ -29,13 +29,19 @@ export default async (request: Request, context: Context) => {
       key,
       secret,
       apiKey,
-      baseURL: env("OPENAI_BASE_URL"),
+      baseURL: env("ANTHROPIC_BASE_URL"),
       model: env("CORA_MODEL"),
+      effort: env("CORA_EFFORT"),
       microsoft: microsoftConfig(env),
     },
     context.requestId,
   );
 };
 export const config: Config = {
-  path: ["/api/cora/chat", "/api/cora/history", "/api/cora/action"],
+  path: [
+    "/api/cora/chat",
+    "/api/cora/history",
+    "/api/cora/action",
+    "/api/cora/brief",
+  ],
 };

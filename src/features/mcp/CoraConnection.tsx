@@ -11,7 +11,7 @@ async function request(
 ) {
   const { data, error } = await client.auth.getSession();
   if (error || !data.session)
-    throw new Error("Sign in to manage ChatGPT access.");
+    throw new Error("Sign in to manage connected apps.");
   const response = await fetch(`/api/cora/connection/${action}`, {
     method: action === "status" ? "GET" : "POST",
     headers: { Authorization: `Bearer ${data.session.access_token}` },
@@ -22,7 +22,65 @@ async function request(
   if (!response.ok) throw new Error(body.message ?? "Connection unavailable.");
   return body;
 }
-export function ChatGPTConnection({ client }: { client: AppClient }) {
+type Grant = { client: { id: string; name: string }; granted_at: string };
+// Claude connectors that signed in with Command (Supabase OAuth grants).
+function SignedInApps({ client }: { client: AppClient }) {
+  const [grants, setGrants] = useState<Grant[] | null>(null),
+    [unavailable, setUnavailable] = useState(false),
+    [busy, setBusy] = useState(""),
+    [error, setError] = useState(""),
+    [reload, setReload] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void client.auth.oauth.listGrants().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setUnavailable(true);
+      else setGrants(data ?? []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [client, reload]);
+  async function revoke(id: string) {
+    setBusy(id);
+    setError("");
+    const { error } = await client.auth.oauth.revokeGrant({ clientId: id });
+    setBusy("");
+    if (error) setError("Access was not revoked. Retry.");
+    setReload((r) => r + 1);
+  }
+  if (unavailable)
+    return (
+      <p className="muted small">
+        Sign-in connections are not enabled for Command yet.
+      </p>
+    );
+  if (!grants) return <p role="status">Checking signed-in apps…</p>;
+  return (
+    <div>
+      <h3>Signed-in apps</h3>
+      {!grants.length && (
+        <p className="muted small">No apps have signed in with Command.</p>
+      )}
+      {grants.map((grant) => (
+        <div className="actions" key={grant.client.id}>
+          <span>
+            {grant.client.name || "Unnamed app"} · since{" "}
+            {new Date(grant.granted_at).toLocaleDateString()}
+          </span>
+          <button
+            disabled={!!busy}
+            onClick={() => void revoke(grant.client.id)}
+          >
+            {busy === grant.client.id ? "Revoking…" : "Revoke"}
+          </button>
+        </div>
+      ))}
+      {error && <p role="alert" className="error-message">{error}</p>}
+    </div>
+  );
+}
+export function CoraConnection({ client }: { client: AppClient }) {
   const [checkedAt, setCheckedAt] = useState(() => Date.now());
   const [connection, setConnection] = useState<Connection | null>(null),
     [loaded, setLoaded] = useState(false),
@@ -43,7 +101,7 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
         }
       })
       .catch(() => {
-        if (active) setError("ChatGPT connection status is unavailable.");
+        if (active) setError("Connected app status is unavailable.");
       });
     return () => {
       active = false;
@@ -60,10 +118,10 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
       if (action === "create") {
         setToken(result.token);
         setNotice(
-          "Copy this token into your private Command app in ChatGPT. It is shown only once.",
+          "Copy this token into your MCP client’s authorization header. It is shown only once.",
         );
       } else
-        setNotice("ChatGPT access revoked. Existing conversations remain.");
+        setNotice("Connected app access revoked. Existing conversations remain.");
       setRetry((r) => r + 1);
     } catch (e) {
       setError((e as Error).message);
@@ -73,12 +131,23 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
   }
   const active = connection && Date.parse(connection.expires_at) > checkedAt;
   return (
-    <section className="settings-panel" aria-labelledby="chatgpt-title">
-      <h2 id="chatgpt-title">Cora in ChatGPT</h2>
+    <section className="settings-panel" aria-labelledby="connector-title">
+      <h2 id="connector-title">Cora in connected apps</h2>
       <p className="muted">
-        Connect your private Cora agent to live Command, Outlook, Calendar and
-        Teams context. Requested tasks, reminders, people, projects, initiatives, journal and AI Lab records save directly. Edits to existing records open here for confirmation. Messages
-        and meetings cannot be changed.
+        Use Cora in Claude on the web, Desktop or Claude Code. Add a custom
+        connector with the address below and sign in with your Command
+        account. Requested tasks, reminders, people, projects, initiatives,
+        journal and AI Lab records save directly. Edits to existing records
+        open here for confirmation. Messages and meetings cannot be changed.
+      </p>
+      <p className="muted small">
+        Connector address: <code>https://cmd.hillspafl.gov/api/mcp</code>
+      </p>
+      <SignedInApps client={client} />
+      <h3>Personal token (optional)</h3>
+      <p className="muted small">
+        For MCP clients that cannot sign in, such as a scripted Claude Code
+        setup. Header: <code>Authorization: Bearer</code> + token.
       </p>
       {!loaded && !error && <p role="status">Checking connection…</p>}
       {loaded && (
@@ -87,29 +156,25 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
             {active
               ? `Access enabled until ${new Date(connection.expires_at).toLocaleDateString()}.`
               : connection
-                ? "Your ChatGPT token has expired."
-                : "ChatGPT access is not enabled."}
+                ? "Your connection token has expired."
+                : "Connected app access is not enabled."}
           </p>
           {connection?.last_used_at && (
             <p className="muted small">
               Last used {new Date(connection.last_used_at).toLocaleString()}
             </p>
           )}
-          <p className="muted small">
-            MCP server: <code>https://cmd.hillspafl.gov/api/mcp</code> ·
-            Authentication: Access token / API key · Bearer
-          </p>
           <div className="actions">
             <button disabled={busy} onClick={() => void change("create")}>
               {busy
                 ? "Working…"
                 : active
-                  ? "Replace ChatGPT token"
-                  : "Create ChatGPT token"}
+                  ? "Replace connection token"
+                  : "Create connection token"}
             </button>
             {connection && (
               <button disabled={busy} onClick={() => void change("revoke")}>
-                Revoke ChatGPT access
+                Revoke connected app access
               </button>
             )}
           </div>
@@ -124,7 +189,7 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
       {token && (
         <div>
           <label>
-            ChatGPT connection token
+            Connection token
             <input
               autoComplete="off"
               spellCheck={false}
@@ -140,7 +205,7 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
                   .writeText(token)
                   .then(() =>
                     setNotice(
-                      "Token copied. Paste it only into your private Command app in ChatGPT.",
+                      "Token copied. Paste it only into your own MCP client configuration.",
                     ),
                   )
                   .catch(() =>
@@ -165,7 +230,7 @@ export function ChatGPTConnection({ client }: { client: AppClient }) {
         <div role="alert">
           <p className="error-message">{error}</p>
           <button onClick={() => setRetry((r) => r + 1)}>
-            Retry ChatGPT status
+            Retry connection status
           </button>
         </div>
       )}

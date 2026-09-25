@@ -46,10 +46,22 @@ describe("Authorized Cora creation", () => {
 // Exercise the real site orchestration with a deterministic provider and HTTP boundary.
 import {afterEach,vi} from 'vitest';
 import {createClient} from '@supabase/supabase-js';
-import type OpenAI from 'openai';
+import type Anthropic from '@anthropic-ai/sdk';
 import type {Database} from '../../src/data/database.types';
 import type {CoraEvent,CoraTurn} from '../../src/features/cora/model';
 import {runCora} from '../../netlify/functions/_shared/cora/engine';
+import {slotAt,slotRunId,verifiedLinks,writeBrief} from '../../netlify/functions/_shared/cora/brief';
+type Reply={text?:string;tool?:{name:string;input:unknown}};
+type Params={tools?:{name:string}[];messages:unknown[];system:unknown};
+// Mirrors the SDK surface the engine uses: beta.messages.stream/create + finalMessage.
+function fakeProvider(reply:(params:Params,round:number)=>Reply){
+ let round=0;
+ const message=(params:Params)=>{const r=reply(params,round++);return{content:r.tool?[{type:'tool_use',id:'call-'+round,name:r.tool.name,input:r.tool.input}]:[{type:'text',text:r.text??''}],stop_reason:r.tool?'tool_use':'end_turn'};};
+ return {beta:{messages:{
+  create:async(params:Params)=>message(params),
+  stream:(params:Params)=>{const texts:((t:string)=>void)[]=[];return{on(event:string,cb:(t:string)=>void){if(event==='text')texts.push(cb);return this;},abort(){},async finalMessage(){const m=message(params);for(const b of m.content)if('text' in b)texts.forEach(cb=>cb(b.text));return m;}};},
+ }}} as unknown as Anthropic;
+}
 afterEach(()=>vi.unstubAllGlobals());
 it.each(directKinds)('site Cora saves %s directly and returns a refreshable receipt without a proposal',async(kind)=>{
  const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Save this record',context:{page:'workspace',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
@@ -64,43 +76,88 @@ it.each(directKinds)('site Cora saves %s directly and returns a refreshable rece
   if(url.pathname.endsWith('/cora_create_record')){expect(await request.json()).toMatchObject({p_user:owner,p_record:{id:expected.id,kind}});return Response.json({saved:true,created:true,id:expected.id});}
   throw new Error('Unexpected request '+url.pathname);
  });
- let round=0;
- const provider={chat:{completions:{create:async()=>{const first=round++===0;return(async function*(){yield {choices:[{delta:first?{tool_calls:[{index:0,id:'call-1',type:'function',function:{name:'create_record',arguments:JSON.stringify(input)}}]}:{content:'Saved.'}}]};})();}}}} as unknown as OpenAI;
+ const provider=fakeProvider((_,round)=>round===0?{tool:{name:'create_record',input}}:{text:'Saved.'});
  const client=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
  const events:CoraEvent[]=[];
- await runCora({client,store:client,turn,provider,model:'fixture',signal:new AbortController().signal,emit:event=>events.push(event)});
+ await runCora({client,store:client,turn,provider,signal:new AbortController().signal,emit:event=>events.push(event)});
  expect(events.find(event=>event.type==='complete')).toMatchObject({turn:{action_status:'created',proposal:null,task_id:expected.id,sources:[{id:expected.id,kind,title:'Follow up'}]}});
  expect(audits.find(a=>a.tool==='create_record')).toMatchObject({success:true,result:{state:'saved'}});
 });
 
-it('brief mode publishes a saved review but rejects work mutations even if the model requests one',async()=>{
- const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Update my brief',context:{page:'command-brief',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
- const writes:Record<string,unknown>[]=[];
+it('site Cora rejects tools outside its request scope and returns the failure to the model',async()=>{
+ const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Save the brief',context:{page:'workspace',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
  const audits:Record<string,unknown>[]=[];
  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
   const request=new Request(input,init),url=new URL(request.url);
   if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
-  if(url.pathname.endsWith('/work_items')){expect(request.method).toBe('GET');return Response.json([],{headers:{'content-range':'0-0/0'}});}
-  if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:true});
-  if(url.pathname.endsWith('/cora_workday_reviews')){
-   if(request.method==='GET')return Response.json([]);
-   writes.push(await request.json());return Response.json(request.method==='POST'?[{id:owner}]:{id:owner});
-  }
+  if(url.pathname.endsWith('/work_items'))return Response.json([],{headers:{'content-range':'0-0/0'}});
   if(url.pathname.endsWith('/cora_activity')){audits.push(await request.json());return new Response(null,{status:201});}
   if(url.pathname.endsWith('/cora_turns'))return request.method==='PATCH'?Response.json({...turn,...await request.json()}):Response.json([]);
   throw new Error('Unexpected request '+url.pathname);
  });
- const calls=[['get_workday_reviews',{}],['record_workday_review',{run_id:owner,status:'running',summary:''}],['create_record',args],['record_workday_review',{run_id:owner,status:'partial',summary:'At a glance\nNo active work found.\n\nCoverage\nCalendar unavailable.'}]] as const;
- let round=0;
- const provider={chat:{completions:{create:async(input:{tools:{type:string;function:{name:string}}[]})=>{
-  const names=input.tools.map(t=>t.function.name);
-  expect(names).toContain('record_workday_review');expect(names).not.toContain('create_record');expect(names).not.toContain('prepare_record');expect(names).not.toContain('search_outlook_mail');
-  const call=calls[round++];return(async function*(){yield {choices:[{delta:call?{tool_calls:[{index:0,id:'call-'+round,type:'function',function:{name:call[0],arguments:JSON.stringify(call[1])}}]}:{content:'Brief saved.'}}]};})();
- }}}} as unknown as OpenAI;
+ let toolResult='';
+ const provider=fakeProvider((params,round)=>{
+  const names=(params.tools??[]).map(t=>t.name);
+  expect(names).toContain('create_reminder');expect(names).not.toContain('record_workday_review');expect(names).not.toContain('search_outlook_mail');
+  if(round===0)return{tool:{name:'record_workday_review',input:{run_id:owner,status:'complete',summary:'x'}}};
+  toolResult=JSON.stringify(params.messages.at(-1));return{text:'I could not do that.'};
+ });
  const client=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
  const events:CoraEvent[]=[];
- await runCora({client,store:client,turn,provider,model:'fixture',signal:new AbortController().signal,emit:event=>events.push(event)});
- expect(writes).toHaveLength(2);expect(writes[1]).toMatchObject({status:'partial',summary:expect.stringContaining('At a glance')});
- expect(audits.find(a=>a.tool==='create_record')).toMatchObject({success:false});
+ await runCora({client,store:client,turn,provider,signal:new AbortController().signal,emit:event=>events.push(event)});
+ expect(toolResult).toContain('"is_error":true');
+ expect(audits.find(a=>a.tool==='record_workday_review')).toMatchObject({success:false});
  expect(events.find(event=>event.type==='complete')).toMatchObject({turn:{action_status:'none',proposal:null}});
+});
+
+describe('Command-owned brief',()=>{
+ it('maps quarter-hour runs to Eastern weekday slots across daylight saving',()=>{
+  expect(slotAt(new Date('2026-09-25T10:45:00Z'))).toBe('06:45');
+  expect(slotAt(new Date('2026-12-01T11:58:00Z'))).toBe('06:45');
+  expect(slotAt(new Date('2026-12-01T20:00:00Z'))).toBe('15:00');
+  expect(slotAt(new Date('2026-09-25T13:20:00Z'))).toBeNull();
+  expect(slotAt(new Date('2026-09-26T13:00:00Z'))).toBeNull();
+  expect(slotRunId(owner,'2026-09-25','09:00')).toBe(slotRunId(owner,'2026-09-25','09:00'));
+  expect(slotRunId(owner,'2026-09-25','09:00')).not.toBe(slotRunId(other,'2026-09-25','09:00'));
+ });
+ it('keeps only record links Command supplied',()=>{
+  expect(verifiedLinks(`Next: [Parcel](/?record=${owner}) then [Fake](/?record=${other}).`,new Set([owner]))).toBe(`Next: [Parcel](/?record=${owner}) then Fake.`);
+ });
+ it('drafts without tools, rewrites an oversized draft and saves one partial receipt',async()=>{
+  const writes:{method:string;body:Record<string,unknown>}[]=[];
+  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
+   const request=new Request(input,init),url=new URL(request.url);
+   if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
+   if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:true});
+   if(url.pathname.endsWith('/work_items')){expect(request.method).toBe('GET');return Response.json([],{headers:{'content-range':'0-0/0'}});}
+   if(url.pathname.endsWith('/cora_workday_reviews')){
+    if(request.method==='GET')return Response.json(null);
+    writes.push({method:request.method,body:await request.json()});
+    return request.method==='POST'?Response.json([{id:owner}]):new Response(null,{status:204});
+   }
+   throw new Error('Unexpected request '+url.pathname);
+  });
+  const provider=fakeProvider((params,round)=>{expect(params.tools).toBeUndefined();return{text:round===0?'word '.repeat(150):'Now: Quiet morning.\n\nNext: Finish the parcel review before lunch.'};});
+  const store=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
+  const result=await writeBrief({store,userId:owner,provider,settings:{apiKey:'fixture'},signal:new AbortController().signal,runId:owner});
+  expect(result).toMatchObject({state:'saved',status:'partial',summary:expect.stringContaining('parcel review')});
+  expect(writes.map(w=>w.method)).toEqual(['POST','PATCH']);
+  expect(writes[1]!.body).toMatchObject({status:'partial'});
+ });
+ it('is a no-op when the slot already ran or reviews are paused',async()=>{
+  let paused=false;
+  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{
+   const request=new Request(input,init),url=new URL(request.url);
+   if(url.pathname.endsWith('/app_memberships'))return Response.json({active:true});
+   if(url.pathname.endsWith('/cora_review_preferences'))return Response.json({automatic_reminders:!paused});
+   if(url.pathname.endsWith('/cora_workday_reviews')&&request.method==='POST')return Response.json([]);
+   throw new Error('Unexpected request '+url.pathname);
+  });
+  const provider=fakeProvider(()=>{throw new Error('Provider must not run');});
+  const store=createClient<Database>('https://fixture.supabase.co','fixture',{auth:{persistSession:false,autoRefreshToken:false}});
+  const options={store,userId:owner,provider,settings:{apiKey:'fixture'},signal:new AbortController().signal,runId:owner};
+  expect(await writeBrief(options)).toMatchObject({state:'skipped',reason:'This brief already ran.'});
+  paused=true;
+  expect(await writeBrief(options)).toMatchObject({state:'skipped',reason:expect.stringContaining('paused')});
+ });
 });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { createServer as httpServer } from "node:http";
+import { fakeClaude, hasToolResult } from "./fake-claude.mjs";
 import { createServer as viteServer } from "vite";
 // Real local Auth/PostgREST + handler + deterministic provider fixture; never hosted.
 export async function testCora({
@@ -13,47 +13,22 @@ export async function testCora({
   secret,
 }) {
   assert(["localhost", "127.0.0.1"].includes(new URL(url).hostname));
-  let calls = 0;
-  let inputs = [];
-  const provider = httpServer(async (req, res) => {
-    let text = "";
-    for await (const chunk of req) text += chunk;
-    const request = JSON.parse(text);
-    inputs.push(request);
-    calls++;
-    const toolResult = request.messages.some((m) => m.role === "tool");
-    const delta = toolResult
-      ? { content: "Ready to add." }
+  const provider = await fakeClaude((request) =>
+    hasToolResult(request)
+      ? { text: "Ready to add." }
       : {
-          tool_calls: [
-            {
-              index: 0,
-              id: "synthetic-call",
-              type: "function",
-              function: {
-                name: "prepare_task",
-                arguments: JSON.stringify({
-                  title: "Cora synthetic follow-up",
-                  due_date: "2026-09-22",
-                  priority: "Normal",
-                  project_id: null,
-                }),
-              },
+          tool: {
+            name: "prepare_task",
+            input: {
+              title: "Cora synthetic follow-up",
+              due_date: "2026-09-22",
+              priority: "Normal",
+              project_id: null,
             },
-          ],
-        };
-    res.writeHead(200, { "Content-Type": "text/event-stream" });
-    res.end(
-      "data: " +
-        JSON.stringify({
-          id: "test",
-          object: "chat.completion.chunk",
-          choices: [{ index: 0, delta, finish_reason: null }],
-        }) +
-        "\n\ndata: [DONE]\n\n",
-    );
-  });
-  await new Promise((resolve) => provider.listen(0, "127.0.0.1", resolve));
+          },
+        },
+  );
+  const inputs = provider.inputs;
   const vite = await viteServer({
     configFile: false,
     server: { middlewareMode: true, hmr: false },
@@ -70,7 +45,7 @@ export async function testCora({
       key: anonKey,
       secret,
       apiKey: "synthetic-provider-key",
-      baseURL: `http://127.0.0.1:${provider.address().port}/v1`,
+      baseURL: provider.baseURL,
     };
     const payload = {
       requestId: randomUUID(),
@@ -105,8 +80,12 @@ export async function testCora({
     const replay = await handleCora(request("chat", payload), config, "retry");
     assert.equal(replay.status, 200);
     assert((await replay.text()).includes("complete"));
-    assert.equal(calls, 2);
-    assert(inputs.every((r) => r.store === false && r.messages.length < 25));
+    assert.equal(inputs.length, 2);
+    assert(
+      inputs.every(
+        (r) => r.messages.length < 25 && r.system[0].cache_control?.type === "ephemeral",
+      ),
+    );
     const stolen = await handleCora(
       request("action", { turnId: complete.turn.id }, otherToken),
       config,
@@ -173,13 +152,13 @@ export async function testCora({
       JSON.stringify({
         event: "cora_integration",
         result: "pass",
-        provider_calls: calls,
+        provider_calls: inputs.length,
         checks:
           "live context, streaming, history, proposal-only model, idempotent task creation, RLS, forged receipt denial, revocation",
       }),
     );
   } finally {
     await vite.close();
-    await new Promise((resolve) => provider.close(resolve));
+    await provider.close();
   }
 }

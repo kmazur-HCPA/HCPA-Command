@@ -18,45 +18,52 @@ import {
 import { connection } from "../microsoft/client";
 import {
   authorize,
+  authorizeOAuth,
   headers,
   referenceCodec,
   storeClient,
   tokenHash,
   tokenPattern,
   type McpConfig,
+  type McpGrant,
 } from "./security";
 
-export const mcpDefinitions = [
+type McpDefinition = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+const isNamed = (list: { name: string }[], name: string) =>
+  list.some((tool) => tool.name === name);
+export const mcpDefinitions: McpDefinition[] = [
   ...tools,
   ...automaticTools,
   ...microsoftTools,
   ...teamsTools,
-].flatMap((tool) => {
-  if (tool.type !== "function") return [];
-  const def = structuredClone(tool.function);
-  def.description = def.description
-    ?.replaceAll("in this turn", "using a returned, unexpired reference")
-    .replaceAll("this turn's", "previous");
+].map((tool) => {
+  const def: McpDefinition = {
+    name: tool.name,
+    description: tool.description
+      .replaceAll("in this turn", "using a returned, unexpired reference")
+      .replaceAll("this turn's", "previous"),
+    parameters: structuredClone(tool.input_schema),
+  };
   if (def.name.startsWith("prepare_")) {
-    def.description =
-      def.description +
+    def.description +=
       " Return the review URL; Kevin confirms in Command. Reuse request_id on retries.";
     def.parameters = {
       ...def.parameters,
       properties: {
-        ...(def.parameters?.properties as object),
+        ...(def.parameters.properties as object),
         request_id: {
           type: "string",
           description: "A new UUID for this proposal; reuse it on retries.",
         },
       },
-      required: [
-        ...((def.parameters?.required as string[]) ?? []),
-        "request_id",
-      ],
+      required: [...(def.parameters.required as string[]), "request_id"],
     };
   }
-  return [def];
+  return def;
 });
 
 async function prepare(
@@ -90,8 +97,8 @@ async function prepare(
     p_user: userId,
     p_conversation: request_id,
     p_request: request_id,
-    p_message: "ChatGPT action proposal: " + proposal.title,
-    p_context: { page: "chatgpt", recordId: null },
+    p_message: "Connected app proposal: " + proposal.title,
+    p_context: { page: "connector", recordId: null },
   });
   if (reservation.error)
     throw new Error(
@@ -132,6 +139,26 @@ async function prepare(
   };
 }
 
+// RFC 9728 metadata: Command's MCP resource is protected by the project's
+// Supabase Auth OAuth 2.1 server, where Kevin signs in with his Command account.
+export function protectedResource(origin: string, supabaseUrl: string) {
+  return Response.json(
+    {
+      resource: `${origin}/api/mcp`,
+      authorization_servers: [`${new URL(supabaseUrl).origin}/auth/v1`],
+      bearer_methods_supported: ["header"],
+      resource_name: "Command Cora",
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=300",
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
+  );
+}
+
 export async function handleMcp(
   request: Request,
   config: McpConfig,
@@ -144,8 +171,11 @@ export async function handleMcp(
         status,
         headers: {
           ...headers,
+          // RFC 9728: tells MCP clients where to sign in with Command.
           ...(status === 401
-            ? { "WWW-Authenticate": 'Bearer realm="Command Cora"' }
+            ? {
+                "WWW-Authenticate": `Bearer realm="Command Cora", resource_metadata="${config.origin}/.well-known/oauth-protected-resource"`,
+              }
             : {}),
         },
       },
@@ -153,16 +183,23 @@ export async function handleMcp(
   if (!["POST", "GET", "DELETE"].includes(request.method))
     return respond(405, "Method not allowed.");
   const origin = request.headers.get("origin");
-  if (origin && ![config.origin, "https://chatgpt.com"].includes(origin))
+  if (origin && ![config.origin, "https://claude.ai"].includes(origin))
     return respond(403, "Origin not allowed.");
   const auth = request.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!tokenPattern.test(token))
-    return respond(401, "Connect using your Command ChatGPT token.");
+  if (!token || token.length > 8192)
+    return respond(401, "Sign in to Command to connect Cora.");
   const store = storeClient(config),
-    hash = tokenHash(token);
+    legacy = tokenPattern.test(token),
+    hash = legacy ? tokenHash(token) : "";
+  // Re-checked after each tool so a revoked grant never receives fetched data.
+  const current = async (): Promise<McpGrant | null> => {
+    if (!legacy) return authorizeOAuth(store, token);
+    const row = await authorize(store, hash);
+    return row ? { user_id: row.user_id, id: row.id, kind: "token" } : null;
+  };
   try {
-    const grant = await authorize(store, hash);
+    const grant = await current();
     if (!grant)
       return respond(
         401,
@@ -197,17 +234,13 @@ export async function handleMcp(
             {
               description: definition.description,
               inputSchema: fromJsonSchema<Record<string, unknown>>(
-                definition.parameters ?? { type: "object" },
+                definition.parameters,
               ),
               annotations: {
                 readOnlyHint:
                   !definition.name.startsWith("prepare_") &&
                   (definition.name.startsWith("get_") ||
-                    !automaticTools.some(
-                      (t) =>
-                        t.type === "function" &&
-                        t.function.name === definition.name,
-                    )),
+                    !isNamed(automaticTools, definition.name)),
                 destructiveHint: false,
                 idempotentHint: true,
                 openWorldHint: false,
@@ -215,10 +248,17 @@ export async function handleMcp(
             },
             async (args) => {
               const started = performance.now();
-              const reservation = await store.rpc("cora_mcp_reserve", {
-                p_hash: hash,
-                p_tool: definition.name,
-              });
+              const reservation =
+                grant.kind === "token"
+                  ? await store.rpc("cora_mcp_reserve", {
+                      p_hash: hash,
+                      p_tool: definition.name,
+                    })
+                  : await store.rpc("cora_mcp_reserve_oauth", {
+                      p_user: grant.user_id,
+                      p_client: grant.id,
+                      p_tool: definition.name,
+                    });
               if (reservation.error)
                 return {
                   isError: true,
@@ -233,13 +273,7 @@ export async function handleMcp(
               try {
                 const sources = new Map<string, CoraSource>();
                 let output: unknown;
-                if (
-                  automaticTools.some(
-                    (t) =>
-                      t.type === "function" &&
-                      t.function.name === definition.name,
-                  )
-                )
+                if (isNamed(automaticTools, definition.name))
                   output = await automaticTool(
                     store,
                     grant.user_id,
@@ -254,13 +288,7 @@ export async function handleMcp(
                     config.origin,
                     definition.name,
                   );
-                else if (
-                  tools.some(
-                    (t) =>
-                      t.type === "function" &&
-                      t.function.name === definition.name,
-                  )
-                )
+                else if (isNamed(tools, definition.name))
                   output = await readTool(
                     store,
                     definition.name,
@@ -315,8 +343,12 @@ export async function handleMcp(
                       "Microsoft connection changed. Search again.",
                     );
                 }
-                const current = await authorize(store, hash);
-                if (!current || current.id !== grant.id)
+                const still = await current();
+                if (
+                  !still ||
+                  still.id !== grant.id ||
+                  still.user_id !== grant.user_id
+                )
                   throw new Error("Connection changed or revoked.");
                 const audit = await store
                   .from("cora_mcp_activity")

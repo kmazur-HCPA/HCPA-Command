@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AppClient } from '../../platform/supabase';
 import { Icon } from '../../ui/Icon';
-import { chat } from '../cora/service';
-import { briefInstructions, briefIsOld, isCompactBrief, latestBrief, type Review } from './brief';
+import { updateBrief } from '../cora/service';
+import { briefIsOld, isCompactBrief, latestBrief, type Review } from './brief';
 const stamp = (value:string) => new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 // Only verified-format Command record links are interactive; never render model HTML.
 function BriefLine({text,onOpen}:{text:string;onOpen:(item:{id:string})=>void}) {
@@ -46,11 +46,8 @@ export function CommandBrief({client,onOpen}:{client:AppClient;onOpen:(item:{id:
  async function generate(){
   if(controller.current||!enabled)return;
   const abort=new AbortController();controller.current=abort;setGenerating(true);setGenerationError('');
-  const started=Date.now();
   try {
-   await chat(client,{message:'Update and save my Command Brief now. '+briefInstructions,requestId:crypto.randomUUID(),conversationId:crypto.randomUUID(),context:{page:'command-brief',recordId:null}},abort.signal,event=>{if(event.type==='error')throw new Error(event.message)});
-   const result=await client.from('cora_workday_reviews').select('*').in('status',['complete','partial']).gte('started_at',new Date(started-1000).toISOString()).order('started_at',{ascending:false}).limit(1);
-   if(result.error||!latestBrief(result.data??[]))throw new Error('Cora did not confirm a saved brief. The previous brief is still shown; check review history before retrying.');
+   await updateBrief(client,abort.signal);
   }catch(caught){if(mounted.current&&!abort.signal.aborted)setGenerationError(caught instanceof Error?caught.message:'Cora could not update the brief.')}
   finally{controller.current=null;if(mounted.current){setGenerating(false);setRetry(v=>v+1)}}
  }

@@ -939,10 +939,10 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await expect.poll(async()=>Math.abs((await brief.boundingBox())!.y-(await page.locator('.day-stats').boundingBox())!.y)).toBeLessThan(2);
  expect(statsBox.x).toBeGreaterThan(briefBox.x+briefBox.width);
  expect(briefBox.width/statsBox.width).toBeCloseTo(3,0);
- await page.route('**/api/cora/chat',async r=>{
-  expect(r.request().postDataJSON().context.page).toBe('command-brief');
+ await page.route('**/api/cora/brief',async r=>{
+  expect(r.request().method()).toBe('POST');
   reviews=[{id:'new',user_id:uid,status:'partial',started_at:'2026-09-23T17:00:00Z',finished_at:'2026-09-23T17:01:00Z',summary:'Next: Make the parcel rollout your next move. Validate two subdivisions before proceeding.\n\nCalendar is unavailable; check it before reserving focus time.'},...reviews];
-  await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{}})+'\n'});
+  await r.fulfill({json:{state:'saved',status:'partial',summary:reviews[0]!.summary}});
  });
  await brief.getByRole('button',{name:'Update brief',exact:true}).click();
  await expect(brief).toContainText('Make the parcel rollout your next move.');
@@ -951,7 +951,7 @@ test('Command Brief leads Work Day, keeps the last usable review, and refreshes 
  await expect(brief.getByRole('button',{name:'Update brief',exact:true})).toBeEnabled();
  expect((await brief.boundingBox())!.height).toBeLessThan(300);
  await page.screenshot({path:'test-results/brief-current-compact.png'});
- await page.route('**/api/cora/chat',r=>r.fulfill({status:503,json:{message:'Cora temporarily unavailable'}}));
+ await page.route('**/api/cora/brief',r=>r.fulfill({status:503,json:{message:'Cora temporarily unavailable'}}));
  await brief.getByRole('button',{name:'Update brief',exact:true}).click();
  await expect(brief.getByRole('alert')).toContainText('Cora temporarily unavailable');
  await expect(brief).toContainText('Make the parcel rollout your next move.');

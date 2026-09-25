@@ -93,3 +93,14 @@ export async function createTask(client: AppClient, turnId: string) {
   if (!r.ok) await responseError(r);
   return r.json() as Promise<{ taskId: string; created: true }>;
 }
+// Command writes and saves the brief server-side; the browser only asks for one.
+export async function updateBrief(client: AppClient, signal: AbortSignal) {
+  const r = await fetch("/api/cora/brief", {
+    method: "POST",
+    headers: await authorization(client),
+    signal,
+    cache: "no-store",
+  });
+  if (!r.ok) await responseError(r);
+  return r.json() as Promise<{ status: "complete" | "partial"; summary: string }>;
+}

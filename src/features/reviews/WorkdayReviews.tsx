@@ -89,9 +89,9 @@ export function WorkdayReviews({
               : "Enable automatic reminders"}
           </button>
           <p className="muted">
-            Schedules are managed in the private ChatGPT Cora agent →
-            Automations. Pausing here blocks new automatic writes; pause the
-            agent automations to also stop Microsoft reads.
+            Cora prepares these briefs on a schedule in Claude and saves them
+            here. Pausing blocks new briefs and automatic reminders from every
+            connected app.
           </p>
         </>
       )}

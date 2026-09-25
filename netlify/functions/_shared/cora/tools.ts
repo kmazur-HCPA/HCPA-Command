@@ -1,6 +1,6 @@
 import { fields as detailFields } from "../../../../src/features/lab/fields";
 import { kinds } from "./actions";
-import type OpenAI from "openai";
+import { definition as toolDefinition } from "../microsoft/tools";
 import type { AppClient } from "../../../../src/platform/supabase";
 import type {
   CoraSource,
@@ -9,6 +9,17 @@ import type {
 import { priorities } from "../../../../src/features/work/model";
 export const uuid =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+// "-04:00" / "-05:00" for America/New_York at the given instant.
+export function nyOffset(at = new Date()) {
+  const name =
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      timeZoneName: "longOffset",
+    })
+      .formatToParts(at)
+      .find((part) => part.type === "timeZoneName")?.value ?? "GMT-05:00";
+  return name === "GMT" ? "+00:00" : name.replace("GMT", "");
+}
 export function today(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
@@ -17,26 +28,11 @@ export function today(now = new Date()) {
     day: "2-digit",
   }).format(now);
 }
-function definition(
+const definition = (
   name: string,
   description: string,
   properties: Record<string, unknown> = {},
-): OpenAI.Chat.Completions.ChatCompletionTool {
-  return {
-    type: "function",
-    function: {
-      name,
-      description,
-      strict: true,
-      parameters: {
-        type: "object",
-        properties,
-        required: Object.keys(properties),
-        additionalProperties: false,
-      },
-    },
-  };
-}
+) => toolDefinition(name, description, properties);
 const page = {
   offset: {
     type: "integer",
@@ -87,6 +83,11 @@ export const tools = [
     page,
   ),
   definition(
+    "get_reminders_due",
+    "Read active reminders due today or overdue, reminders timed for today or earlier, and snoozed reminders whose snooze has ended.",
+    page,
+  ),
+  definition(
     "get_active_projects",
     "Read active/on-hold projects and their recorded current state.",
     page,
@@ -114,6 +115,14 @@ export const tools = [
       project_id: { type: ["string", "null"] },
     },
   ),
+];
+// The small attention snapshot preloaded for every chat turn and brief.
+export const baselineTools = [
+  "get_tasks_due_today",
+  "get_reminders_due",
+  "get_priority_tasks",
+  "get_waiting_on",
+  "get_active_projects",
 ];
 export function validateProposal(value: unknown): TaskProposal {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -261,6 +270,15 @@ export async function readTool(
     if (name === "get_tasks_due_today") q = q.lte("due_date", today());
     if (name === "get_priority_tasks")
       q = q.in("priority", ["Critical", "High"]);
+  } else if (name === "get_reminders_due") {
+    // Quoted values: ISO timestamps contain PostgREST filter delimiters.
+    const now = new Date(),
+      endOfDay = `"${today(now)}T23:59:59${nyOffset(now)}"`;
+    q = q
+      .eq("kind", "reminder")
+      .or(
+        `and(status.eq.Active,or(due_date.lte.${today(now)},remind_at.lte.${endOfDay})),and(status.eq.Snoozed,snoozed_until.lte."${now.toISOString()}")`,
+      );
   } else if (name === "get_active_projects")
     q = q.eq("kind", "project").in("status", ["Active", "On Hold"]);
   else if (name === "get_waiting_on")

@@ -64,7 +64,7 @@ Recommended controls for this application:
 
 - Provision Kevin explicitly; disable public registration and anonymous sign-in. Use Supabase Authentication with a tested recovery procedure. MFA is deferred per Kevin’s Phase 0 decision.
 - Restrict every exposed table and document operation by ownership and permitted action. Test denial for signed-out callers, an unrelated test user, and attempts to change ownership.
-- Keep privileged database keys, OpenAI credentials, and Microsoft tokens server-side. Authenticate and authorize each server operation; never trust a client-supplied owner ID.
+- Keep privileged database keys, model-provider (Claude API) credentials, and Microsoft tokens server-side. Authenticate and authorize each server operation; never trust a client-supplied owner ID.
 - Use private document storage and bounded authenticated access. Treat temporary document links as credentials and keep them out of logs.
 - Use one hosted production Supabase project per Kevin’s Phase 1 decision. Keep local/CI tests synthetic and previews disconnected from production; scan commits and builds for secrets.
 - Validate inputs and files; limit request sizes and expensive operations. Render notes, retrieved documents, and AI output safely. Apply appropriate browser security headers.

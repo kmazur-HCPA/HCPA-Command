@@ -1,5 +1,7 @@
 # Cora in ChatGPT
 
+> **Superseded September 2026.** Cora now runs on Claude inside Command, and the ChatGPT agent is retired. See [Cora on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
+
 Cora’s private ChatGPT agent uses the same Command tools and Microsoft connection as the website. Command remains the source of truth. ChatGPT conversations do not automatically appear in Command; task proposals do, with an explicit Add task review card.
 
 ## Connection
@@ -10,7 +12,7 @@ Cora’s private ChatGPT agent uses the same Command tools and Microsoft connect
 - One token per Command owner; 90-day expiry. Replacing or revoking it immediately invalidates the previous token. Membership revocation removes it as well. A token cannot sign in to Command, access Supabase directly, manage credentials, send messages or save work.
 - Only a SHA-256 digest of a random 256-bit token is stored. Microsoft credentials stay encrypted server-side. No new Entra registration, Supabase project, OAuth server, or AI API key is needed.
 
-The agent instructions are maintained in [CORA-CHATGPT-INSTRUCTIONS.md](CORA-CHATGPT-INSTRUCTIONS.md). Keep the agent and app private. The verified connection uses the agent-owned account option; do not share this agent with other people while it carries Kevin’s connection. Switch to end-user accounts and verify each user’s authorization before any future sharing. No schedules or autonomous triggers are configured.
+The agent instructions are maintained in the former ChatGPT agent instructions (removed; see git history). Keep the agent and app private. The verified connection uses the agent-owned account option; do not share this agent with other people while it carries Kevin’s connection. Switch to end-user accounts and verify each user’s authorization before any future sharing. No schedules or autonomous triggers are configured.
 
 ## Tools and boundaries
 

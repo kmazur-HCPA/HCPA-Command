@@ -1,26 +1,33 @@
-import type OpenAI from "openai";
 import type { AppClient } from "../../../../src/platform/supabase";
 import type { CoraSource } from "../../../../src/features/cora/model";
 import { outlookLink } from "../../../../src/features/microsoft/model";
 import { connection, graphRead, graphUrl, microsoftToken } from "./client";
 import type { MicrosoftConfig } from "./config";
+// One provider-neutral shape serves Claude (input_schema) and MCP (inputSchema).
+// Every server-side tool still validates its own arguments; the schema only guides the model.
+export type ToolDefinition = {
+  name: string;
+  description: string;
+  input_schema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required: string[];
+    additionalProperties: false;
+  };
+};
 export function definition(
   name: string,
   description: string,
   properties: Record<string, unknown>,
-): OpenAI.Chat.Completions.ChatCompletionTool {
+): ToolDefinition {
   return {
-    type: "function",
-    function: {
-      name,
-      description,
-      strict: true,
-      parameters: {
-        type: "object",
-        properties,
-        required: Object.keys(properties),
-        additionalProperties: false,
-      },
+    name,
+    description,
+    input_schema: {
+      type: "object",
+      properties,
+      required: Object.keys(properties),
+      additionalProperties: false,
     },
   };
 }

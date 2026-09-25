@@ -1,5 +1,7 @@
 # Cora workday reviews
 
+> **Superseded September 2026.** Cora now runs on Claude inside Command, and the ChatGPT agent is retired. See [Cora on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
+
 Authorized by Kevin on September 21, 2026: Monday–Friday at 6:45 AM, 9 AM, 11 AM, 1 PM and 3 PM, America/New_York. Create reminders without another approval. Other record mutations remain reviewed proposals.
 
 Five native automations in the private ChatGPT Cora agent own execution and timezone handling. Command owns durable reminder provenance/deduplication, review receipts, and the automatic-write pause setting. Agent credentials remain owner-scoped; renewal of the existing ChatGPT token is required before its December 20 expiry. Pause schedules in the agent's Automations panel to stop reads. Pause automatic reminders in Command Settings to reject automatic writes immediately.

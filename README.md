@@ -2,9 +2,9 @@
 
 Production: **https://cmd.hillspafl.gov**.
 
-Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. Cora adds live Command and Microsoft context, with task proposals reviewed before saving.
+Private work planning for HCPA. The authenticated, installable shell now includes Tasks, Reminders, Projects, Initiatives, People, Journal, Waiting On, Quick Capture and Work Day. Cora works from Claude (web, Desktop and Claude Code) through Command's signed-in connector: live Command and Microsoft context, requested new records saved directly, edits reviewed in Command, and the weekday Command Brief.
 
-- [Cora in ChatGPT: connection and operations](docs/CORA-CHATGPT-SETUP.md)
+- [Cora on Claude: connector sign-in, skill, brief routines and cutover](docs/CORA-CLAUDE.md)
 - [Phase 8 search, exports and operations](docs/PHASE-8-DELIVERY.md)
 - [Visual redesign and theme guide](docs/DESIGN-DELIVERY.md)
 - [Phases 3 → 5 → 4 delivery and pilot checks](docs/PHASES-3-5-4-DELIVERY.md)
@@ -24,7 +24,7 @@ The GitHub workflow includes application checks and disposable Supabase integrat
 
 ## Production boundary
 
-React/Vite/TypeScript on Netlify; Supabase Auth and PostgreSQL. Public signup and anonymous sign-in are disabled. An authenticated user also needs active app membership; row-level security enforces ownership. Privileged Supabase and Microsoft credentials stay in production server functions; none belong in the browser. The access function verifies the user's token and membership with a public key. Cora's server-only operations validate the owner and membership before using privileged credentials.
+React/Vite/TypeScript on Netlify; Supabase Auth and PostgreSQL. Public signup and anonymous sign-in are disabled. An authenticated user also needs active app membership; row-level security enforces ownership. Privileged Supabase and Microsoft credentials stay in production server functions; none belong in the browser. The access function verifies the user's token and membership with a public key. Cora's server-only operations validate the owner and membership before using privileged credentials. The Claude API key is server-only.
 
 Email/password sign-in, no MFA, and no SMTP service are Kevin's current decisions. Self-service email recovery is deferred; administrator-assisted recovery is documented in the runbook.
 
@@ -32,4 +32,4 @@ Preview builds have no production database connection. Production public environ
 
 Learning, AI Lab and private Library: [Phases 6–7 delivery and file recovery](docs/PHASES-6-7-DELIVERY.md).
 
-Cora v0.1: [implementation, operating boundaries and acceptance](docs/CORA-DELIVERY.md).
+Cora history: [v0.1 delivery](docs/CORA-DELIVERY.md), [former ChatGPT connection](docs/CORA-CHATGPT-SETUP.md) and [former ChatGPT workday reviews](docs/CORA-WORKDAY-AUTOMATION.md).
