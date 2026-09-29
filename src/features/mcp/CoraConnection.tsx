@@ -7,14 +7,19 @@ type Connection = {
 };
 async function request(
   client: AppClient,
-  action: "status" | "create" | "revoke",
+  action: "status" | "create" | "revoke" | "grants" | "revoke-grant",
+  payload?: object,
 ) {
   const { data, error } = await client.auth.getSession();
   if (error || !data.session)
     throw new Error("Sign in to manage connected apps.");
   const response = await fetch(`/api/cora/connection/${action}`, {
-    method: action === "status" ? "GET" : "POST",
-    headers: { Authorization: `Bearer ${data.session.access_token}` },
+    method: ["status", "grants"].includes(action) ? "GET" : "POST",
+    headers: {
+      Authorization: `Bearer ${data.session.access_token}`,
+      ...(payload ? { "Content-Type": "application/json" } : {}),
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
     cache: "no-store",
     signal: AbortSignal.timeout(15000),
   });
@@ -22,8 +27,15 @@ async function request(
   if (!response.ok) throw new Error(body.message ?? "Connection unavailable.");
   return body;
 }
-type Grant = { client: { id: string; name: string }; granted_at: string };
-// Claude connectors that signed in with Command (Supabase OAuth grants).
+type Grant = {
+  id: string;
+  name: string;
+  created_at: string;
+  refreshed_at: string | null;
+  last_used_at: string | null;
+  refresh_expires_at: string;
+};
+// Claude connectors that Command has approved through its own OAuth sign-in.
 function SignedInApps({ client }: { client: AppClient }) {
   const [grants, setGrants] = useState<Grant[] | null>(null),
     [unavailable, setUnavailable] = useState(false),
@@ -32,11 +44,13 @@ function SignedInApps({ client }: { client: AppClient }) {
     [reload, setReload] = useState(0);
   useEffect(() => {
     let active = true;
-    void client.auth.oauth.listGrants().then(({ data, error }) => {
-      if (!active) return;
-      if (error) setUnavailable(true);
-      else setGrants(data ?? []);
-    });
+    request(client, "grants")
+      .then((data) => {
+        if (active) setGrants(data.grants);
+      })
+      .catch(() => {
+        if (active) setUnavailable(true);
+      });
     return () => {
       active = false;
     };
@@ -44,15 +58,18 @@ function SignedInApps({ client }: { client: AppClient }) {
   async function revoke(id: string) {
     setBusy(id);
     setError("");
-    const { error } = await client.auth.oauth.revokeGrant({ clientId: id });
+    try {
+      await request(client, "revoke-grant", { id });
+    } catch {
+      setError("Access was not revoked. Retry.");
+    }
     setBusy("");
-    if (error) setError("Access was not revoked. Retry.");
     setReload((r) => r + 1);
   }
   if (unavailable)
     return (
       <p className="muted small">
-        Sign-in connections are not enabled for Command yet.
+        Connected app status is unavailable. Reload to retry.
       </p>
     );
   if (!grants) return <p role="status">Checking signed-in apps…</p>;
@@ -60,19 +77,24 @@ function SignedInApps({ client }: { client: AppClient }) {
     <div>
       <h3>Signed-in apps</h3>
       {!grants.length && (
-        <p className="muted small">No apps have signed in with Command.</p>
+        <p className="muted small">
+          No apps are connected. Add the connector address in Claude to sign in.
+        </p>
       )}
       {grants.map((grant) => (
-        <div className="actions" key={grant.client.id}>
+        <div className="actions" key={grant.id}>
           <span>
-            {grant.client.name || "Unnamed app"} · since{" "}
-            {new Date(grant.granted_at).toLocaleDateString()}
+            {grant.name || "Unnamed app"} · since{" "}
+            {new Date(grant.created_at).toLocaleDateString()} · last used{" "}
+            {grant.last_used_at
+              ? new Date(grant.last_used_at).toLocaleString()
+              : "never"}{" "}
+            · stays active until{" "}
+            {new Date(grant.refresh_expires_at).toLocaleDateString()} unless
+            unused
           </span>
-          <button
-            disabled={!!busy}
-            onClick={() => void revoke(grant.client.id)}
-          >
-            {busy === grant.client.id ? "Revoking…" : "Revoke"}
+          <button disabled={!!busy} onClick={() => void revoke(grant.id)}>
+            {busy === grant.id ? "Revoking…" : "Revoke"}
           </button>
         </div>
       ))}

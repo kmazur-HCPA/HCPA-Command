@@ -16,8 +16,8 @@ export function App({ client }: { client: AppClient }) {
     catch { setLogoutError('Sign-out failed. Please check your connection and retry.') }
   }
   // Claude's connector sign-in lands here after Command's normal sign-in and access check.
-  const authorization = location.pathname === '/oauth/consent' ? new URLSearchParams(location.search).get('authorization_id') : null
-  if (access.kind === 'ready' && authorization) return <Suspense fallback={<main className="entry-layout" aria-busy="true"><p role="status">Checking this request…</p></main>}><Consent client={client} authorizationId={authorization} /></Suspense>
+  const authorization = location.pathname === '/oauth/authorize' ? location.search : null
+  if (access.kind === 'ready' && authorization) return <Suspense fallback={<main className="entry-layout" aria-busy="true"><p role="status">Checking this request…</p></main>}><Consent client={client} query={authorization} /></Suspense>
   if (access.kind === 'ready') return <Suspense fallback={<main className="workspace-content" aria-busy="true"><p role="status">Opening your workspace…</p></main>}><Workspace key={access.user.id} client={client} user={access.user} /></Suspense>
   return <main id="main" className="entry-layout"><div className="entry-brand"><span className="brand"><span aria-hidden="true">/</span> COMMAND</span><p>Attention. Context. Action.</p></div>
     {access.kind === 'signed-out' && <AuthForm client={client} />}

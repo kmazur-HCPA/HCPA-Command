@@ -7,10 +7,12 @@ import {
 import { trustedRedirect } from "../../src/features/oauth/redirect";
 import { manageMcp } from "../../netlify/functions/_shared/mcp/manage";
 import {
+  issueAccessToken,
   issueToken,
   tokenHash,
   referenceCodec,
 } from "../../netlify/functions/_shared/mcp/security";
+import { authorizationServer } from "../../netlify/functions/_shared/mcp/oauth";
 const owner = "11111111-1111-4111-8111-111111111111";
 const token = issueToken();
 const cfg = {
@@ -293,15 +295,9 @@ it('direct creation uses the verified MCP owner and returns a saved receipt with
 });
 
 describe("Claude connector sign-in (OAuth)", () => {
-  const client = "33333333-3333-4333-8333-333333333333";
-  const jwt = (claims: Record<string, unknown>) =>
-    [{ alg: "ES256" }, claims, "sig"]
-      .map((part) =>
-        Buffer.from(typeof part === "string" ? part : JSON.stringify(part)).toString("base64url"),
-      )
-      .join(".");
-  const oauth = jwt({ sub: owner, role: "authenticated", client_id: client });
-  const session = jwt({ sub: owner, role: "authenticated" });
+  const grant = "44444444-4444-4444-8444-444444444444";
+  const oauth = issueAccessToken();
+  const session = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ4In0.sig";
   let reserved: Record<string, unknown>[];
   beforeEach(() => {
     reserved = [];
@@ -311,16 +307,20 @@ describe("Claude connector sign-in (OAuth)", () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const r = new Request(input, init),
           u = new URL(r.url);
-        if (u.pathname === "/auth/v1/user") {
-          const bearer = r.headers.get("authorization")?.slice(7);
-          return [oauth, session].includes(bearer!) && !revoked
-            ? Response.json({ id: owner, aud: "authenticated", is_anonymous: false })
-            : Response.json({ message: "invalid JWT" }, { status: 401 });
+        if (u.pathname.endsWith("/rpc/cora_oauth_verify")) {
+          const { p_hash } = await r.json();
+          return Response.json(
+            p_hash === tokenHash(oauth) && !revoked && active
+              ? { user_id: owner, grant_id: grant, client_id: owner }
+              : null,
+          );
         }
         if (u.pathname.endsWith("/cora_mcp_reserve_oauth")) {
           reserved.push(await r.json());
           return Response.json(owner);
         }
+        if (u.pathname.startsWith("/auth/v1/"))
+          throw new Error("OAuth must not call Supabase Auth");
         if (u.pathname.endsWith("/cora_mcp_connections"))
           throw new Error("OAuth must not touch personal tokens");
         return base(input, init);
@@ -334,30 +334,41 @@ describe("Claude connector sign-in (OAuth)", () => {
     method: "tools/call",
     params: { name: "get_my_tasks", arguments: { offset: 0 } },
   };
-  it("points unauthenticated clients to Command's protected resource metadata", async () => {
+  it("points unauthenticated clients to Command as the authorization server", async () => {
     const response = await handleMcp(req(list, ""), cfg, "test");
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toContain(
       'resource_metadata="https://cmd.hillspafl.gov/.well-known/oauth-protected-resource"',
     );
-    const metadata = await protectedResource(cfg.origin, cfg.url).json();
-    expect(metadata).toMatchObject({
+    expect(await protectedResource(cfg.origin).json()).toMatchObject({
       resource: "https://cmd.hillspafl.gov/api/mcp",
-      authorization_servers: ["https://fixture.supabase.co/auth/v1"],
+      authorization_servers: ["https://cmd.hillspafl.gov"],
+    });
+    expect(await authorizationServer(cfg.origin).json()).toMatchObject({
+      issuer: "https://cmd.hillspafl.gov",
+      authorization_endpoint: "https://cmd.hillspafl.gov/oauth/authorize",
+      token_endpoint: "https://cmd.hillspafl.gov/api/oauth/token",
+      registration_endpoint: "https://cmd.hillspafl.gov/api/oauth/register",
+      code_challenge_methods_supported: ["S256"],
     });
   });
-  it("accepts an OAuth access token and audits under its client ID", async () => {
+  it("accepts an OAuth access token and audits under its grant ID", async () => {
     const value = await result(await handleMcp(req(call, oauth), cfg, "test"));
     expect(value.result.isError).toBeFalsy();
-    expect(reserved).toEqual([{ p_user: owner, p_client: client, p_tool: "get_my_tasks" }]);
+    expect(reserved).toEqual([{ p_user: owner, p_client: grant, p_tool: "get_my_tasks" }]);
   });
-  it("rejects browser sessions, revoked grants and inactive members", async () => {
+  it("rejects browser sessions, unknown tokens, revoked grants and inactive members", async () => {
     expect((await handleMcp(req(list, session), cfg, "test")).status).toBe(401);
+    expect((await handleMcp(req(list, issueAccessToken()), cfg, "test")).status).toBe(401);
     revoked = true;
     expect((await handleMcp(req(list, oauth), cfg, "test")).status).toBe(401);
     revoked = false;
     active = false;
     expect((await handleMcp(req(list, oauth), cfg, "test")).status).toBe(401);
+  });
+  it("reports a verification outage as retryable, not as a revoked connection", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "down" }, { status: 503 })));
+    expect((await handleMcp(req(list, oauth), cfg, "test")).status).toBe(503);
   });
 });
 

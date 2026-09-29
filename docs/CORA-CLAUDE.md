@@ -7,7 +7,7 @@ Kevin's assistant now lives in Claude, where it is called **CMD**. It works on t
 | Piece | Where | What it does |
 | --- | --- | --- |
 | **Command connector** | Claude custom connector → `https://cmd.hillspafl.gov/api/mcp` | Command's existing MCP tools: read every record kind, save authorized new records, prepare reviewed edits, read Outlook and Teams through Command, save brief receipts. |
-| **Connector sign-in** | Supabase Auth OAuth 2.1 server + `cmd.hillspafl.gov/oauth/consent` | Kevin signs in with his normal Command account and approves Claude. No token to paste or rotate. |
+| **Connector sign-in** | Command's own OAuth 2.1 server (`/api/oauth/*`) + `cmd.hillspafl.gov/oauth/authorize` | Kevin signs in with his normal Command account and approves Claude. No token to paste or rotate, and no dependence on Supabase Auth token refresh or the browser session time box. |
 | **CMD skill** | `.claude/skills/cmd/` (`SKILL.md`, `brief.md`) | The assistant's name in Claude is **CMD**. Voice, evidence and trust rules, Kevin's standing write authorizations, workflows (attention, meeting prep, capture, weekly review) and the on-request brief procedure. |
 | **Claude Project** | claude.ai Project with the Command and Microsoft 365 connectors and the CMD skill | Where Kevin works with CMD: ask for a Command Brief, capture reminders and tasks, prep meetings. Everything is on request and in real time; nothing is scheduled. |
 
@@ -16,26 +16,22 @@ The Microsoft 365 connector already in Kevin's Claude can also be used for Outlo
 ## How sign-in works
 
 1. Claude calls `/api/mcp` without credentials. Command answers `401` with `WWW-Authenticate: … resource_metadata="https://cmd.hillspafl.gov/.well-known/oauth-protected-resource"`.
-2. That document (RFC 9728) names the authorization server: the Command Supabase project's `/auth/v1`. Claude registers itself there by dynamic client registration and starts the standard OAuth flow with PKCE.
-3. Supabase sends Kevin to `https://cmd.hillspafl.gov/oauth/consent`. Command requires its normal sign-in and active membership, shows what the app can do, and allows **Allow** only when the return address is Claude's (`https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback`) or a loopback address (Claude Code).
-4. Claude receives a Supabase access token (1-hour, refreshable). On every call, `/api/mcp` verifies it with Supabase Auth. It requires a `client_id` claim, so an ordinary Command browser session is refused. It also requires active membership, and it re-checks after each tool before returning data.
-5. Tool calls share the existing quota: 30 per minute and 1,000 per day per owner. They are audited in `cora_mcp_activity`, with the OAuth client ID as `connection_id`, and are included in workspace exports.
+2. That document (RFC 9728) names Command itself as the authorization server. `/.well-known/oauth-authorization-server` (RFC 8414) lists the endpoints. Claude registers by dynamic client registration (`/api/oauth/register`; public clients, and only Claude callback addresses are accepted) and starts the standard authorization-code flow with PKCE (S256).
+3. Claude sends Kevin to `https://cmd.hillspafl.gov/oauth/authorize`. Command requires its normal sign-in and active membership, shows what the app can do and allows **Allow** only when the return address is one registered by the client and is Claude's (`https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback`) or a loopback address (Claude Code). Approval creates a single-use code that lives five minutes.
+4. Claude exchanges the code at `/api/oauth/token` and receives Command's own tokens: a one-hour access token (`cmd_at_…`) and a rotating refresh token (`cmd_rt_…`). Only SHA-256 digests are stored. The refresh window slides 90 days from each use, capped at one year from approval, so a connection that is used stays connected without reauthorizing. The three newest refresh tokens stay valid, so a lost response or parallel refresh never strands the client.
+5. On every call, `/api/mcp` verifies the access token in one database call: live token, live grant, active membership. It re-checks after each tool before returning data. A Command browser session or a Supabase token is refused. The token cannot reach Command's database API, only the MCP endpoint.
+6. The token endpoint returns `invalid_grant` only when a grant is definitely invalid (revoked, expired, wrong code). Database trouble returns `503 temporarily_unavailable`, which clients retry instead of asking Kevin to reconnect.
+7. Tool calls share the existing quota: 30 per minute and 1,000 per day per owner. They are audited in `cora_mcp_activity`, with the grant ID as `connection_id`, and are included in workspace exports.
 
-Revoke any signed-in app in **Command → Settings → Cora in connected apps**. Revoking membership stops everything. The previous personal token still works for scripted Claude Code use and is optional.
-
-A limitation to note: a Supabase OAuth access token is a Supabase user token. Claude could in principle present it to Command's database API directly, where row-level security limits it to Kevin's own data, the same as his browser session. Command's MCP endpoint is the only place Claude is told to use it.
+Revoke any connected app in **Command → Settings → Cora in connected apps**, which also shows when each was last used. Revoking membership stops everything. The personal token still works for scripted Claude Code use and is optional.
 
 ## Setup (in order)
 
 Steps marked **Kevin** change production settings or accounts. Nothing in this change applied them.
 
-1. **Kevin, Supabase dashboard** (Command project):
-   - Authentication → OAuth Server: **enable**, Authorization Path `/oauth/consent`, **allow dynamic client registration**.
-   - Authentication → URL Configuration: confirm Site URL is `https://cmd.hillspafl.gov`.
-   - Authentication → JWT signing keys: asymmetric keys are recommended for OAuth. Check whether the project already uses them.
-   - Apply migration `20260925160000_cora_mcp_oauth.sql`, which adds the server-only reservation function.
-2. **Deploy** this branch after CI passes. It adds the consent page, the discovery document and OAuth support on `/api/mcp`.
-3. **Kevin, Claude (org owner):** add a custom connector named "Command" with URL `https://cmd.hillspafl.gov/api/mcp`. Keep it limited to Kevin, if that option is available. Connect it, sign in to Command, choose **Allow**. Confirm Settings in Command lists it under Signed-in apps.
+1. **Apply migration** `20260929120000_command_oauth_server.sql` to the Command Supabase project. It adds the OAuth tables and server-only functions. Supabase's own OAuth Server setting is no longer used and can stay off.
+2. **Deploy** after CI passes. It adds the OAuth endpoints, the authorize page and the discovery documents.
+3. **Kevin, Claude (org owner):** add a custom connector named "Command" with URL `https://cmd.hillspafl.gov/api/mcp`. Keep it limited to Kevin, if that option is available. Connect it, sign in to Command, choose **Allow**. Confirm Settings in Command lists it under Signed-in apps. If Claude still shows the old connection, remove the connector and add it again.
 4. **Kevin, Claude:** upload the skill. Remove any older "cora" skill first. Zip the folder (`cd .claude/skills && zip -r ~/Desktop/cmd.zip cmd`) and add it under Claude's Skills settings. Claude Code already picks it up inside this repository.
 5. **Test in Claude:** "CMD, what needs my attention today?", "Remind me tomorrow to follow up on the website" (check Reminders in Command), and "Give me my Command Brief."
 6. **Create a Claude Project** (for example "Command") with the Command and Microsoft 365 connectors enabled and the CMD skill on. Optionally add a one-line project instruction: "You are CMD; use the cmd skill."
@@ -58,20 +54,10 @@ Command is the data side: records, Work Day, the Outlook calendar panel and Sett
 
 ## Rollback
 
-Revoke the Claude connector in Command Settings and remove it from Claude. Turning off Supabase's OAuth server stops all connector sign-ins; the personal token keeps working. The added database function can stay. Do not delete audit or review history.
+Revoke the Claude connector in Command Settings and remove it from Claude. The personal token keeps working. The added database objects can stay. Do not delete audit or review history.
 
 ## Verification in this change
 
 - `npm run check`: type checking, lint, unit and database tests including the new migration, and the build.
-- Browser workflows (`npm run test:e2e`) and PWA tests (`npm run test:pwa`).
-- New unit tests:
-  - The 401 discovery header and metadata document.
-  - OAuth access accepted and audited under its client ID.
-  - Browser sessions, revoked grants and inactive members refused.
-  - Consent return-address allowlist.
-  - Skill brief rules matching Command.
-- Not tested here:
-  - A real Claude-to-Supabase sign-in, which needs the production OAuth server enabled.
-  - Whether Claude sends an RFC 8707 `resource` parameter that Supabase accepts.
-
-  Check these in setup steps 3–5.
+- New tests: registration and redirect allowlist, consent origin/session/PKCE checks, code single-use and burn-on-failure, refresh rotation with lost-response tolerance, sliding and absolute lifetimes, membership revocation, registration cap, and retryable outage handling.
+- Not tested here: a real Claude-to-Command sign-in on claude.ai, Claude Desktop and Claude Code. Check it in setup steps 3–5. Claude sends an RFC 8707 `resource` parameter; Command accepts it only when it names Command.

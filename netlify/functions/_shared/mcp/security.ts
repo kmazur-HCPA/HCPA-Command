@@ -43,51 +43,59 @@ export function storeClient(config: McpConfig, authorization?: string) {
   );
 }
 // A grant is whoever the MCP request authenticates as, however it signed in.
+// For OAuth, id is the grant ID (the audit connection_id and reference context).
 export type McpGrant = {
   user_id: string;
   id: string;
   kind: "token" | "oauth";
 };
-const jwtPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-const uuidPattern =
+export const accessPattern = /^cmd_at_[A-Za-z0-9_-]{43}$/;
+export const issueAccessToken = () => "cmd_at_" + nonce();
+export const issueRefreshToken = () => "cmd_rt_" + nonce();
+export const uuidPattern =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-// Accepts only OAuth access tokens issued to a registered client (client_id
-// claim), never an ordinary Command browser session. The Auth server check also
-// rejects tokens whose session or grant was revoked.
+// Accepts only access tokens issued by Command's own OAuth server. One database
+// call confirms the token, its grant and the owner's active membership at once.
 export async function authorizeOAuth(
   store: AppClient,
   token: string,
 ): Promise<McpGrant | null> {
-  if (token.length > 8192 || !jwtPattern.test(token)) return null;
-  const { data, error } = await store.auth.getUser(token);
-  if (error)
-    if (error.status && error.status < 500) return null;
-    else throw new Error("Connection verification unavailable.");
-  if (!data.user || data.user.is_anonymous) return null;
-  let claims: Record<string, unknown>;
+  if (!accessPattern.test(token)) return null;
+  const { data, error } = await store.rpc("cora_oauth_verify", {
+    p_hash: tokenHash(token),
+  });
+  if (error) throw new Error("Connection verification unavailable.");
+  return data ? { user_id: data.user_id, id: data.grant_id, kind: "oauth" } : null;
+}
+// Command browser session (never an MCP credential) for the management and
+// consent endpoints. Returns the active member's Supabase user or a response.
+export async function sessionUser(request: Request, config: McpConfig) {
+  const respond = (status: number, message: string) =>
+    Response.json({ message }, { status, headers });
+  const auth = request.headers.get("authorization") ?? "";
+  if (!/^Bearer [^\s]+$/i.test(auth) || auth.length > 8192)
+    return respond(401, "Sign in to Command.");
+  const bearer = auth.slice(7);
+  if (bearer.startsWith("cmd_mcp_") || bearer.startsWith("cmd_at_"))
+    return respond(401, "Sign in to Command.");
   try {
-    claims = JSON.parse(
-      Buffer.from(token.split(".")[1]!, "base64url").toString("utf8"),
-    );
+    const client = storeClient(config, auth);
+    const result = await client.auth.getUser(bearer);
+    const user = result.data.user;
+    if (result.error || !user || user.is_anonymous)
+      return respond(401, "Sign in to Command.");
+    const member = await client
+      .from("app_memberships")
+      .select("active")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (member.error) return respond(503, "Access verification unavailable.");
+    if (!member.data?.active)
+      return respond(403, "Command access unavailable.");
+    return user;
   } catch {
-    return null;
+    return respond(503, "Access verification unavailable.");
   }
-  if (
-    claims.sub !== data.user.id ||
-    claims.role !== "authenticated" ||
-    typeof claims.client_id !== "string" ||
-    !uuidPattern.test(claims.client_id)
-  )
-    return null;
-  const member = await store
-    .from("app_memberships")
-    .select("active")
-    .eq("user_id", data.user.id)
-    .maybeSingle();
-  if (member.error) throw new Error("Connection verification unavailable.");
-  return member.data?.active
-    ? { user_id: data.user.id, id: claims.client_id, kind: "oauth" }
-    : null;
 }
 export async function authorize(store: AppClient, hash: string) {
   const { data, error } = await store

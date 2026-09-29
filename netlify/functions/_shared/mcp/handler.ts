@@ -27,6 +27,7 @@ import {
   type McpConfig,
   type McpGrant,
 } from "./security";
+export { protectedResource } from "./oauth";
 
 type McpDefinition = {
   name: string;
@@ -137,26 +138,6 @@ async function prepare(
     instruction:
       "Open the review URL in Command and confirm the card. A proposal alone does not change records.",
   };
-}
-
-// RFC 9728 metadata: Command's MCP resource is protected by the project's
-// Supabase Auth OAuth 2.1 server, where Kevin signs in with his Command account.
-export function protectedResource(origin: string, supabaseUrl: string) {
-  return Response.json(
-    {
-      resource: `${origin}/api/mcp`,
-      authorization_servers: [`${new URL(supabaseUrl).origin}/auth/v1`],
-      bearer_methods_supported: ["header"],
-      resource_name: "Command Cora",
-    },
-    {
-      headers: {
-        "Cache-Control": "public, max-age=300",
-        "Access-Control-Allow-Origin": "*",
-        "X-Content-Type-Options": "nosniff",
-      },
-    },
-  );
 }
 
 export async function handleMcp(
