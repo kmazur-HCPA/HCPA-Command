@@ -1,5 +1,6 @@
 import { briefInstructions, isCompactBrief } from "../../../../src/features/reviews/brief";
 import { createRecord, createRecordDefinition } from "./create";
+import { quickUpdate, quickUpdateDefinition } from "./quick";
 import { createHash } from "node:crypto";
 import type { AppClient } from "../../../../src/platform/supabase";
 import {
@@ -10,6 +11,7 @@ import { validateFields } from "./actions";
 import { definition } from "../microsoft/tools";
 export const automaticTools = [
   createRecordDefinition,
+  quickUpdateDefinition,
   definition(
     "get_workday_reviews",
     "Read the five most recent review receipts to establish the last successful review and any missed/partial coverage.",
@@ -102,6 +104,7 @@ export async function automaticTool(
     return { reviews: r.data, current_time: new Date().toISOString(), command_brief_instructions: briefInstructions };
   }
   if (name === "create_record") return createRecord(store,userId,args);
+  if (name === "quick_update") return quickUpdate(store,userId,args);
   const pref = await store
     .from("cora_review_preferences")
     .select("automatic_reminders")

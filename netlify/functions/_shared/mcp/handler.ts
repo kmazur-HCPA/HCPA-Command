@@ -9,6 +9,7 @@ import type { AppClient } from "../../../../src/platform/supabase";
 import type { CoraSource } from "../../../../src/features/cora/model";
 import { tools, readTool, validateProposal, uuid, today } from "../cora/tools";
 import { boundedJson } from "../cora/handler";
+import { registerPrompts } from "./prompts";
 import { microsoftTools, createMicrosoftReader } from "../microsoft/tools";
 import {
   teamsTools,
@@ -378,6 +379,7 @@ export async function handleMcp(
             },
           );
         }
+        registerPrompts(server);
         return server;
       },
       { responseMode: "json" },

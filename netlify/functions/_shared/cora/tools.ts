@@ -41,6 +41,10 @@ const page = {
 };
 export const tools = [
   definition(
+    "get_day_snapshot",
+    "Read the whole current attention picture in ONE call: tasks due today or overdue, reminders due, open critical/high-priority tasks, active waiting-on items and active/on-hold projects. Start briefs, check-ins and 'what needs attention' questions here instead of calling each list tool. Each list is the first 25 with an exact total and has_more; page a single list with its own tool when has_more is true. Records are compact (no bodies); use get_record for full text.",
+  ),
+  definition(
     "get_records",
     "Search or list any Command record type, including reminders. Returns versions for editing. Null kind searches all types; search uses indexed full text. Set archived=true to find archived records.",
     {
@@ -157,6 +161,65 @@ export function validateProposal(value: unknown): TaskProposal {
 }
 const columns =
   "id,title,kind,status,priority,due_date,remind_at,snoozed_until,version,archived,details,tags,entry_type,focus_slot,initiative_id,learning_id,program_id,use_case_id,experiment_id,decision_id,source_entry_id,organization,person_role,project_id,person_id,task_id,current_state,next_milestone,goals,body,updated_at" as const;
+const snapshotLists = [
+  ["tasks_due_today", "get_tasks_due_today"],
+  ["reminders_due", "get_reminders_due"],
+  ["priority_tasks", "get_priority_tasks"],
+  ["waiting_on", "get_waiting_on"],
+  ["active_projects", "get_active_projects"],
+] as const;
+const snapshotFields = [
+  "id",
+  "title",
+  "kind",
+  "status",
+  "priority",
+  "due_date",
+  "remind_at",
+  "snoozed_until",
+  "version",
+  "project_id",
+  "person_id",
+  "task_id",
+  "current_state",
+  "next_milestone",
+];
+async function daySnapshot(
+  client: AppClient,
+  sources: Map<string, CoraSource>,
+  ownerId?: string,
+) {
+  const lists = await Promise.all(
+    snapshotLists.map(async ([key, tool]) => {
+      const r = (await readTool(
+        client,
+        tool,
+        { offset: 0 },
+        sources,
+        ownerId,
+      )) as {
+        records: Record<string, unknown>[];
+        total: number | null;
+        has_more: boolean;
+      };
+      return [
+        key,
+        {
+          total: r.total,
+          has_more: r.has_more,
+          records: r.records.map((row) =>
+            Object.fromEntries(
+              snapshotFields
+                .filter((f) => row[f] !== undefined && row[f] !== "" && row[f] !== null)
+                .map((f) => [f, row[f]]),
+            ),
+          ),
+        },
+      ] as const;
+    }),
+  );
+  return { today: today(), ...Object.fromEntries(lists) };
+}
 export async function readTool(
   client: AppClient,
   name: string,
@@ -164,6 +227,10 @@ export async function readTool(
   sources: Map<string, CoraSource>,
   ownerId?: string,
 ) {
+  if (name === "get_day_snapshot") {
+    if (Object.keys(args).length) throw new Error("No arguments accepted.");
+    return daySnapshot(client, sources, ownerId);
+  }
   const offset = args.offset;
   if (
     !Number.isInteger(offset) ||

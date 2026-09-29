@@ -48,7 +48,8 @@ Command is the data side: records, Work Day, the Outlook calendar panel and Sett
 ## Boundaries that did not change
 
 - Microsoft 365 is read-only: no sending, replying, accepting or changing meetings.
-- Direct saves are limited to new reminders, tasks, people, projects, initiatives, journal entries and AI Lab records. Everything else is a review card that Kevin confirms in Command.
+- Direct saves are limited to new reminders, tasks, people, projects, initiatives, journal entries and AI Lab records, plus `quick_update`: complete or reopen a task, complete/dismiss/snooze a reminder, or change a due date. `quick_update` accepts only `status`, `due_date` and `snoozed_until`, refuses a stale record version so it can never overwrite an edit Kevin made, and returns an `undo` payload. Everything else is a review card that Kevin confirms in Command.
+- `get_day_snapshot` returns the attention picture (due and overdue tasks, due reminders, priorities, Waiting On, active projects) in one audited call. The connector also offers prompts: Command Brief, Meeting prep, Weekly review and Capture notes.
 - A unit test keeps the brief rules in `brief.md` identical to Command's (`briefStyle`).
 - Data sent to Claude is the same data the ChatGPT agent received (Command records, calendar and, when asked, mail and Teams excerpts), handled under HCPA's Claude organization agreement. Command conversation history is not synchronized with Claude chats.
 

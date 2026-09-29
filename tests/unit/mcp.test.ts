@@ -144,7 +144,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(22);
+    expect(list.result.tools).toHaveLength(24);
     expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("get_reminders_due");
     expect(
       list.result.tools
@@ -153,8 +153,51 @@ describe("Private connected-app MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task", "create_record", "create_reminder", "record_workday_review"]);
+    ).toEqual(["prepare_record", "prepare_task", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
+  });
+  it("reads the whole attention picture in one audited call", async () => {
+    const value = await result(
+      await handleMcp(
+        req({ jsonrpc: "2.0", id: 20, method: "tools/call", params: { name: "get_day_snapshot", arguments: {} } }),
+        cfg,
+        "test",
+      ),
+    );
+    expect(value.result.isError).not.toBe(true);
+    const data = value.result.structuredContent.data;
+    for (const key of ["tasks_due_today", "reminders_due", "priority_tasks", "waiting_on", "active_projects"])
+      expect(data[key]).toEqual({ total: 0, has_more: false, records: [] });
+    expect(data.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(queries.filter((q) => q.pathname.endsWith("/cora_mcp_reserve"))).toHaveLength(1);
+    const bad = await result(
+      await handleMcp(
+        req({ jsonrpc: "2.0", id: 21, method: "tools/call", params: { name: "get_day_snapshot", arguments: { offset: 0 } } }),
+        cfg,
+        "test",
+      ),
+    );
+    expect(bad.error || bad.result?.isError).toBeTruthy();
+  });
+  it("offers the brief, meeting prep, weekly review and capture routines as prompts", async () => {
+    const list = await result(
+      await handleMcp(req({ jsonrpc: "2.0", id: 22, method: "prompts/list", params: {} }), cfg, "test"),
+    );
+    expect(list.result.prompts.map((p: { name: string }) => p.name)).toEqual([
+      "command_brief",
+      "meeting_prep",
+      "weekly_review",
+      "capture",
+    ]);
+    const prep = await result(
+      await handleMcp(
+        req({ jsonrpc: "2.0", id: 23, method: "prompts/get", params: { name: "meeting_prep", arguments: { meeting: "Budget review" } } }),
+        cfg,
+        "test",
+      ),
+    );
+    expect(prep.result.messages[0].content.text).toContain('"Budget review"');
+    expect(requests.some((r) => new URL(r.url).pathname.endsWith("/work_items"))).toBe(false);
   });
   it("reads only the token owner and audits the tool call without writing work", async () => {
     const value = await result(

@@ -159,7 +159,8 @@ export function CoraConnection({ client }: { client: AppClient }) {
         Use Cora in Claude on the web, Desktop or Claude Code. Add a custom
         connector with the address below and sign in with your Command
         account. Requested tasks, reminders, people, projects, initiatives,
-        journal and AI Lab records save directly. Edits to existing records
+        journal and AI Lab records save directly, and tasks, reminders and due
+        dates can be completed, snoozed or moved (each undoable). Other edits
         open here for confirmation. Messages and meetings cannot be changed.
       </p>
       <p className="muted small">

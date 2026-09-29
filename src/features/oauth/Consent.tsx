@@ -51,7 +51,8 @@ export function Consent({ client, query }: { client: AppClient; query: string })
         <ul>
           <li>Read all of your Command records, and your Outlook calendar, mail and Teams through Command's read-only Microsoft connection.</li>
           <li>Save new reminders, tasks, people, projects, initiatives, journal entries and AI Lab records when you ask, and save Command Brief receipts.</li>
-          <li>Prepare edits for you to confirm in Command. It cannot send email or Teams messages or change meetings.</li>
+          <li>Complete or reopen tasks, complete, dismiss or snooze reminders, and change due dates (each change can be undone).</li>
+          <li>Prepare all other edits for you to confirm in Command. It cannot send email or Teams messages or change meetings.</li>
         </ul>
         <p className="muted small">Returns to: {details.redirect_host}. The connection stays active while it is used, and you can revoke it at any time in Settings → Cora in connected apps.</p>
         <div className="actions">
