@@ -209,3 +209,18 @@ describe("Connected-app management", () => {
     }
   });
 });
+
+describe("Browser-based MCP clients", () => {
+  it("answers CORS preflight for registration and token requests only", async () => {
+    for (const path of ["/api/oauth/register", "/api/oauth/token"]) {
+      const r = await handleOAuth(new Request(cfg.origin + path, { method: "OPTIONS", headers: { Origin: "https://claude.ai" } }), cfg);
+      expect(r.status).toBe(204);
+      expect(r.headers.get("access-control-allow-origin")).toBe("*");
+    }
+    const consent = await handleOAuth(new Request(cfg.origin + "/api/oauth/authorize", { method: "OPTIONS" }), cfg);
+    expect(consent.status).toBe(405);
+    expect(consent.headers.get("access-control-allow-origin")).toBeNull();
+    const failed = await handleOAuth(new Request(cfg.origin + "/api/oauth/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), cfg);
+    expect(failed.headers.get("access-control-allow-origin")).toBe("*");
+  });
+});

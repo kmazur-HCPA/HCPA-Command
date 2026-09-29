@@ -33,7 +33,10 @@ export default async (request: Request, context: Context) => {
   const path = new URL(request.url).pathname;
   if (path.startsWith("/.well-known/oauth-protected-resource"))
     return protectedResource(settings.origin);
-  if (path.startsWith("/.well-known/oauth-authorization-server"))
+  if (
+    path.startsWith("/.well-known/oauth-authorization-server") ||
+    path === "/.well-known/openid-configuration"
+  )
     return authorizationServer(settings.origin);
   if (path.startsWith("/api/oauth/")) return handleOAuth(request, settings);
   return path === "/api/mcp"
@@ -46,6 +49,8 @@ export const config: Config = {
     "/.well-known/oauth-protected-resource",
     "/.well-known/oauth-protected-resource/api/mcp",
     "/.well-known/oauth-authorization-server",
+    "/.well-known/oauth-authorization-server/api/mcp",
+    "/.well-known/openid-configuration",
     "/api/oauth/register",
     "/api/oauth/authorize",
     "/api/oauth/token",

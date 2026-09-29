@@ -76,17 +76,36 @@ async function readBody(request: Request) {
 const text = (value: unknown, max: number) =>
   typeof value === "string" && value.length <= max ? value : "";
 
+// Registration and token requests carry no cookies, so any origin may call them
+// (browser-based MCP clients). Consent stays same-origin only.
+const open = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "600",
+};
 export async function handleOAuth(request: Request, config: McpConfig) {
   const path = new URL(request.url).pathname;
+  const isOpen = path === "/api/oauth/register" || path === "/api/oauth/token";
+  if (isOpen && request.method === "OPTIONS")
+    return new Response(null, { status: 204, headers: open });
   if (request.method !== "POST")
     return Response.json(
       { error: "invalid_request", message: "POST required." },
       { status: 405, headers: oauthHeaders },
     );
-  if (path === "/api/oauth/register") return register(request, config);
-  if (path === "/api/oauth/token") return token(request, config);
-  if (path === "/api/oauth/authorize") return authorize(request, config);
-  return Response.json({ message: "Not found." }, { status: 404, headers });
+  const response =
+    path === "/api/oauth/register"
+      ? await register(request, config)
+      : path === "/api/oauth/token"
+        ? await token(request, config)
+        : path === "/api/oauth/authorize"
+          ? await authorize(request, config)
+          : Response.json({ message: "Not found." }, { status: 404, headers });
+  if (isOpen)
+    for (const [key, value] of Object.entries(open))
+      response.headers.set(key, value);
+  return response;
 }
 
 // RFC 7591: public clients only, and only return addresses Claude may use.
