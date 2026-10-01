@@ -2012,3 +2012,6 @@ summary {
 }
 @media (max-width: 700px) { .sitrep-panel[data-drawer] { width: 100vw; } }
 @media (prefers-reduced-motion: reduce) { .sitrep-panel[data-drawer] { transition: none; } }
+.sitrep-item.is-struck { opacity: .6; }
+.sitrep-item.is-dimmed { opacity: .55; }
+.sitrep-when, .sitrep-label { font-size: 12px; color: var(--muted); font-weight: 600; }

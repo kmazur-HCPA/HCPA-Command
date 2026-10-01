@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { boldParts, problems, useSitrepLayout } from "./support";
 import type { AppClient } from "../../platform/supabase";
-import { loadSitrep, type SitrepState } from "../../services/sitrep";
+import { loadSitrep, recordStatus, type SitrepState } from "../../services/sitrep";
+import { flaggedMail } from "../../services/mail";
+import { mostlyDone, reconcileSection, type Reconciled, type RecordState } from "./reconcile";
 import { sections } from "./sections";
-import type { SitrepItem, SitrepRef } from "./schema";
+import type { SitrepRef } from "./schema";
 import { Icon } from "../../ui/Icon";
 
 const zone = "America/New_York";
@@ -31,7 +33,9 @@ export function SitrepPanel({
   onOpen: (item: { id: string }) => void;
 }) {
   const [state, setState] = useState<SitrepState | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [live, setLive] = useState<{ records: Map<string, RecordState>; openFlagged: Set<string> | null }>({ records: new Map(), openFlagged: null }),
+    [now, setNow] = useState(() => Date.now());
   const panel = useRef<HTMLElement>(null);
   const { collapsed, toggleCollapsed, drawer, setDrawer, narrow } = layout;
   const isDrawerOpen = narrow && drawer;
@@ -41,9 +45,24 @@ export function SitrepPanel({
     let alive = true;
     const refresh = () =>
       loadSitrep(client, date)
-        .then((next) => {
+        .then(async (next) => {
+          const payload = next.run?.payload;
+          const refs = payload
+            ? sections.slice(1).flatMap(([k]) => payload[k as "next"].flatMap((i) => i.refs ?? []))
+            : [];
+          const ids = [...new Set(refs.filter((r) => r.kind === "record").map((r) => r.id))];
+          const [records, openFlagged] = await Promise.all([
+            recordStatus(client, ids).catch(() => new Map<string, RecordState>()),
+            refs.some((r) => r.kind === "email")
+              ? flaggedMail(client)
+                  .then((f) => (f.truncated ? null : new Set(f.messages.filter((m) => !m.capture).map((m) => m.id))))
+                  .catch(() => null)
+              : Promise.resolve(null),
+          ]);
           if (alive) {
             setState(next);
+            setLive({ records, openFlagged });
+            setNow(Date.now());
             setError("");
           }
         })
@@ -96,17 +115,24 @@ export function SitrepPanel({
     ) : ref.label ? (
       <span key={ref.id} className="sitrep-ref-plain">{ref.label}</span>
     ) : null;
-  const item = (it: SitrepItem, i: number) => (
-    <li key={i} className="sitrep-item">
-      <p>
-        {it.marker && <strong className={`sitrep-marker marker-${it.marker}`}>{markerLabel[it.marker]}</strong>}
-        {it.marker && " "}
-        {boldParts(it.text)}
-      </p>
-      {it.reason && <p className="sitrep-reason">{it.reason}</p>}
-      {!!it.refs?.length && <p className="sitrep-refs">{it.refs.map(link)}</p>}
-    </li>
-  );
+  const item = (r: Reconciled, i: number) => {
+    const it = r.item;
+    return (
+      <li key={i} className={`sitrep-item${r.struck ? " is-struck" : ""}${r.dimmed ? " is-dimmed" : ""}`}>
+        <p>
+          {r.marker && <strong className={`sitrep-marker marker-${r.marker}`}>{markerLabel[r.marker]}</strong>}
+          {r.marker && " "}
+          {r.struck ? <s>{boldParts(it.text)}</s> : boldParts(it.text)}
+          {r.when && <strong className="sitrep-when"> · {r.when}</strong>}
+          {r.label && <strong className="sitrep-label"> · {r.label}</strong>}
+        </p>
+        {it.reason && <p className="sitrep-reason">{it.reason}</p>}
+        {!!it.refs?.length && <p className="sitrep-refs">{it.refs.filter((x) => !r.removedRecords.has(x.id)).map(link)}</p>}
+      </li>
+    );
+  };
+  const ctx = { now, today: date, records: live.records, openFlagged: live.openFlagged };
+  const nextItems = run?.payload ? reconcileSection(run.payload.next, ctx) : [];
   const body = () => {
     if (error && !state) return <p role="alert" className="error-message">{error}</p>;
     if (!state) return <p role="status" className="small muted">Loading SITREP…</p>;
@@ -138,7 +164,12 @@ export function SitrepPanel({
                 {key === "now" ? (
                   <p className="sitrep-now">{boldParts(run.payload!.now)}</p>
                 ) : run.payload![key].length ? (
-                  <ul>{run.payload![key].map(item)}</ul>
+                  <>
+                    {key === "next" && state.isToday && mostlyDone(nextItems) && (
+                      <p className="small muted">Most of this morning’s list is done.</p>
+                    )}
+                    <ul>{(key === "next" ? nextItems : reconcileSection(run.payload![key], ctx)).map(item)}</ul>
+                  </>
                 ) : (
                   <p className="small muted">Nothing</p>
                 )}

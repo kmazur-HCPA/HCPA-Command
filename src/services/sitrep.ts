@@ -68,3 +68,15 @@ export async function loadSitrep(
       : null;
   return { run, isToday: !!current, todayFailure };
 }
+
+// One batched lookup for the records a run points at. RLS scopes it to the owner.
+export async function recordStatus(client: AppClient, ids: string[]) {
+  const map = new Map<string, { status: string; archived: boolean } | null>(
+    ids.map((id) => [id, null]),
+  );
+  if (!ids.length) return map;
+  const r = await client.from("work_items").select("id,status,archived").in("id", ids);
+  if (r.error) throw new Error("Record status unavailable.");
+  for (const row of r.data) map.set(row.id, { status: row.status, archived: row.archived });
+  return map;
+}
