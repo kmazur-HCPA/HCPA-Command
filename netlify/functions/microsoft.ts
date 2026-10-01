@@ -38,6 +38,7 @@ export const config: Config = {
   path: [
     "/api/microsoft/status",
     "/api/microsoft/calendar",
+    "/api/microsoft/flagged",
     "/api/microsoft/connect",
     "/api/microsoft/callback",
     "/api/microsoft/disconnect",

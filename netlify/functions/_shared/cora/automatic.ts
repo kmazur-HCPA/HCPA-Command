@@ -9,7 +9,9 @@ import {
 } from "../../../../src/features/microsoft/model";
 import { validateFields } from "./actions";
 import { definition } from "../microsoft/tools";
+import { sitrepTools, saveSitrep, getSitrepRuns } from "../sitrep";
 export const automaticTools = [
+  ...sitrepTools,
   createRecordDefinition,
   quickUpdateDefinition,
   definition(
@@ -103,6 +105,8 @@ export async function automaticTool(
     if (r.error) throw new Error("Review history unavailable.");
     return { reviews: r.data, current_time: new Date().toISOString(), command_brief_instructions: briefInstructions };
   }
+  if (name === "get_sitrep_runs") return getSitrepRuns(store, userId, args);
+  if (name === "save_sitrep") return saveSitrep(store, userId, args);
   if (name === "create_record") return createRecord(store,userId,args);
   if (name === "quick_update") return quickUpdate(store,userId,args);
   const pref = await store

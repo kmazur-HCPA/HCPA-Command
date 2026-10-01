@@ -144,7 +144,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(24);
+    expect(list.result.tools).toHaveLength(27);
     expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("get_reminders_due");
     expect(
       list.result.tools
@@ -153,7 +153,7 @@ describe("Private connected-app MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
+    ).toEqual(["prepare_record", "prepare_task", "save_sitrep", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
   });
   it("reads the whole attention picture in one audited call", async () => {

@@ -28,11 +28,15 @@ export async function graphRead(
   url: URL,
   accessToken: string,
   signal: AbortSignal,
+  // Immutable IDs survive a message moving folders; callers that store IDs ask for them.
+  immutableIds = false,
 ) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      Prefer: 'outlook.body-content-type="text", outlook.timezone="UTC"',
+      Prefer:
+        'outlook.body-content-type="text", outlook.timezone="UTC"' +
+        (immutableIds ? ', IdType="ImmutableId"' : ""),
     },
     redirect: "error",
     signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
@@ -48,8 +52,11 @@ export async function graphRead(
       throw new Error(
         "Microsoft is limiting requests. Please try again later.",
       );
-    throw new Error(
-      "Microsoft is temporarily unavailable. No external data was changed.",
+    throw Object.assign(
+      new Error(
+        "Microsoft is temporarily unavailable. No external data was changed.",
+      ),
+      { status: response.status },
     );
   }
   return boundedResponse(response) as Promise<Record<string, unknown>>;

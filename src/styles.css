@@ -1970,3 +1970,45 @@ summary {
 .day-overview .stat-card .stat-arrow { display:none; }
 @media(max-width:1100px) { .day-overview .day-stats { gap:14px; } }
 @media(max-width:700px) { .day-overview .day-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } }
+
+/* Work Day: live work on the left, SITREP fixed on the right. */
+.workday { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 420px); gap: 24px; align-items: start; }
+.workday[data-sitrep="collapsed"] { grid-template-columns: minmax(0, 1fr) 44px; }
+.day-overview .day-stats { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.sitrep-panel { position: sticky; top: env(safe-area-inset-top, 0px); height: 100dvh; overflow-y: auto; box-sizing: border-box; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.sitrep-panel[data-rail] { padding: 0; overflow: hidden; }
+.sitrep-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sitrep-heading h2 { margin: 0; font-size: 17px; }
+.sitrep-heading button, .sitrep-open { min-height: 36px; min-width: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); color: var(--text); font: inherit; cursor: pointer; }
+.sitrep-open { padding: 0 14px; font-weight: 600; align-self: flex-start; }
+.sitrep-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; height: 100%; padding: 14px 0; border: 0; background: none; color: var(--text); cursor: pointer; }
+.sitrep-rail span { writing-mode: vertical-rl; font-size: 11px; letter-spacing: .12em; color: var(--muted); }
+.sitrep-status { font-size: 12px; color: var(--muted); }
+.sitrep-status p { margin: 0 0 4px; }
+.sitrep-body h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sitrep-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sitrep-item p, .sitrep-now { margin: 0; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.sitrep-now { font-size: 15px; }
+.sitrep-reason { font-size: 12px !important; color: var(--muted); margin-top: 2px !important; }
+.sitrep-marker { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--orange); }
+.sitrep-marker.marker-overdue { color: var(--error); }
+.sitrep-refs { margin-top: 4px !important; display: flex; gap: 8px; flex-wrap: wrap; }
+.sitrep-ref { border: 0; background: none; padding: 0; color: var(--orange); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.sitrep-ref-plain { font-size: 12px; color: var(--muted); }
+.sitrep-previous { opacity: .72; }
+.sitrep-previous-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 0; }
+.sitrep-scrim { position: fixed; inset: 0; background: #0008; z-index: 39; }
+.flag-list li { align-items: flex-start; }
+.flag-icon { flex: none; margin-top: 3px; color: var(--muted); }
+.flag-high { color: var(--orange); }
+.flag-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.flag-actions button { min-height: 32px; padding: 0 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); color: var(--text); cursor: pointer; }
+.flagged-panel { margin-top: 20px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+@media (max-width: 1100px) {
+  .workday, .workday[data-sitrep="collapsed"] { grid-template-columns: minmax(0, 1fr); }
+  .sitrep-panel[data-drawer] { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(420px, 100vw); height: 100dvh; border-radius: 0; padding-top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(105%); visibility: hidden; transition: transform 180ms ease-out, visibility 0s linear 180ms; }
+  .sitrep-panel[data-open] { transform: none; visibility: visible; transition: transform 180ms ease-out; }
+}
+@media (max-width: 700px) { .sitrep-panel[data-drawer] { width: 100vw; } }
+@media (prefers-reduced-motion: reduce) { .sitrep-panel[data-drawer] { transition: none; } }

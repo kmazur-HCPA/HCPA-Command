@@ -27,6 +27,8 @@ const paths: Record<string, string> = {
   check: "m5 12 4 4L19 6",
   close: "m6 6 12 12M6 18 18 6",
   flag: "M5 21V3h13l-2 4 2 4H5",
+  mail: "M3 5h18v14H3Zm0 1 9 7 9-7",
+  panel: "M3 4h18v16H3Zm12 0v16",
   chevron: "m9 5 7 7-7 7",
 };
 export function Icon({

@@ -12,7 +12,8 @@ import type { Database } from "../../../../src/data/database.types";
 import type { MicrosoftConfig } from "./config";
 import { consentScopes, hasTeamsConsent, normalizedScope } from "./config";
 import { digest, nonce, seal, unseal } from "./crypto";
-import { connection, graphRead, graphUrl } from "./client";
+import { connection, graphRead, graphUrl, microsoftToken } from "./client";
+import { flaggedMail } from "./flagged";
 export type MicrosoftServerConfig = {
   url: string;
   key: string;
@@ -41,7 +42,8 @@ export async function handleMicrosoft(
   const expectedMethod =
     callback ||
     path === "/api/microsoft/status" ||
-    path === "/api/microsoft/calendar"
+    path === "/api/microsoft/calendar" ||
+    path === "/api/microsoft/flagged"
       ? "GET"
       : "POST";
   if (
@@ -49,6 +51,7 @@ export async function handleMicrosoft(
       "/api/microsoft/callback",
       "/api/microsoft/status",
       "/api/microsoft/calendar",
+      "/api/microsoft/flagged",
       "/api/microsoft/connect",
       "/api/microsoft/disconnect",
     ].includes(path)
@@ -219,6 +222,22 @@ export async function handleMicrosoft(
       .maybeSingle();
     if (member.error || !member.data?.active)
       return respond(403, "Command access is unavailable.");
+    if (path.endsWith("flagged")) {
+      if (!config || !(await connection(store, user.id))?.token_cache)
+        return respond(
+          409,
+          "Connect Microsoft 365 in Settings to see flagged email.",
+        );
+      const token = await microsoftToken(store, user.id, config, signal);
+      const result = await flaggedMail(store, user.id, token.accessToken, signal);
+      // Re-check so nothing is returned after a disconnect mid-request.
+      if ((await connection(store, user.id))?.generation !== token.generation)
+        return respond(409, "Microsoft connection changed. Retry.");
+      return Response.json(
+        { ...result, retrievedAt: new Date().toISOString() },
+        { headers },
+      );
+    }
     if (path.endsWith("calendar")) {
       const params = new URL(request.url).searchParams;
       let range: { start: string; end: string };

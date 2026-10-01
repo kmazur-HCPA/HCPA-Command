@@ -1,5 +1,5 @@
 import { WorkList } from "./WorkList";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
 import { workDay, patchWork } from "../../services/work";
 import { effectiveStatus } from "./model";
@@ -7,6 +7,9 @@ import type { Kind, WorkItem, WorkSummary } from "./model";
 import { displayDate, today } from "./dates";
 import { CalendarPanel } from "../microsoft/CalendarPanel";
 import { Icon } from "../../ui/Icon";
+import { FlaggedMail } from "../mail/FlaggedMail";
+import { SitrepPanel } from "../sitrep/SitrepPanel";
+import { useSitrepLayout } from "../sitrep/support";
 export function WorkDay({
   client,
   userId,
@@ -27,7 +30,10 @@ export function WorkDay({
     [retry, setRetry] = useState(0),
     [now, setNow] = useState(() => Date.now()),
     [busy, setBusy] = useState<string | null>(null),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [flagged, setFlagged] = useState<number | null>(null);
+  const sitrep = useSitrepLayout(),
+    sitrepButton = useRef<HTMLButtonElement>(null);
   const refreshMinute = Math.floor(now / 60000);
   const date = today(new Date(now)),
     hour = Number(
@@ -146,6 +152,7 @@ export function WorkDay({
     </ul>
   );
   return (
+    <div className="workday" data-sitrep={sitrep.collapsed && !sitrep.narrow ? "collapsed" : undefined}>
     <section className="work-day">
       <div className="day-heading">
         <div>
@@ -163,6 +170,17 @@ export function WorkDay({
           </h1>
           <p className="intro">Here’s what matters today.</p>
         </div>
+        {sitrep.narrow && (
+          <button
+            ref={sitrepButton}
+            className="sitrep-open"
+            aria-haspopup="dialog"
+            aria-expanded={sitrep.drawer}
+            onClick={() => sitrep.setDrawer(true)}
+          >
+            SITREP
+          </button>
+        )}
         <div className="day-signature" aria-hidden="true">
           <span />
           <span />
@@ -227,12 +245,25 @@ export function WorkDay({
                   "Follow-ups and dependencies",
                   "waiting",
                 ],
+                [
+                  "flag",
+                  "Flagged email",
+                  flagged === null ? "–" : flagged,
+                  flagged === null ? "Unavailable" : "Not yet captured",
+                  "flagged",
+                ],
               ] as const
             ).map(([icon, label, value, context, kind]) => (
               <button
                 className="stat-card"
                 key={label}
-                onClick={() => onNavigate(kind)}
+                onClick={() =>
+                  kind === "flagged"
+                    ? document
+                        .getElementById("flagged-heading")
+                        ?.scrollIntoView({ block: "start" })
+                    : onNavigate(kind)
+                }
               >
                 <Icon name={icon} />
                 <span>
@@ -381,6 +412,12 @@ export function WorkDay({
               </section>
             </div>{" "}
           </div>
+          <FlaggedMail
+            client={client}
+            revision={revision}
+            onCount={setFlagged}
+            onChanged={() => setRetry((v) => v + 1)}
+          />
           <footer className="day-footer">
             <span>COMMAND / YOUR DAY, WITH INTENTION</span>
             <span>FOCUS · ORGANIZE · EXPLORE · DO</span>
@@ -388,5 +425,13 @@ export function WorkDay({
         </>
       )}
     </section>
+    <SitrepPanel
+      client={client}
+      date={date}
+      layout={sitrep}
+      trigger={sitrepButton}
+      onOpen={onOpen}
+    />
+    </div>
   );
 }
