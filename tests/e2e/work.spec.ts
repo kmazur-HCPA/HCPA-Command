@@ -913,3 +913,25 @@ test("every page keeps the Stone layout and passes accessibility checks in both 
     }
   }
 });
+
+test("Work Day: completing from Now or Open work saves the task and it does not come back", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { rows } = await setup(page);
+  const stamp = new Date().toISOString();
+  rows.push(
+    { ...newItem("task", uid), title: "Plan the budget", status: "Next", priority: "High", due_date: "2020-01-01", focus_slot: 1, original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null },
+    { ...newItem("task", uid), title: "Tidy the shared drive", status: "Inbox", original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null },
+  );
+  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  await page.getByRole("button", { name: "Work Day", exact: true }).click();
+  await page.getByRole("button", { name: "Complete task: Tidy the shared drive" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Task completed" })).toBeVisible();
+  expect(rows.find((r) => r.title === "Tidy the shared drive")?.status).toBe("Complete");
+  await expect(page.locator(".wd-open-row", { hasText: "Tidy the shared drive" })).toHaveCount(0);
+  await page.getByRole("button", { name: /Mark done: Plan the budget/ }).first().click();
+  await expect.poll(() => rows.find((r) => r.title === "Plan the budget")?.status).toBe("Complete");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Work Day" })).toBeVisible();
+  await expect(page.getByText("Plan the budget")).toHaveCount(0);
+  await expect(page.getByText("Tidy the shared drive")).toHaveCount(0);
+});

@@ -104,6 +104,8 @@ export function WorkDay({
     [helix, setHelix] = useState<HelixItem | null>(null);
   const date = today(new Date(now));
   const [snoozed, snooze] = useDaily("snoozed", date),
+    [doneIds, markDone] = useDaily("done", date),
+    [doneAtLoad] = useState(doneIds),
     [leftAlone, leaveIt] = useDaily("tidy", date);
   const sitrep = useSitrep(client, date),
     agenda = useAgenda(client, date),
@@ -168,18 +170,34 @@ export function WorkDay({
     };
   }, [client]);
 
+  // Completes the record behind a task (the same change as completing it on Tasks).
+  async function completeRecord(id: string) {
+    const record = await getWork(client, id);
+    await patchWork(client, record, { status: "Complete", snoozed_until: null });
+    setNotice("Task completed");
+    setRetry((v) => v + 1);
+  }
   async function complete(item: NowItem) {
     if (busy) return;
     setBusy(item.key);
     setError("");
     try {
-      if (item.recordId) {
-        const record = await getWork(client, item.recordId);
-        await patchWork(client, record, { status: "Complete", snoozed_until: null });
-        setNotice("Task completed");
-        setRetry((v) => v + 1);
-      }
+      if (item.recordId) await completeRecord(item.recordId);
+      markDone(item.key);
       setLocalDone((old) => [...old, item.key]);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function completeOpen(task: WorkSummary) {
+    if (busy) return;
+    setBusy(task.id);
+    setError("");
+    try {
+      await completeRecord(task.id);
+      setOpenTasks((old) => (old ? { ...old, tasks: old.tasks.filter((t) => t.id !== task.id) } : old));
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
@@ -193,7 +211,7 @@ export function WorkDay({
     if (run?.payload) {
       const ctx = { now, today: date, records: sitrep.live.records, openFlagged: sitrep.live.openFlagged };
       return reconcileSection(run.payload.next, ctx)
-        .map((r, i): NowItem => {
+        .map((r): NowItem => {
           const it = r.item;
           const recordId = it.refs?.find((x) => x.kind === "record" && !r.removedRecords.has(x.id))?.id ?? null;
           let tag = "",
@@ -212,7 +230,7 @@ export function WorkDay({
             tone = "accent";
           } else if (it.due_date && daysBetween(date, it.due_date) === 1) tag = "Due tomorrow";
           return {
-            key: `s${i}:${it.text}`,
+            key: recordId ? `r:${recordId}` : `t:${it.text}`,
             recordId,
             tag,
             tone,
@@ -230,7 +248,7 @@ export function WorkDay({
       .map((t): NowItem => {
         const overdue = !!t.due_date && t.due_date < date;
         return {
-          key: t.id,
+          key: `r:${t.id}`,
           recordId: t.id,
           tag: overdue ? overdueTag(t.due_date!, date) : t.focus_slot ? "Chosen priority" : "Due today",
           tone: overdue ? "overdue" : "accent",
@@ -241,9 +259,13 @@ export function WorkDay({
         };
       });
   }, [run, data, now, date, sitrep.live]);
-  const shown = nowItems.filter((n) => !snoozed.includes(n.key)).slice(0, 3);
-  const cleared = shown.filter((n) => n.struck || localDone.includes(n.key)).length;
-  const pending = shown.length - cleared;
+  // Done items settle for this visit, then stay gone: finished earlier, or completed elsewhere.
+  const isDone = (n: NowItem) => n.struck || localDone.includes(n.key);
+  const shown = nowItems
+    .filter((n) => !snoozed.includes(n.key) && !doneAtLoad.includes(n.key) && !(n.struck && !localDone.includes(n.key)))
+    .slice(0, 3);
+  const cleared = nowItems.filter((n) => isDone(n) || doneIds.includes(n.key)).length;
+  const pending = shown.filter((n) => !isDone(n)).length;
 
   // ---- Day line and week strip from Outlook.
   const events = agenda.data?.events ?? [];
@@ -346,7 +368,7 @@ export function WorkDay({
         <div className="wd-dayline rise d3">
           <div className="wd-dayline-top meta">
             <span>{agenda.error ? "Calendar unavailable" : agenda.data ? scheduleLine(events, now) : "Checking your calendar…"}</span>
-            <span>{shown.length === 0 ? "" : pending === 0 ? "All clear" : cleared === 0 ? `${pending} to clear` : `${cleared} of ${shown.length} cleared`}</span>
+            <span>{pending === 0 ? (data || run ? "All clear" : "") : `${pending} to clear`}{cleared > 0 && pending > 0 ? ` · ${cleared} done` : cleared > 0 ? ` · ${cleared} done today` : ""}</span>
           </div>
           <div className="wd-track" role="img" aria-label={`Day line, 8 AM to 5 PM. ${inHours ? `It is ${clock(new Date(now).toISOString())}.` : ""}`}>
             <div className="wd-track-base" />
@@ -376,7 +398,7 @@ export function WorkDay({
           {!data && !error && !run && <p role="status" className="meta">Loading…</p>}
           <div className="wd-now">
             {shown.map((n, i) => {
-              const done = n.struck || localDone.includes(n.key);
+              const done = isDone(n);
               return (
                 <div key={n.key} className={`row rise d${i + 4}`} style={{ opacity: done ? 0.45 : 1 }}>
                   <button
@@ -560,10 +582,18 @@ export function WorkDay({
             {areaTasks.map((t) => {
               const m = taskMeta(t, date);
               return (
-                <button key={t.id} className="row wd-open-row" onClick={() => onOpen(t)}>
-                  <span className="wd-track-title">{t.title}</span>
-                  <span className={`meta ${m.overdue ? "meta--overdue" : ""}`}>{m.text}</span>
-                </button>
+                <div key={t.id} className="row wd-open-row">
+                  <button
+                    className="check"
+                    aria-label={`Complete task: ${t.title}`}
+                    disabled={busy === t.id}
+                    onClick={() => void completeOpen(t)}
+                  />
+                  <button className="wd-open-main" onClick={() => onOpen(t)}>
+                    <span className="wd-track-title">{t.title}</span>
+                    <span className={`meta ${m.overdue ? "meta--overdue" : ""}`}>{m.text}</span>
+                  </button>
+                </div>
               );
             })}
             {openTasks && groups.length === 0 && <p className="wd-note">No open tasks. Capture one from the bar above.</p>}

@@ -1676,8 +1676,7 @@ summary {
   font-size: 14px;
   color: var(--text-2);
 }
-.wd-track-row,
-.wd-open-row {
+.wd-track-row {
   display: flex;
   width: calc(100% + 24px);
   margin: 0 -12px;
@@ -2402,4 +2401,33 @@ details > summary {
 }
 .link-rows .meta--overdue {
   color: var(--overdue);
+}
+
+.wd-open-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: calc(100% + 24px);
+  margin: 0 -12px;
+  padding: 8px 12px;
+}
+.wd-open-row .check {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin-top: 8px;
+}
+.wd-open-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-weight: 400;
 }
