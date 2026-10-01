@@ -107,7 +107,7 @@ begin
 end $$;
 create trigger sitrep_runs_guard before update on public.sitrep_runs for each row execute function public.sitrep_guard();
 
--- Retention: default 30 days. Confirm with the records custodian before go-live.
+-- Retention: default 30 days.
 -- Run nightly (Supabase cron or a scheduled function). Server-only.
 create function public.sitrep_maintenance(p_retention_days int default 30) returns jsonb
 language plpgsql security invoker set search_path='' as $$

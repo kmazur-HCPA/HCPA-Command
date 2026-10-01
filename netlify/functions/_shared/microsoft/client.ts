@@ -7,10 +7,15 @@ import { seal, unseal } from "./crypto";
 
 export function graphUrl(
   value: string,
-  resource: "calendarView" | "messages" | "me",
+  resource: "calendarView" | "messages" | "inbox" | "sentitems" | "me",
 ) {
   const url = new URL(value);
-  const prefix = resource === "me" ? "/v1.0/me" : `/v1.0/me/${resource}`;
+  const prefix =
+    resource === "me"
+      ? "/v1.0/me"
+      : resource === "inbox" || resource === "sentitems"
+        ? `/v1.0/me/mailFolders/${resource}/messages`
+        : `/v1.0/me/${resource}`;
   if (
     url.origin !== "https://graph.microsoft.com" ||
     url.username ||

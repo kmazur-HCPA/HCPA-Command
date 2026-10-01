@@ -469,6 +469,7 @@ describe("Microsoft data boundaries", () => {
       );
     const result = await read("search_outlook_mail", { query: "fixture" });
     expect(result).toMatchObject({ returned: 3, truncated: true });
+    expect((result as { records: { id: string; immutable_id: string }[] }).records[0]).toMatchObject({ id: "message1", immutable_id: "message1" });
     expect(graphCalls).toHaveLength(3);
     await read("search_outlook_mail", { query: "fixture" });
     expect(graphCalls).toHaveLength(3);

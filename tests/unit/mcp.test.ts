@@ -144,7 +144,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(27);
+    expect(list.result.tools).toHaveLength(28);
     expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("get_reminders_due");
     expect(
       list.result.tools
