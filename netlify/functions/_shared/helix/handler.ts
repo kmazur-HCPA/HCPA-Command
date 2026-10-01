@@ -361,8 +361,19 @@ export async function handleHelix(
       try {
         let result = await call(false);
         if (result.response.status === 401) result = await call(true);
-        if (result.response.status === 403)
-          return fallback("Helix access is unavailable for this connection.");
+        if (result.response.status === 403) {
+          // Helix's refusal reason is a short fixed string ({ "error": "..." }); show it so a
+          // misconfigured connection can be diagnosed. Anything else is dropped.
+          const reason = await result.response
+            .json()
+            .then((body: { error?: unknown }) =>
+              typeof body.error === "string" ? body.error.slice(0, 120) : "",
+            )
+            .catch(() => "");
+          return fallback(
+            `Helix access is unavailable for this connection.${reason ? ` (${reason})` : ""}`,
+          );
+        }
         if (!result.response.ok)
           return fallback("Helix is temporarily unavailable.");
         const text = await result.response.text();
