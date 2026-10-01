@@ -1692,19 +1692,13 @@ summary {
   margin-top: 2px;
   color: var(--text-2);
 }
-.wd-track-row > span,
-.wd-open-row {
+.wd-track-row > span {
   min-width: 0;
 }
 .wd-track-row > span {
   display: flex;
   flex-direction: column;
   gap: 3px;
-}
-.wd-open-row {
-  flex-direction: column;
-  gap: 3px;
-  min-height: 44px;
 }
 .wd-track-title {
   font-size: var(--fs-body);
