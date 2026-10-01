@@ -793,7 +793,7 @@ describe("Teams consent and bounded retrieval", () => {
       })),
       participants_truncated: true,
     });
-    expect(graphCalls[0]!.searchParams.get("$expand")).toBe("members");
+    expect(graphCalls[0]!.searchParams.get("$expand")).toBe("members,lastMessagePreview");
     expect(graphCalls[0]!.searchParams.get("$orderby")).toBe("lastMessagePreview/createdDateTime desc");
     graphResponse = {
       value: Array.from({ length: 31 }, (_, i) => ({
@@ -813,6 +813,42 @@ describe("Teams consent and bounded retrieval", () => {
     await expect(
       read("read_teams_chat", { reference: chats.records[0]!.reference }),
     ).rejects.toThrow(/unavailable/);
+  });
+  it("orders chats by last message, exposes stable Teams IDs and keeps references working", async () => {
+    rows = [{ ...stored(), granted_scopes: teamsScopes }];
+    const read = createTeamsReader(store(), owner, cfg, new AbortController().signal, new Map());
+    const chat = (id: string, updated: string, preview?: { at: string; from: string }) => ({
+      id, chatType: "group", topic: id, lastUpdatedDateTime: updated, members: [],
+      ...(preview ? { lastMessagePreview: { createdDateTime: preview.at, from: { user: { displayName: preview.from } } } } : {}),
+    });
+    graphResponse = { value: [
+      chat("19:old@thread.v2", "2026-10-01T00:00:00Z"),
+      chat("19:tech@thread.v2", "2026-09-03T00:00:00Z", { at: "2026-10-01T13:55:00Z", from: "Kevin Mazur" }),
+      chat("19:mid@thread.v2", "2026-09-10T00:00:00Z", { at: "2026-09-20T09:00:00Z", from: "Sam Lee" }),
+    ] };
+    const chats = (await read("list_teams_chats", {})) as { records: { reference: string; chat_id: string; last_message_at: string | null; last_message_from: string | null; updated_at: string }[] };
+    expect(chats.records.map((c) => c.chat_id)).toEqual(["19:tech@thread.v2", "19:mid@thread.v2", "19:old@thread.v2"]);
+    expect(chats.records[0]).toMatchObject({ last_message_at: "2026-10-01T13:55:00Z", last_message_from: "Kevin Mazur", updated_at: "2026-09-03T00:00:00Z" });
+    expect(chats.records[2]).toMatchObject({ last_message_at: null, last_message_from: null });
+    graphResponse = { value: [{ id: "1759000000000", body: { content: "Hi" } }, { id: "1759000000001", chatId: "19:other@thread.v2", body: { content: "Yo" } }] };
+    const messages = (await read("read_teams_chat", { reference: chats.records[0]!.reference })) as { records: { chat_id: string; message_id: string }[] };
+    expect(messages.records.map((m) => [m.chat_id, m.message_id])).toEqual([["19:tech@thread.v2", "1759000000000"], ["19:other@thread.v2", "1759000000001"]]);
+  });
+  it("falls back to an unordered chat list sorted locally when Graph rejects the ordering", async () => {
+    rows = [{ ...stored(), granted_scopes: teamsScopes }];
+    const read = createTeamsReader(store(), owner, cfg, new AbortController().signal, new Map());
+    graphResponse = { value: [
+      { id: "a", chatType: "group", members: [], lastMessagePreview: { createdDateTime: "2026-09-01T00:00:00Z" } },
+      { id: "b", chatType: "group", members: [], lastMessagePreview: { createdDateTime: "2026-10-01T00:00:00Z" } },
+    ] };
+    const real = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(new Request(input, init).url);
+      if (url.hostname === "graph.microsoft.com" && url.searchParams.has("$orderby")) return new Response("{}", { status: 400 });
+      return real(input, init);
+    }));
+    const chats = (await read("list_teams_chats", {})) as { records: { chat_id: string }[] };
+    expect(chats.records.map((c) => c.chat_id)).toEqual(["b", "a"]);
   });
   it("rejects forged Teams links and preserves safe plain-text entities", () => {
     expect(

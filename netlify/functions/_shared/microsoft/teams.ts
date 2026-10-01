@@ -23,7 +23,7 @@ export const teamsTools = [
   ),
   definition(
     "list_teams_chats",
-    "List up to 25 of the user's Teams chats with the most recent messages, including meeting/group chats. Does not list channel activity or prove unread status. Use returned references with read_teams_chat.",
+    "List up to 25 of the user's Teams chats, newest activity first, including meeting/group chats. Each has chat_id (stable), last_message_at and last_message_from (display name of the latest sender); use these to find recent activity and skip chats where Kevin sent the latest message. updated_at only means chat properties changed (rename, members), NOT last activity. Does not list channel activity or prove unread status. Use returned references with read_teams_chat.",
     {},
   ),
   definition(
@@ -158,10 +158,14 @@ function sourceUrl(row: Record<string, unknown>, chatId?: string) {
     ? `https://teams.microsoft.com/l/message/${chat}/${id}?context=${encodeURIComponent('{"contextType":"chat"}')}`
     : undefined;
 }
-function summarize(row: Record<string, unknown>, limit = 4000) {
+function summarize(row: Record<string, unknown>, limit = 4000, chatId?: string) {
   const body = object(row.body),
     deleted = !!row.deletedDateTime;
   return {
+    // Stable across sessions. SITREP teams refs are "{chat_id}/{message_id}".
+    // Channel messages have no chat, so chat_id is null for them.
+    chat_id: text(row.chatId, 1500) || chatId || null,
+    message_id: text(row.id, 1500) || null,
     subject: teamsText(row.subject, 250),
     from: text(
       object(object(row.from).user).displayName ||
@@ -332,24 +336,33 @@ export function createTeamsReader(
       const ref = getRef(reference)!;
       const url = sourceUrl(row) ?? ref.url;
       addSource(reference, teamsText(row.subject, 150) || "Teams message", url);
-      result = { ...summarize(row, 12000), url, single_message_only: true };
+      result = { ...summarize(row, 12000, ref.chatId), url, single_message_only: true };
     } else {
       const url = new URL(`https://graph.microsoft.com${path}`);
       url.searchParams.set("$top", name === "list_teams_chats" ? "25" : "30");
       url.searchParams.set("$orderby", "lastMessagePreview/createdDateTime desc");
       if (name === "list_teams_chats")
-        url.searchParams.set("$expand", "members");
+        url.searchParams.set("$expand", "members,lastMessagePreview");
       if (name === "read_teams_chat")
         url.searchParams.set("$orderby", "lastModifiedDateTime desc");
-      const data = await graphRead(
-        teamsUrl(url.href, path),
-        accessToken,
-        signal,
-      );
+      let data: Record<string, unknown>;
+      try {
+        data = await graphRead(teamsUrl(url.href, path), accessToken, signal);
+      } catch (error) {
+        // Some tenants reject $orderby on lastMessagePreview. Fetch unordered, sort below.
+        if (name !== "list_teams_chats" || (error as { status?: number }).status !== 400)
+          throw error;
+        url.searchParams.delete("$orderby");
+        data = await graphRead(teamsUrl(url.href, path), accessToken, signal);
+      }
       if (!Array.isArray(data.value))
         throw new Error("Teams returned an incomplete response. Retry later.");
       const all = list(data.value),
         limit = name === "list_teams_chats" ? 25 : 30;
+      const preview = (row: Record<string, unknown>) => object(row.lastMessagePreview);
+      const at = (row: Record<string, unknown>) => Date.parse(text(preview(row).createdDateTime, 50)) || 0;
+      // Chat order is by last message, never by lastUpdatedDateTime.
+      if (name === "list_teams_chats") all.sort((a, b) => at(b) - at(a));
       const records = all.slice(0, limit).map((row) => {
         if (name === "list_teams_chats") {
           const id = segment(row.id);
@@ -371,6 +384,14 @@ export function createTeamsReader(
             participants_truncated:
               list(row.members).length > 20 || !!row["members@odata.nextLink"],
             type: text(row.chatType, 40),
+            chat_id: text(row.id, 1500) || null,
+            last_message_at: text(preview(row).createdDateTime, 50) || null,
+            last_message_from:
+              text(
+                object(object(preview(row).from).user).displayName ||
+                  object(object(preview(row).from).application).displayName,
+                150,
+              ) || null,
             updated_at: text(row.lastUpdatedDateTime, 50),
             url: teamsLink(row.webUrl),
           };
@@ -381,7 +402,7 @@ export function createTeamsReader(
           teamsText(row.subject, 150) || "Teams chat message",
           url,
         );
-        return { ...summarize(row, 2000), url };
+        return { ...summarize(row, 2000, getRef(reference)?.chatId), url };
       });
       // Deliberately stop at one page. No fan-out over every chat or unbounded sync.
       result = {
@@ -389,7 +410,7 @@ export function createTeamsReader(
         returned: records.length,
         truncated: !!data["@odata.nextLink"] || all.length > limit,
         complete_history: false,
-        order: name === "list_teams_chats" ? "recent_message_first" : "recently_modified_first",
+        order: name === "list_teams_chats" ? "last_message_at_desc" : "recently_modified_first",
         channel_activity_included: false,
       };
     }

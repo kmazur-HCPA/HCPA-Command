@@ -155,6 +155,12 @@ describe("Private connected-app MCP boundary", () => {
         .map((t: { name: string }) => t.name),
     ).toEqual(["prepare_record", "prepare_task", "save_sitrep", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
+    // Searchable by name: every mail/Teams/SITREP tool is listed with a description and schema.
+    for (const name of ["get_flagged_mail", "get_direct_mail", "list_teams_chats", "save_sitrep", "get_sitrep_runs"]) {
+      const tool = list.result.tools.find((t: { name: string }) => t.name === name);
+      expect(tool?.description?.length, name).toBeGreaterThan(40);
+      expect(tool?.inputSchema?.type, name).toBe("object");
+    }
   });
   it("reads the whole attention picture in one audited call", async () => {
     const value = await result(
