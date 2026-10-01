@@ -2380,3 +2380,26 @@ details > summary {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Project and person detail */
+.ctx-lead {
+  max-width: 62ch;
+  margin: 8px 0 4px;
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+.ctx-section {
+  margin-top: var(--sp-7);
+}
+.ctx-section .label {
+  margin-bottom: 4px;
+}
+.ctx-empty {
+  margin: 8px 0;
+}
+.link-rows .meta--overdue {
+  color: var(--overdue);
+}

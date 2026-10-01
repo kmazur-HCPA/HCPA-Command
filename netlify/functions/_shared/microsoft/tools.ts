@@ -150,7 +150,7 @@ function summarizeMail(row: Record<string, unknown>) {
   };
 }
 // Request-scoped memoization only: no mailbox copy, cross-user cache, background
-// sync or content left on a warm function instance after the Cora request ends.
+// sync or content left on a warm function instance after the CMD request ends.
 export function createMicrosoftReader(
   store: AppClient,
   userId: string,

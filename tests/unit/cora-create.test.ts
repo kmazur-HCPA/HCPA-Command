@@ -14,7 +14,7 @@ const args = {
     due_date: "2026-09-23",
   }),
 };
-describe("Authorized Cora creation", () => {
+describe("Authorized CMD creation", () => {
   it("uses a stable owner-scoped retry ID and preserves supplied content", () => {
     const first = directRecordInput(owner, args);
     expect(directRecordInput(owner, args)).toEqual(first);
@@ -62,7 +62,7 @@ function fakeProvider(reply:(params:Params,round:number)=>Reply){
  }}} as unknown as Anthropic;
 }
 afterEach(()=>vi.unstubAllGlobals());
-it.each(directKinds)('site Cora saves %s directly and returns a refreshable receipt without a proposal',async(kind)=>{
+it.each(directKinds)('site CMD saves %s directly and returns a refreshable receipt without a proposal',async(kind)=>{
  const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Save this record',context:{page:'workspace',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
  const input={...args,kind};const expected=directRecordInput(owner,input);
  const audits:Record<string,unknown>[]=[];
@@ -83,7 +83,7 @@ it.each(directKinds)('site Cora saves %s directly and returns a refreshable rece
  expect(audits.find(a=>a.tool==='create_record')).toMatchObject({success:true,result:{state:'saved'}});
 });
 
-it('site Cora rejects tools outside its request scope and returns the failure to the model',async()=>{
+it('site CMD rejects tools outside its request scope and returns the failure to the model',async()=>{
  const turn:CoraTurn={id:owner,user_id:owner,conversation_id:owner,message:'Save the brief',context:{page:'workspace',recordId:null},response:'',sources:[],proposal:null,task_id:other,status:'running',action_status:'none',created_at:new Date().toISOString(),finished_at:null};
  const audits:Record<string,unknown>[]=[];
  vi.stubGlobal('fetch',async(input:RequestInfo|URL,init?:RequestInit)=>{

@@ -136,7 +136,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(initialized.result.serverInfo.name).toBe("Command Cora");
+    expect(initialized.result.serverInfo.name).toBe("Command CMD");
     const list = await result(
       await handleMcp(
         req({ jsonrpc: "2.0", id: 2, method: "tools/list" }),

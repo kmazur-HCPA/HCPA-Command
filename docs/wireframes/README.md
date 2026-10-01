@@ -8,7 +8,7 @@ Review these decisions:
 2. Wider layouts gain a navigation rail and secondary column; narrow viewports still reflow.
 3. Both themes share hierarchy; orange highlights are restrained. Final tokens must pass contrast checks during implementation.
 4. Capture is always available. Reminders stay on Work Day; Captures will become Journal in Phase 5.
-5. Cora and Calendar occupy no space until they can provide real information.
+5. CMD and Calendar occupy no space until they can provide real information.
 
 Try completing work, snoozing a reminder, searching Tasks, capturing text, and switching appearance/layout. Snoozing changes the sample state only; no clock, scheduled job, authentication, offline persistence, or real record storage is implemented.
 

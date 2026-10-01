@@ -8,6 +8,7 @@ import {LabSummary} from '../lab/LabFields'
 import {priorities,statuses} from './model'
 import {Editor} from './Editor'
 import {displayDate} from './dates'
+import {ProjectView,PersonView} from './ContextView'
 export function Detail({client,userId,id,onClose,modal=false,onChanged}:{client:AppClient;userId:string;id:string;onClose:()=>void;modal?:boolean;onChanged?:()=>void}) {
  const [quickSaving,setQuickSaving]=useState(false),[quickNotice,setQuickNotice]=useState('')
  const quickLock=useRef(false)
@@ -46,15 +47,15 @@ export function Detail({client,userId,id,onClose,modal=false,onChanged}:{client:
   </div>}
   {item.kind!=='person'&&item.kind!=='task'&&<p className="record-meta">{item.status} · {item.priority} · {displayDate(item.due_date,item.remind_at)}</p>}
   {item.kind==='journal'&&<p className="meta">{displayDate(null,item.created_at)} · {item.entry_type}</p>}
-  <p className={item.kind==='journal'?'full-text reading':'full-text'}>{item.body||'No notes yet.'}</p>
+  {(item.body||!['project','initiative','person'].includes(item.kind))&&<p className={item.kind==='journal'?'full-text reading':'full-text'}>{item.body||'No notes yet.'}</p>}
   {item.tags.length>0&&<p className="muted">Tags · {item.tags.join(', ')}</p>}
-  {(item.kind==='project'||item.kind==='initiative')&&<dl className="context-summary"><dt>Goals</dt><dd>{item.goals||'Not set'}</dd><dt>Current state</dt><dd>{item.current_state||'Not set'}</dd><dt>Next milestone</dt><dd>{item.next_milestone||'Not set'}</dd></dl>}
-  {item.kind==='person'&&<p className="directory-role">{[item.person_role,item.organization].filter(Boolean).join(' · ')}</p>}
+  {(item.kind==='project'||item.kind==='initiative')&&<ProjectView item={item} related={related} more={more} onMore={()=>setOffset(v=>v+50)}/>}
+  {item.kind==='person'&&<><p className="directory-role meta">{[item.person_role,item.organization].filter(Boolean).join(' · ')}</p><PersonView item={item} related={related} more={more} onMore={()=>setOffset(v=>v+50)}/></>}
   <LabSummary item={item}/>
   {item.kind==='library'&&<Originals client={client} item={item}/>}
   <p><a href={`/?record=${item.id}`}>Permanent link to this record</a></p>
   {linked.length>0&&<section><h2 className="label">Linked context</h2><ul className="link-rows">{linked.map(link=><li key={link.id}><a href={`/?record=${link.id}`}>{link.title}</a> · {link.kind}{link.archived?' (archived)':''}</li>)}</ul></section>}
-  {['project','initiative','person','journal','task','learning','program','use_case','experiment'].includes(item.kind)&&<section><h2 className="label">{item.kind==='journal'?'Resulting tasks':'Related work'}</h2>{!related.length?<p className="muted">No current linked work.</p>:<ul className="link-rows">{related.map(row=><li key={row.id}><a href={`/?record=${row.id}`}>{row.title}</a> · {row.kind} · {row.status}</li>)}</ul>}{more&&<button onClick={()=>setOffset(related.length)}>More related work</button>}</section>}
+  {['journal','task','learning','program','use_case','experiment'].includes(item.kind)&&<section><h2 className="label">{item.kind==='journal'?'Resulting tasks':'Related work'}</h2>{!related.length?<p className="muted">No current linked work.</p>:<ul className="link-rows">{related.map(row=><li key={row.id}><a href={`/?record=${row.id}`}>{row.title}</a> · {row.kind} · {row.status}</li>)}</ul>}{more&&<button onClick={()=>setOffset(related.length)}>More related work</button>}</section>}
   {item.kind==='journal'&&<><button onClick={()=>setCreateTask(true)}>Create resulting task</button><details><summary>Original entry</summary><p className="full-text">{item.original_body}</p></details></>}{['journal','learning','program','use_case','experiment','library'].includes(item.kind)&&<><details><summary>Revision history</summary>{history.map(row=><article key={row.id} className="revision"><h3>Version {row.version} · {displayDate(null,row.created_at)}</h3><p>{row.snapshot.title}</p><p className="full-text">{row.snapshot.body}</p><LabSummary item={row.snapshot}/><p>{row.snapshot.status}</p></article>)}{historyMore&&<button onClick={()=>setHistoryOffset(history.length)}>Earlier revisions</button>}</details></>}
   {editing&&!modal&&<Editor client={client} userId={userId} kind={item.kind} item={item} onClose={()=>setEditing(false)} onSaved={saved}/>}
   {createTask&&<Editor client={client} userId={userId} kind="task" seed={{title:item.title,body:item.body,source_entry_id:item.id,project_id:item.project_id,person_id:item.person_id,initiative_id:item.initiative_id}} onClose={()=>setCreateTask(false)} onSaved={saved}/>}

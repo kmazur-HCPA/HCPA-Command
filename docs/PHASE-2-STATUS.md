@@ -11,7 +11,7 @@
 - Update behavior revised at Kevin’s request: no update popup. A normal refresh loads current app code from the network; the offline worker activates naturally after older tabs close. No automatic reload while working.
 - User-scoped draft-storage utility, tested for reload recovery, isolation, failed storage and acknowledgement races. This is infrastructure for later editors, not an offline capture feature. Future editors must authorize before reading drafts, surface storage errors, preserve unsaved edits, and guard logout/update until the user saves, exports or deliberately discards them.
 
-Only functional Workspace and Settings destinations appear. Work Day, Tasks, Capture and Cora are deliberately not interactive yet. The phone layout is ready for Capture when its workflow is implemented in the later phase; no empty Capture destination is presented.
+Only functional Workspace and Settings destinations appear. Work Day, Tasks, Capture and CMD are deliberately not interactive yet. The phone layout is ready for Capture when its workflow is implemented in the later phase; no empty Capture destination is presented.
 
 ## Verification
 

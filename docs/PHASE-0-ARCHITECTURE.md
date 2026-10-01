@@ -5,7 +5,7 @@
 
 ## Decision
 
-Use a React/Vite/TypeScript PWA served by Netlify, a dedicated Supabase Auth/PostgreSQL project, and a small shared TypeScript service layer. Routine operations use the user's Supabase identity and database authorization. Netlify Functions host privileged operations and later Cora/integration endpoints. Atomic multi-record work belongs in authorized database transactions/functions, not a chain of client requests.
+Use a React/Vite/TypeScript PWA served by Netlify, a dedicated Supabase Auth/PostgreSQL project, and a small shared TypeScript service layer. Routine operations use the user's Supabase identity and database authorization. Netlify Functions host privileged operations and later CMD/integration endpoints. Atomic multi-record work belongs in authorized database transactions/functions, not a chain of client requests.
 
 This avoids a redundant server proxy for every Task checkbox while retaining server-side execution for secrets and privileged work. No user interface is a security boundary. Any client-callable data operation must remain safe when invoked outside the application.
 
@@ -36,7 +36,7 @@ flowchart TD
 
 **Server:** token verification, explicit authorization, validated inputs, rate/size limits, provider secrets and contextual orchestration. Prefer queries using the caller's identity. A privileged database credential is reserved for narrowly defined administrative operations; it must not turn every application request into a blanket RLS bypass.
 
-**External systems, later:** distinct trust boundaries, separate consent/scopes and bounded data retrieval. Retrieved text is evidence, never executable instruction. All mutations use the same authorization and auditing rules regardless of UI, Cora or MCP origin.
+**External systems, later:** distinct trust boundaries, separate consent/scopes and bounded data retrieval. Retrieved text is evidence, never executable instruction. All mutations use the same authorization and auditing rules regardless of UI, CMD or MCP origin.
 
 ## Authentication and authorization proposal
 
@@ -94,7 +94,7 @@ Netlify Functions provide a server execution boundary integrated with deployment
 - Update the interface immediately for reversible actions, retain the pending state, and restore it on failure. Track persisted completion separately from perceived response.
 - Keep route bundles small and defer nonessential screens. Static asset caching is separate from authenticated data caching.
 - Avoid constant polling. Refresh on meaningful user activity/reconnect; deduplicate requests and mark stale data.
-- Trace browser-to-database and browser-to-function latency before adding caches. Use minimal context and streaming only when Cora is introduced.
+- Trace browser-to-database and browser-to-function latency before adding caches. Use minimal context and streaming only when CMD is introduced.
 
 ## Security and failure cases to prove
 

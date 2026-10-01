@@ -6,7 +6,7 @@ Use **People → Import CSV** to download the template, select a UTF-8 file, and
 
 The server validates the complete batch, uses existing owner-scoped permissions and audit triggers, and commits atomically. Stable record IDs make a retry safe if the acknowledgement is lost. Existing matches are never overwritten. No uploaded CSV is stored separately.
 
-Cora can create contacts with the new detail fields using its existing create_record tool. Existing-record edits retain the established review workflow.
+CMD can create contacts with the new detail fields using its existing create_record tool. Existing-record edits retain the established review workflow.
 
 Validation: 150 unit/database tests and 35 browser tests passed, including isolation, atomic rollback, duplicate matching, lost acknowledgement retry, mobile overflow, and automated accessibility checks.
 

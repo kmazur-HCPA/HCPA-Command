@@ -25,7 +25,7 @@ export function protectedResource(origin: string) {
       resource: `${origin}/api/mcp`,
       authorization_servers: [origin],
       bearer_methods_supported: ["header"],
-      resource_name: "Command Cora",
+      resource_name: "Command CMD",
     },
     {
       headers: {

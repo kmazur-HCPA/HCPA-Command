@@ -54,7 +54,7 @@ describe("Directory imports", () => {
       "Matches an archived contact",
     ]);
   });
-  it("validates Cora contact fields and restricts phone links to dialable characters", () => {
+  it("validates CMD contact fields and restricts phone links to dialable characters", () => {
     expect(
       validateFields("person", {
         details: { email: "a@example.org", phone: "+1 (813) 555-0100 ext 22" },

@@ -36,9 +36,9 @@ export type Database = {
         Relationships: []
       }
       user_preferences: {
-        Row: { user_id: string; theme: 'system' | 'dark' | 'light'; timezone: string; version: number; updated_at: string }
-        Insert: { user_id: string; theme?: 'system' | 'dark' | 'light'; timezone?: string }
-        Update: { theme?: 'system' | 'dark' | 'light'; timezone?: string }
+        Row: { user_id: string; theme: 'system' | 'dark' | 'light' | 'auto' | 'day' | 'evening'; timezone: string; version: number; updated_at: string }
+        Insert: { user_id: string; theme?: 'system' | 'dark' | 'light' | 'auto' | 'day' | 'evening'; timezone?: string }
+        Update: { theme?: 'system' | 'dark' | 'light' | 'auto' | 'day' | 'evening'; timezone?: string }
         Relationships: []
       }
       activity_log: {

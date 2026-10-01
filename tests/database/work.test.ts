@@ -54,7 +54,7 @@ describe('Work record integrity and authorization', () => {
     expect((await call([{...contact,id:crypto.randomUUID()}])).rows[0]!.r).toMatchObject({created:1,skipped:0});
   });
 
-  it('creates every authorized Cora kind once and rejects cross-owner links, edits and browser calls',async()=>{
+  it('creates every authorized CMD kind once and rejects cross-owner links, edits and browser calls',async()=>{
     const make=(user:string,kind:string,request:string,fields:Record<string,unknown>)=>directRecordInput(user,{kind,request_id:request,fields_json:JSON.stringify(fields)});
     let taskId='';
     for(const kind of directKinds){
@@ -286,7 +286,7 @@ describe('Work record integrity and authorization', () => {
     await expect(db.query('select public.export_workspace()')).rejects.toThrow(/unavailable/)
   })
 
-  it('reserves Cora requests once and restricts writes to the server role',async()=>{
+  it('reserves CMD requests once and restricts writes to the server role',async()=>{
     const request='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',conversation='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
     await db.exec('set local role service_role')
     const args=[owner,conversation,request,'What needs attention?',JSON.stringify({page:'workspace',recordId:null})]
@@ -299,7 +299,7 @@ describe('Work record integrity and authorization', () => {
     expect(exported.counts.cora_turns).toBe(1)
     await expect(db.query('select public.cora_begin($1,$2,$3,$4,$5::jsonb)',args)).rejects.toThrow(/permission denied/)
   })
-  it('isolates Cora history and prevents browser-forged assistant receipts',async()=>{
+  it('isolates CMD history and prevents browser-forged assistant receipts',async()=>{
     await db.exec('set local role service_role')
     await db.query("select public.cora_begin($1,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Private conversation','{}')",[owner])
     await db.exec('reset role');await authenticate(other)
@@ -307,7 +307,7 @@ describe('Work record integrity and authorization', () => {
     expect((await db.query('select * from public.cora_turns')).rows).toHaveLength(0)
     await expect(db.query("update public.cora_turns set response='Task created'" )).rejects.toThrow(/permission denied/)
   })
-  it('serializes separate Cora requests and hides history on revocation',async()=>{
+  it('serializes separate CMD requests and hides history on revocation',async()=>{
     await db.exec('set local role service_role')
     await db.query("select public.cora_begin($1,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Private conversation','{}')",[owner])
     await db.exec('savepoint next_request')

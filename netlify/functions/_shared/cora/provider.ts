@@ -11,7 +11,7 @@ export type ProviderConfig = {
 const efforts: Effort[] = ["low", "medium", "high", "xhigh", "max"];
 
 export function createProvider(config: ProviderConfig, timeout = 40000) {
-  // Retries are disabled: every Cora request already has a hard deadline and
+  // Retries are disabled: every CMD request already has a hard deadline and
   // a retry could repeat a tool round the user already saw stream.
   return new Anthropic({
     apiKey: config.apiKey,

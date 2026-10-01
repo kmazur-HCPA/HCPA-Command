@@ -18,7 +18,7 @@ export default async (request: Request, context: Context) => {
     return Response.json(
       {
         message:
-          "Cora in Command is not turned on. Ask Cora in Claude instead; your Command workspace is available.",
+          "CMD in Command is not turned on. Ask CMD in Claude instead; your Command workspace is available.",
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );

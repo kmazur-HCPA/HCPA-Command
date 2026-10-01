@@ -1,4 +1,4 @@
-# Cora on Claude
+# CMD on Claude
 
 Kevin's assistant now lives in Claude, where it is called **CMD**. It works on the web, in Claude Desktop and in Claude Code, and replaces the private ChatGPT agent and its schedules. It uses Kevin's existing HCPA Claude subscription: no Anthropic API account, no API key and no new vendor account. Command stays the source of truth, and its boundaries are unchanged: owner-only data, row-level security, reviewed edits and read-only Microsoft 365.
 
@@ -23,7 +23,7 @@ The Microsoft 365 connector already in Kevin's Claude can also be used for Outlo
 6. The token endpoint returns `invalid_grant` only when a grant is definitely invalid (revoked, expired, wrong code). Database trouble returns `503 temporarily_unavailable`, which clients retry instead of asking Kevin to reconnect.
 7. Tool calls share the existing quota: 30 per minute and 1,000 per day per owner. They are audited in `cora_mcp_activity`, with the grant ID as `connection_id`, and are included in workspace exports.
 
-Revoke any connected app in **Command → Settings → Cora in connected apps**, which also shows when each was last used. Revoking membership stops everything. The personal token still works for scripted Claude Code use and is optional.
+Revoke any connected app in **Command → Settings → CMD in connected apps**, which also shows when each was last used. Revoking membership stops everything. The personal token still works for scripted Claude Code use and is optional.
 
 ## Setup (in order)
 
@@ -35,7 +35,7 @@ Steps marked **Kevin** change production settings or accounts. Nothing in this c
 4. **Kevin, Claude:** upload the skill. Remove any older "cora" skill first. Zip the folder (`cd .claude/skills && zip -r ~/Desktop/cmd.zip cmd`) and add it under Claude's Skills settings. Claude Code already picks it up inside this repository.
 5. **Test in Claude:** "CMD, what needs my attention today?", "Remind me tomorrow to follow up on the website" (check Reminders in Command), and "Give me my Command Brief."
 6. **Create a Claude Project** (for example "Command") with the Command and Microsoft 365 connectors enabled and the CMD skill on. Optionally add a one-line project instruction: "You are CMD; use the cmd skill."
-7. **Retire ChatGPT:** delete the five ChatGPT automations and the private Command Cora app/agent, then revoke the old ChatGPT token in Command Settings (Personal token → Revoke).
+7. **Retire ChatGPT:** delete the five ChatGPT automations and the private Command CMD app/agent, then revoke the old ChatGPT token in Command Settings (Personal token → Revoke).
 
 ## Inside Command
 
@@ -43,7 +43,7 @@ Command is the data side: records, Work Day, the Outlook calendar panel and Sett
 - **Work Day:** four count cards in one row, then Tasks, with Calendar, Reminders and Waiting On alongside. The Command Brief card was removed; briefs are requested from CMD in Claude and answered in the chat.
 - **Calendar panel:** shows today through Friday. On weekends it shows the coming work week. It previously started on Monday, so earlier days could use up the 75-entry limit before today's events loaded.
 - **Automatic reminders** in Settings is the standing consent for CMD to save the reminders you ask for without a confirmation card. Pausing it blocks those saves from every connected app.
-- **Cora panel inside Command:** it needs model access for Command's own server, which is not configured, and now says to use CMD in Claude. The Claude API engine remains in the code, dormant without `ANTHROPIC_API_KEY`. Scheduled briefs were removed.
+- **CMD panel inside Command:** it needs model access for Command's own server, which is not configured, and now says to use CMD in Claude. The Claude API engine remains in the code, dormant without `ANTHROPIC_API_KEY`. Scheduled briefs were removed.
 
 ## Boundaries that did not change
 

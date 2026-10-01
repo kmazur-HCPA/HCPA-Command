@@ -23,6 +23,7 @@ describe('PostgreSQL foundation authorization', () => {
       grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
     `)
     await db.exec(await readFile('supabase/migrations/20260921115103_foundation.sql', 'utf8'))
+    await db.exec(await readFile('supabase/migrations/20261001210000_theme_modes.sql', 'utf8'))
     await db.query('insert into auth.users(id) values ($1),($2),($3)', [owner, other, unapproved])
     await db.query('insert into public.app_memberships(user_id) values ($1),($2)', [owner, other])
   })
@@ -86,6 +87,10 @@ describe('PostgreSQL foundation authorization', () => {
     await authenticate(owner)
     expect((await db.query('select * from public.user_preferences')).rows).toHaveLength(0)
     expect((await db.query("update public.user_preferences set theme='light' where user_id=$1 returning user_id",[owner])).rows).toHaveLength(0)
+  })
+  it('accepts the Auto, Day and Evening appearance modes', async () => {
+    await authenticate(owner)
+    for (const mode of ['auto', 'day', 'evening']) await db.query('update public.user_preferences set theme=$1 where user_id=$2', [mode, owner])
   })
   it('rejects invalid preference values', async () => {
     await authenticate(owner)

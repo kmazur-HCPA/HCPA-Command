@@ -78,7 +78,7 @@ export function reminderArgs(args: Record<string, unknown>) {
     fields,
     hash,
     body:
-      args.body + (url ? "\n\nSource: " + url : "") + "\n\nCreated by Cora.",
+      args.body + (url ? "\n\nSource: " + url : "") + "\n\nCreated by CMD.",
   };
 }
 export async function automaticTool(

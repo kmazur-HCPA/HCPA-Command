@@ -1,3 +1,5 @@
+> **Superseded October 2026.** The current look is the Stone design system; see [STONE-DESIGN.md](STONE-DESIGN.md). This file records the earlier design.
+
 # Command visual redesign
 
 Canonical production URL: https://cmd.hillspafl.gov.

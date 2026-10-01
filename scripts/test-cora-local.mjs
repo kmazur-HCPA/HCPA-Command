@@ -20,7 +20,7 @@ export async function testCora({
           tool: {
             name: "prepare_task",
             input: {
-              title: "Cora synthetic follow-up",
+              title: "CMD synthetic follow-up",
               due_date: "2026-09-22",
               priority: "Normal",
               project_id: null,

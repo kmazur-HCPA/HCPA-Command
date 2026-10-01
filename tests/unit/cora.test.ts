@@ -14,7 +14,7 @@ const config = {
   secret: "sb_secret_test",
   apiKey: "test",
 };
-describe("Cora request and action boundaries", () => {
+describe("CMD request and action boundaries", () => {
   it("rejects anonymous calls and unsupported methods before provider access", async () => {
     expect(
       (

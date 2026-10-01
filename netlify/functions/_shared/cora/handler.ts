@@ -68,7 +68,7 @@ export async function handleCora(
     return respond(405, "Method not allowed.");
   const auth = request.headers.get("authorization") ?? "";
   if (auth.length > 8192 || !/^Bearer [^\s]+$/i.test(auth))
-    return respond(401, "Sign in to use Cora.");
+    return respond(401, "Sign in to use CMD.");
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(45000)]);
   const options = {
     auth: {
@@ -101,7 +101,7 @@ export async function handleCora(
     const identityResult = await client.auth.getUser(auth.slice(7));
     const user = identityResult.data.user;
     if (identityResult.error || !user || user.is_anonymous)
-      return respond(401, "Sign in to use Cora.");
+      return respond(401, "Sign in to use CMD.");
     const membership = await client
       .from("app_memberships")
       .select("active")
@@ -197,7 +197,7 @@ export async function handleCora(
         });
         if (audit.error)
           throw new Error(
-            "Change may be saved, but its Cora receipt could not be recorded. Retry this same card to reconcile.",
+            "Change may be saved, but its CMD receipt could not be recorded. Retry this same card to reconcile.",
           );
         const updated = await store
           .from("cora_turns")
@@ -239,7 +239,7 @@ export async function handleCora(
           !["message", "requestId", "conversationId", "context"].includes(k),
       )
     )
-      return respond(400, "Invalid Cora request.");
+      return respond(400, "Invalid CMD request.");
     const context = (body.context ?? {}) as CoraContext;
     const pages = [
       "workspace",
@@ -279,13 +279,13 @@ export async function handleCora(
       return respond(
         reserved.error.code === "P0001" ? 429 : 409,
         reserved.error.code === "P0001"
-          ? "Cora is busy or the request limit was reached. Wait a minute and retry."
+          ? "CMD is busy or the request limit was reached. Wait a minute and retry."
           : "This request could not be started. Reload the conversation.",
       );
     if (!reserved.data.started && reserved.data.turn.status === "running")
       return respond(
         409,
-        "Cora is still working on this request. Reload conversation history in a moment.",
+        "CMD is still working on this request. Reload conversation history in a moment.",
       );
     const turn = reserved.data.turn,
       encoder = new TextEncoder();
@@ -334,7 +334,7 @@ export async function handleCora(
             .update({
               status: "error",
               response:
-                "Cora could not finish this response. Check Command for any saved reminders before retrying.",
+                "CMD could not finish this response. Check Command for any saved reminders before retrying.",
               finished_at: new Date().toISOString(),
             })
             .eq("id", turn.id)
@@ -344,7 +344,7 @@ export async function handleCora(
             type: "error",
             message: signal.aborted
               ? "Stopped. Check Command for any saved reminders before retrying."
-              : "Cora could not finish. Your message is saved; please try again. Check Command for any saved reminders before retrying.",
+              : "CMD could not finish. Your message is saved; please try again. Check Command for any saved reminders before retrying.",
           });
         } finally {
           console.info(
@@ -367,7 +367,7 @@ export async function handleCora(
   } catch {
     return respond(
       503,
-      "Cora is temporarily unavailable. Your regular Command tools are still available.",
+      "CMD is temporarily unavailable. Your regular Command tools are still available.",
     );
   }
 }

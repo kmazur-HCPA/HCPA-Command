@@ -13,12 +13,11 @@ export const themeModes: { mode: ThemeMode; label: string }[] = [
   { mode: "evening", label: "Evening" },
 ];
 
-// The saved preference keeps its existing three values so the database is unchanged.
-export const toStoredTheme = (mode: ThemeMode): Theme =>
-  mode === "day" ? "light" : mode === "evening" ? "dark" : "system";
-// "dark" was the old default for every account, so it cannot be read as a deliberate Evening
-// choice on a device with no local setting. Only an explicit Day or Auto carries across devices.
-export const fromStoredTheme = (theme: Theme): ThemeMode => (theme === "light" ? "day" : "auto");
+// The saved preference stores the mode directly. Accounts saved before the Stone redesign hold
+// system / dark / light: Day carries over; system and dark (the old default) mean Auto.
+export const toStoredTheme = (mode: ThemeMode): Theme => mode;
+export const fromStoredTheme = (theme: Theme): ThemeMode =>
+  theme === "day" || theme === "light" ? "day" : theme === "evening" ? "evening" : "auto";
 
 export const currentMode = (): ThemeMode => switcher()?.getMode() ?? "auto";
 export const hasLocalMode = () => {

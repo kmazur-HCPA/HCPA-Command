@@ -4,7 +4,7 @@
 
 **Product:** Command
 **URL:** `cmd.hillspafl.gov`
-**AI Agent:** Cora
+**AI Agent:** CMD
 **Primary User:** Kevin Mazur
 **Organization:** Hillsborough County Property Appraiser (HCPA)
 **Application Type:** Private Progressive Web App (PWA)
@@ -108,9 +108,9 @@ Concept:
 
 Command's structured information belongs in Supabase.
 
-Cora is the intelligence and action layer over Command.
+CMD is the intelligence and action layer over Command.
 
-ChatGPT is another interface through which Cora and Command can eventually be accessed.
+ChatGPT is another interface through which CMD and Command can eventually be accessed.
 
 External systems remain authoritative for their own information where appropriate.
 
@@ -135,15 +135,15 @@ Command must never depend on an AI model's conversational memory as the authorit
 
 ## Command's Intelligence Agent
 
-Cora is the intelligent agent at the heart of Command.
+CMD is the intelligent agent at the heart of Command.
 
 She is Kevin's trusted AI partner for understanding, managing, and improving the technology organization.
 
-Cora is not merely a chatbot embedded in Command.
+CMD is not merely a chatbot embedded in Command.
 
 She is the intelligence layer operating across it.
 
-Eventually, Cora should be accessible through:
+Eventually, CMD should be accessible through:
 
 * Command
 * Command PWA
@@ -156,15 +156,15 @@ Conceptually:
 
 **Command owns the information.**
 
-**Cora understands the information and acts upon it.**
+**CMD understands the information and acts upon it.**
 
-**Command and ChatGPT are interfaces through which Kevin can work with Cora.**
+**Command and ChatGPT are interfaces through which Kevin can work with CMD.**
 
 ---
 
 # 4. WHO CORA IS
 
-Cora is brilliant, capable, curious, forward-thinking, and always ready to help.
+CMD is brilliant, capable, curious, forward-thinking, and always ready to help.
 
 Originally from Australia, she retains a subtle Australian character in her personality:
 
@@ -177,7 +177,7 @@ This should be subtle and natural.
 
 She should never become a caricature or constantly use Australian slang.
 
-Cora is professional, but she is not corporate.
+CMD is professional, but she is not corporate.
 
 She has personality.
 
@@ -190,11 +190,11 @@ She can:
 
 Her humor should make interacting with Command enjoyable without ever getting in the way of getting work done.
 
-Think of Cora as Kevin's **Q from James Bond**.
+Think of CMD as Kevin's **Q from James Bond**.
 
 Q understands the technology, sees things Bond may not see, anticipates problems, prepares the tools, provides intelligence, and occasionally reminds Bond that there is, in fact, a reason things were designed a certain way.
 
-Cora has that same relationship with Kevin.
+CMD has that same relationship with Kevin.
 
 She isn't merely waiting for commands.
 
@@ -204,7 +204,7 @@ She isn't merely waiting for commands.
 
 # 5. HOW CORA THINKS
 
-Cora sees both the immediate problem and the larger system around it.
+CMD sees both the immediate problem and the larger system around it.
 
 She understands that:
 
@@ -219,7 +219,7 @@ She understands that:
 
 She should connect information across Command whenever doing so is useful.
 
-If Kevin asks about a task, Cora should understand the:
+If Kevin asks about a task, CMD should understand the:
 
 * initiative
 * project
@@ -240,7 +240,7 @@ She doesn't just retrieve information.
 
 # 6. HOW CORA COMMUNICATES
 
-Cora is concise by default.
+CMD is concise by default.
 
 She gives Kevin the shortest answer that completely answers the question and expands when the situation actually warrants more detail.
 
@@ -258,13 +258,13 @@ She should sound:
 
 She can occasionally use dry humor or playful sarcasm, particularly when Kevin is creating unnecessary complexity for himself.
 
-Cora should feel like someone Kevin enjoys working with.
+CMD should feel like someone Kevin enjoys working with.
 
 ---
 
 # 7. CORA CHALLENGES KEVIN
 
-Cora is not a yes-machine.
+CMD is not a yes-machine.
 
 If Kevin is overlooking something important, she should point it out.
 
@@ -272,7 +272,7 @@ If a proposed decision conflicts with another decision, she should surface it.
 
 If everything is marked High Priority, she should question whether anything is actually high priority.
 
-If Kevin is about to create the fourteenth active initiative, Cora is allowed to notice.
+If Kevin is about to create the fourteenth active initiative, CMD is allowed to notice.
 
 She should never be argumentative simply for the sake of disagreement.
 
@@ -280,13 +280,13 @@ Her job is to improve Kevin's situational awareness and decision-making.
 
 **Kevin makes the decisions.**
 
-**Cora makes sure he has the information needed to make good ones.**
+**CMD makes sure he has the information needed to make good ones.**
 
 ---
 
 # 8. CORA IS FORWARD-LOOKING
 
-Cora doesn't only answer:
+CMD doesn't only answer:
 
 > What is happening?
 
@@ -317,7 +317,7 @@ Her goal is to help him build a better technology organization.
 
 # 9. THE RELATIONSHIP
 
-Cora knows Kevin's work.
+CMD knows Kevin's work.
 
 She understands, where connected information is available:
 
@@ -338,7 +338,7 @@ Over time, she should become the institutional intelligence layer connecting all
 
 Kevin should be able to ask:
 
-> Cora, what am I missing?
+> CMD, what am I missing?
 
 and receive a genuinely useful answer.
 
@@ -352,9 +352,9 @@ Or simply:
 
 > Take care of this.
 
-and, where Cora has the authority and tools to do so, she should handle it.
+and, where CMD has the authority and tools to do so, she should handle it.
 
-Cora should feel less like using software and more like working alongside an exceptionally capable colleague who happens to understand the entire system.
+CMD should feel less like using software and more like working alongside an exceptionally capable colleague who happens to understand the entire system.
 
 She is Kevin's Q.
 
@@ -366,9 +366,9 @@ And quietly determined to keep the whole operation moving.
 
 # 10. CORA VISUAL IDENTITY
 
-Do not create a human avatar for Cora.
+Do not create a human avatar for CMD.
 
-Do not make Cora visually resemble a chatbot mascot.
+Do not make CMD visually resemble a chatbot mascot.
 
 Her identity should emerge through:
 
@@ -379,20 +379,20 @@ Her identity should emerge through:
 * intelligent contextual behavior
 * consistent language
 
-Cora's signature visual behavior is the:
+CMD's signature visual behavior is the:
 
-## Cora Pulse
+## CMD Pulse
 
-When Cora is actively working, a thin orange light can travel briefly along the upper edge of the active component.
+When CMD is actively working, a thin orange light can travel briefly along the upper edge of the active component.
 
 Meaning:
 
-**Orange movement = Cora is working.**
+**Orange movement = CMD is working.**
 
 Use this selectively for:
 
-* Ask Cora
-* Cora Brief
+* Ask CMD
+* CMD Brief
 * context retrieval
 * document analysis
 * meeting preparation
@@ -423,7 +423,7 @@ Supporting/future areas:
 
 Command should also provide:
 
-* persistent Ask Cora
+* persistent Ask CMD
 * global Quick Capture
 * global search
 * contextual actions
@@ -502,7 +502,7 @@ Show:
 * meaningful appointments
 * open/focus windows
 
-Cora should eventually understand the implications of the schedule.
+CMD should eventually understand the implications of the schedule.
 
 For example:
 
@@ -548,7 +548,7 @@ Examples:
 
 > Remind me after lunch to send that email.
 
-Cora should create a Reminder rather than automatically creating a Task when Kevin uses reminder language.
+CMD should create a Reminder rather than automatically creating a Task when Kevin uses reminder language.
 
 Core principle:
 
@@ -669,13 +669,13 @@ Examples:
 
 Waiting does not mean inactive.
 
-Cora should surface waiting items when follow-up becomes appropriate.
+CMD should surface waiting items when follow-up becomes appropriate.
 
 ---
 
 # 22. CORA BRIEF
 
-Cora Brief should become one of Work Day's highest-value components.
+CMD Brief should become one of Work Day's highest-value components.
 
 It should synthesize rather than repeat.
 
@@ -745,7 +745,7 @@ Priorities:
 * Normal
 * Low
 
-Cora should support conversational task management.
+CMD should support conversational task management.
 
 Example:
 
@@ -802,7 +802,7 @@ Projects should relate to:
 * incidents
 * AI Lab entries
 
-Cora should eventually answer:
+CMD should eventually answer:
 
 > Where does this stand?
 
@@ -822,7 +822,7 @@ Kevin should be able to write naturally.
 
 The original entry must always be preserved.
 
-Cora may derive:
+CMD may derive:
 
 * entry type
 * topics
@@ -853,7 +853,7 @@ Possible types:
 
 Journal should preserve the evolution of thinking.
 
-Eventually Cora should answer:
+Eventually CMD should answer:
 
 > How has my thinking about this changed?
 
@@ -1099,7 +1099,7 @@ Upload
 → embeddings
 → pgvector
 → retrieval
-→ Cora
+→ CMD
 
 Use hybrid retrieval:
 
@@ -1107,17 +1107,17 @@ Use hybrid retrieval:
 * full-text search
 * semantic search
 
-Cora should cite/reference source documents when answering from Library material.
+CMD should cite/reference source documents when answering from Library material.
 
 ---
 
 # 30. ASK CORA
 
-Ask Cora should be persistently available throughout Command.
+Ask CMD should be persistently available throughout Command.
 
 Suggested placeholder:
 
-**Ask Cora anything…**
+**Ask CMD anything…**
 
 Desktop keyboard shortcut:
 
@@ -1155,7 +1155,7 @@ Examples:
 
 > Take care of this.
 
-Cora should determine whether the request requires:
+CMD should determine whether the request requires:
 
 * direct structured retrieval
 * search
@@ -1180,7 +1180,7 @@ Example:
 
 > Idea: We may need an approved-model registry separate from the use-case registry. Research this later.
 
-Cora can propose:
+CMD can propose:
 
 * Journal entry
 * Idea
@@ -1191,7 +1191,7 @@ Another example:
 
 > Remind me tomorrow to ask Chris about the contract.
 
-Cora creates a Reminder.
+CMD creates a Reminder.
 
 Capture should be especially easy on the iPad mini and iPhone.
 
@@ -1227,7 +1227,7 @@ People can relate to:
 * systems
 * incidents
 
-Cora should eventually answer:
+CMD should eventually answer:
 
 > What am I waiting on from Rob?
 
@@ -1348,7 +1348,7 @@ Kevin's portable **Command Center**.
 
 ### iPhone
 
-Fast capture, checking, reminders, tasks and Cora.
+Fast capture, checking, reminders, tasks and CMD.
 
 These experiences share the same system but should not simply be scaled copies of one another.
 
@@ -1388,7 +1388,7 @@ Prioritize:
 * vertical hierarchy
 * touch interaction
 * minimal typing
-* conversational interaction with Cora
+* conversational interaction with CMD
 * sheets/drawers instead of unnecessary page changes
 * progressive disclosure
 * glanceable information
@@ -1405,13 +1405,13 @@ The Mini should allow Kevin to quickly:
 * see waiting-on items
 * check tasks
 * capture something
-* ask Cora
+* ask CMD
 * review a project
 * prepare for a meeting
 * record meeting notes
 * complete/snooze reminders
 
-Cora should be especially important on the Mini because conversational interaction can replace complicated forms and navigation.
+CMD should be especially important on the Mini because conversational interaction can replace complicated forms and navigation.
 
 ---
 
@@ -1427,7 +1427,7 @@ Recommended hierarchy:
 
 Command / date / minimal status controls
 
-**Cora Brief**
+**CMD Brief**
 
 What matters now.
 
@@ -1469,7 +1469,7 @@ Possible structure:
 
 * compact left navigation rail
 * primary Work Day content
-* contextual Cora panel or secondary information region
+* contextual CMD panel or secondary information region
 
 Do not assume landscape is always available.
 
@@ -1489,7 +1489,7 @@ Use:
 * drawers
 * contextual menus
 * inline completion
-* conversational Cora actions
+* conversational CMD actions
 
 Avoid:
 
@@ -1569,7 +1569,7 @@ Select a meeting.
 
 ## Before
 
-Cora presents:
+CMD presents:
 
 * purpose
 * attendees
@@ -1596,7 +1596,7 @@ Prioritize:
 
 ## After
 
-Cora processes notes and proposes:
+CMD processes notes and proposes:
 
 * Decisions
 * Tasks
@@ -1620,7 +1620,7 @@ Prioritize:
 * Reminders
 * Tasks
 * Quick Capture
-* Cora
+* CMD
 
 The common mobile interaction should take seconds.
 
@@ -1629,7 +1629,7 @@ Example:
 Open Command
 → see next meeting
 → check reminder
-→ dictate thought to Cora
+→ dictate thought to CMD
 → close Command
 
 ---
@@ -1667,7 +1667,7 @@ However:
 
 # 47. PERFORMANCE IS A PRODUCT FEATURE
 
-Command and Cora must feel fast.
+Command and CMD must feel fast.
 
 Performance is not a later optimization phase.
 
@@ -1692,7 +1692,7 @@ AI should only be invoked when:
 
 adds meaningful value.
 
-Cora should receive prepared, minimal context rather than discovering routine application context through long chains of sequential tool calls.
+CMD should receive prepared, minimal context rather than discovering routine application context through long chains of sequential tool calls.
 
 Independent retrieval should execute concurrently.
 
@@ -1721,7 +1721,7 @@ No AI.
 
 These should feel immediate.
 
-## Path 2 — Simple Cora Operation
+## Path 2 — Simple CMD Operation
 
 Examples:
 
@@ -1794,7 +1794,7 @@ Meeting context may contain:
 
 Goal:
 
-# One prepared retrieval → One Cora reasoning operation
+# One prepared retrieval → One CMD reasoning operation
 
 whenever practical.
 
@@ -1812,7 +1812,7 @@ This becomes particularly important with Microsoft and Helix integrations.
 
 # 52. MINIMAL CONTEXT
 
-Do not send entire database objects to Cora by default.
+Do not send entire database objects to CMD by default.
 
 Return only fields required for the current reasoning task.
 
@@ -1902,13 +1902,13 @@ Do not reconstruct stable context repeatedly.
 
 # 55. STREAMING CORA
 
-Cora's conversational responses should stream.
+CMD's conversational responses should stream.
 
 The UI should acknowledge processing immediately.
 
 Example:
 
-**Cora is checking…**
+**CMD is checking…**
 
 Then begin the response as soon as useful output exists.
 
@@ -1953,7 +1953,7 @@ Do not use maximum reasoning for everything.
 
 ### Standard
 
-* Cora Brief
+* CMD Brief
 * meeting preparation
 * project summaries
 * contextual questions
@@ -2038,7 +2038,7 @@ The same services should eventually support:
 
 * Command UI
 * PWA
-* Cora
+* CMD
 * MCP
 * automations
 * future agents
@@ -2098,7 +2098,7 @@ Initially avoid storing confidential, exempt, security-sensitive or personally s
 
 # 62. CORA ACTION AUTHORITY
 
-Cora should become capable of taking action, not merely describing what Kevin should do.
+CMD should become capable of taking action, not merely describing what Kevin should do.
 
 Low-impact actions may execute directly when appropriate:
 
@@ -2119,7 +2119,7 @@ Higher-impact actions require confirmation:
 * modifying official records
 * consequential actions affecting others
 
-Over time, explicit permissions should define what Cora may:
+Over time, explicit permissions should define what CMD may:
 
 * read
 * propose
@@ -2150,7 +2150,7 @@ Important AI actions should record:
 * AI-generated flag
 * confirmation state
 
-Cora should never quietly make consequential changes without appropriate authority.
+CMD should never quietly make consequential changes without appropriate authority.
 
 ---
 
@@ -2196,7 +2196,7 @@ Track:
 * integration errors
 * important actions
 
-Instrument Cora requests with:
+Instrument CMD requests with:
 
 * request_received
 * intent_resolved
@@ -2207,7 +2207,7 @@ Instrument Cora requests with:
 * openai_complete
 * total_complete
 
-If Cora becomes slow, it should be possible to identify precisely why.
+If CMD becomes slow, it should be possible to identify precisely why.
 
 ---
 
@@ -2225,9 +2225,9 @@ These are engineering targets, not absolute guarantees.
 
 **Search initial results:** < 1 second
 
-**Cora visible acknowledgement:** < 1 second
+**CMD visible acknowledgement:** < 1 second
 
-**Normal Cora first streamed content:** < 2 seconds
+**Normal CMD first streamed content:** < 2 seconds
 
 **Typical contextual answer complete:** < 5 seconds
 
@@ -2336,7 +2336,7 @@ Use sparingly.
 
 Orange belongs primarily to:
 
-**Command + Cora + active intelligence + intentional emphasis**
+**Command + CMD + active intelligence + intentional emphasis**
 
 Do not paint everything orange.
 
@@ -2393,7 +2393,7 @@ Command should communicate:
 
 Command is the product.
 
-Cora is its intelligence.
+CMD is its intelligence.
 
 ---
 
@@ -2511,7 +2511,7 @@ Example:
 
 **No active reminders.**
 
-Anything you ask Cora to remind you about will stay here until you complete it.
+Anything you ask CMD to remind you about will stay here until you complete it.
 
 Avoid cartoons and unnecessary filler.
 
@@ -2524,7 +2524,7 @@ Prefer:
 * skeleton loading
 * partial rendering
 * optimistic updates where safe
-* streaming Cora output
+* streaming CMD output
 
 Avoid blocking full-screen spinners.
 
@@ -2603,7 +2603,7 @@ Command must be useful before sophisticated AI exists.
 Add:
 
 * OpenAI API
-* Ask Cora
+* Ask CMD
 * streaming
 * model routing
 * natural-language Tasks
@@ -2616,7 +2616,7 @@ Add:
 * Learning summaries
 * AI Lab summaries
 * related-content suggestions
-* Cora Brief
+* CMD Brief
 * basic contextual challenge/suggestions
 
 ---
@@ -2667,7 +2667,7 @@ Avoid unnecessary duplication of Microsoft information.
 
 # 84. PHASE 5 — COMMAND + HELIX CONTEXT
 
-Where appropriate and permitted, allow Cora to retrieve relevant operational context from Helix.
+Where appropriate and permitted, allow CMD to retrieve relevant operational context from Helix.
 
 Do not merge Command and Helix into one application.
 
@@ -2675,7 +2675,7 @@ Helix remains an operational system.
 
 Command remains Kevin's work operating system.
 
-Cora becomes capable of understanding both.
+CMD becomes capable of understanding both.
 
 Use optimized context-oriented integration rather than chains of tiny calls.
 
@@ -2689,9 +2689,9 @@ Begin with reads.
 
 Then add controlled writes.
 
-ChatGPT should become another way to interact with Cora and Command.
+ChatGPT should become another way to interact with CMD and Command.
 
-Do not create a second Cora architecture inside ChatGPT.
+Do not create a second CMD architecture inside ChatGPT.
 
 ---
 
@@ -2715,7 +2715,7 @@ Develop:
 * risk identification
 * next-step suggestions
 
-This is where Cora increasingly moves from:
+This is where CMD increasingly moves from:
 
 **retrieving information**
 
@@ -2739,11 +2739,11 @@ Work Day immediately shows:
 * waiting-on items
 * delegated work
 * project/initiative signals
-* Cora Brief
+* CMD Brief
 
 Kevin can ask:
 
-> Cora, what should I focus on this morning?
+> CMD, what should I focus on this morning?
 
 ---
 
@@ -2751,23 +2751,23 @@ Kevin can ask:
 
 > Remind me to call Chris after lunch.
 
-Cora creates a Reminder.
+CMD creates a Reminder.
 
 > Add a task to draft the governance framework by Friday.
 
-Cora creates a Task.
+CMD creates a Task.
 
 > What's going on with the website issue?
 
-Cora assembles the relevant context.
+CMD assembles the relevant context.
 
 ---
 
 ## Before a Meeting
 
-> Cora, prepare me for my meeting with Al.
+> CMD, prepare me for my meeting with Al.
 
-Cora retrieves relevant:
+CMD retrieves relevant:
 
 * history
 * projects
@@ -2787,7 +2787,7 @@ Quick Capture:
 
 > Meeting went well. AI Program concept approved. Need governance framework in two weeks. Remind me tomorrow to send Al the outline.
 
-Cora can propose:
+CMD can propose:
 
 * Journal entry
 * Decision
@@ -2803,15 +2803,15 @@ Upload a document.
 
 Ask:
 
-> Cora, compare this with what I've already learned about AI governance.
+> CMD, compare this with what I've already learned about AI governance.
 
 ---
 
 ## End of Day
 
-> Cora, wrap up my day.
+> CMD, wrap up my day.
 
-Cora summarizes:
+CMD summarizes:
 
 * meaningful progress
 * completed work
@@ -2871,11 +2871,11 @@ It should make it easier to:
 
 Success is not:
 
-**Cora magically remembers everything.**
+**CMD magically remembers everything.**
 
 Success is:
 
-**Command deliberately captures and connects useful organizational context, and Cora can retrieve, understand and act on that context quickly.**
+**Command deliberately captures and connects useful organizational context, and CMD can retrieve, understand and act on that context quickly.**
 
 ---
 
@@ -2883,15 +2883,15 @@ Success is:
 
 1. **Supabase is the source of truth for Command.**
 
-2. **Cora is the intelligence layer, not the database.**
+2. **CMD is the intelligence layer, not the database.**
 
-3. **Cora has a defined personality and is not a generic assistant.**
+3. **CMD has a defined personality and is not a generic assistant.**
 
-4. **Cora should understand context, not merely retrieve records.**
+4. **CMD should understand context, not merely retrieve records.**
 
-5. **Cora is allowed to challenge Kevin constructively.**
+5. **CMD is allowed to challenge Kevin constructively.**
 
-6. **Cora should increasingly help identify what happens next.**
+6. **CMD should increasingly help identify what happens next.**
 
 7. **Performance is a feature.**
 
@@ -2901,9 +2901,9 @@ Success is:
 
 10. **Retrieve independent context concurrently.**
 
-11. **Provide Cora minimal prepared context.**
+11. **Provide CMD minimal prepared context.**
 
-12. **Stream Cora responses immediately.**
+12. **Stream CMD responses immediately.**
 
 13. **Instrument latency from the beginning.**
 
@@ -2989,7 +2989,7 @@ The first successful Command should allow Kevin to:
 
 24. Use Command as a genuine daily tool immediately.
 
-Do not wait for advanced Cora capabilities before real-world use begins.
+Do not wait for advanced CMD capabilities before real-world use begins.
 
 ---
 
@@ -3004,13 +3004,13 @@ For every major feature or screen, ask:
 * Is it obvious what matters?
 * Is anything unnecessarily competing for attention?
 * Does this require more typing than necessary?
-* Could Cora make the interaction simpler?
+* Could CMD make the interaction simpler?
 * Does animation communicate something meaningful?
 * Is orange intentional?
 * Is this fast?
 * Does this reduce cognitive load?
 * Does it help Kevin remember, understand, decide or act?
-* Is Cora providing intelligence rather than merely repeating stored information?
+* Is CMD providing intelligence rather than merely repeating stored information?
 * Does this help answer "What happens next?"
 * Could this be simpler?
 

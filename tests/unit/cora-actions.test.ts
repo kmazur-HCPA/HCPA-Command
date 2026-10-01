@@ -28,7 +28,7 @@ const reminder = {
   },
 };
 afterEach(() => vi.unstubAllGlobals());
-describe("Cora record actions", () => {
+describe("CMD record actions", () => {
   it("supports date-only and timed reminders without substituting a task", () => {
     expect(validateRecordProposal(reminder).kind).toBe("reminder");
     expect(

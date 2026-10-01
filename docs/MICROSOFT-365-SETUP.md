@@ -1,6 +1,6 @@
 # Command — Microsoft 365
 
-Owner: Kevin Mazur / HCPA. This release connects the existing Command Cora panel to the signed-in user's default Outlook calendar, mailbox, and Teams context. Cora on Claude and the scheduled Command Brief use this same connection; see [Cora on Claude](CORA-CLAUDE.md).
+Owner: Kevin Mazur / HCPA. This release connects the existing Command CMD panel to the signed-in user's default Outlook calendar, mailbox, and Teams context. CMD on Claude and the scheduled Command Brief use this same connection; see [CMD on Claude](CORA-CLAUDE.md).
 
 ## Entra registration
 
@@ -30,7 +30,7 @@ In Netlify's **Command** site, scope these variables to **Functions / Production
 | `MICROSOFT_CLIENT_SECRET` | Client secret **Value** |
 | `MICROSOFT_TOKEN_ENCRYPTION_KEY` | A cryptographically random 32-byte key encoded as 64 hexadecimal characters; keep it stable across deploys |
 
-`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY` are already used by Cora. Do not prefix any Microsoft variable with `VITE_`.
+`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY` are already used by CMD. Do not prefix any Microsoft variable with `VITE_`.
 
 The production origin defaults to `https://cmd.hillspafl.gov`. For local OAuth testing, additionally register **Web** URI `http://127.0.0.1:8888/api/microsoft/callback` and set local `MICROSOFT_APP_ORIGIN=http://127.0.0.1:8888`. Production must use its HTTPS origin. Run `npm run dev:netlify`.
 
@@ -49,7 +49,7 @@ Try:
 - “Find recent emails about [a known subject], then read the relevant message.”
 - “Based on that email, prepare a follow-up task.” Verify that a review card appears and nothing is saved until **Add task**.
 
-Verify source links open the original Outlook item. Disconnect in Settings, verify Cora stops retrieving Microsoft content, then reconnect. Test tenant consent denial and expired credentials before acceptance. Real Microsoft sign-in and Graph retrieval remain required deployment checks; fixtures cannot establish tenant permissions or account access.
+Verify source links open the original Outlook item. Disconnect in Settings, verify CMD stops retrieving Microsoft content, then reconnect. Test tenant consent denial and expired credentials before acceptance. Real Microsoft sign-in and Graph retrieval remain required deployment checks; fixtures cannot establish tenant permissions or account access.
 
 ## Security, performance and operational behavior
 
@@ -58,9 +58,9 @@ Verify source links open the original Outlook item. Disconnect in Settings, veri
 - `microsoft_connections` has RLS enabled and no browser/anonymous table grants. Only the server can read or write it. It is intentionally excluded from workspace exports and normal recovery imports. Reconnect after recovery.
 - Disconnect deletes credentials and pending attempts. Connection generations and compare-and-swap updates prevent an in-flight callback or refresh from restoring deleted credentials. Disabling Command membership also deletes the connection. Disconnect does not revoke the app's tenant consent; an administrator can remove that separately in Entra.
 - Queries run on demand. Calendar requests cover at most 31 days and 75 returned events; mail searches return at most 45 previews. The tools disclose truncation and retrieval time. Outlook bodies are plain text capped at 12,000 characters; attachments are not fetched. Calendar recurrence is expanded by Graph; cancellations, all-day state, timezone and busy status are retained.
-- Only request-scoped results are memoized. No mailbox content is synced to database or browser storage. Relevant details in Cora's generated answers and source titles remain in its existing private conversation history and export. Tool auditing records tool names/outcomes, not email bodies, search phrases or tokens.
-- Graph calls have eight-second timeouts; Cora retains its overall request deadline and user quotas. Throttling, consent denial and outages produce explicit missing-context messages. Microsoft failures do not disable normal Command records.
-- Email and meeting text are untrusted evidence. They cannot authorize writes. The sole Cora write remains the existing user-confirmed task card.
+- Only request-scoped results are memoized. No mailbox content is synced to database or browser storage. Relevant details in CMD's generated answers and source titles remain in its existing private conversation history and export. Tool auditing records tool names/outcomes, not email bodies, search phrases or tokens.
+- Graph calls have eight-second timeouts; CMD retains its overall request deadline and user quotas. Throttling, consent denial and outages produce explicit missing-context messages. Microsoft failures do not disable normal Command records.
+- Email and meeting text are untrusted evidence. They cannot authorize writes. The sole CMD write remains the existing user-confirmed task card.
 
 ## Rollback and rotation
 
@@ -78,7 +78,7 @@ The production migration is applied. Direct grant checks confirm RLS enabled, no
 
 The HCPA tenant authority was reachable and all four local Microsoft environment variables were present. The generated encryption key was also configured as a production Functions secret in Netlify. [Full CI for the implementation](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35626914254) passed both application and native Supabase jobs, including the new real Auth/PostgREST connection tests and existing recovery drill. Production deploy `6ab15d8c60ef740008a909b4` published commit `ecf7ade4599a7218afc403a130037d70abad5446`.
 
-Production activation is verified. After Kevin corrected the Netlify client-secret Value, deploy `6ab160b01a7d28ea1b60368f` published commit `3502dbf7317e7158c324c8bb6af90ca294431381`. Microsoft's account chooser and consent screen requested the intended delegated permissions; organization-wide consent was left unchecked. Settings confirms Kevin's HCPA account is connected read-only. A live Cora request successfully retrieved today's calendar, searched recent email, and read one returned message. Server activity records independently confirm all three successful tool calls at 16:54 UTC. The check requested no subjects or message content in the answer and created no tasks. Email search correctly disclosed truncation.
+Production activation is verified. After Kevin corrected the Netlify client-secret Value, deploy `6ab160b01a7d28ea1b60368f` published commit `3502dbf7317e7158c324c8bb6af90ca294431381`. Microsoft's account chooser and consent screen requested the intended delegated permissions; organization-wide consent was left unchecked. Settings confirms Kevin's HCPA account is connected read-only. A live CMD request successfully retrieved today's calendar, searched recent email, and read one returned message. Server activity records independently confirm all three successful tool calls at 16:54 UTC. The check requested no subjects or message content in the answer and created no tasks. Email search correctly disclosed truncation.
 
 [Latest full CI](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35627823089) passed. The immediately preceding run had an intermittent 409 in the existing concurrent task-creation test (`test-cora-local.mjs`); the subsequent unchanged native harness passed. This concurrency failure is not yet reproduced or resolved. Kevin subsequently corrected the local configuration too; live Teams tools were verified using that server configuration during the Teams release.
 
@@ -86,17 +86,17 @@ A follow-up diagnostic release adds allowlisted, content-free connection referen
 
 ## Teams behavior and limits
 
-Four Cora tools provide indexed message search, recent chat discovery, reading a discovered chat, and reading a discovered chat/channel message (including replies when Graph supplies the parent identity). They use Microsoft Graph v1.0 and delegated user access only. Search is a read-only POST to the fixed `/search/query` endpoint; every other Teams request is GET. There are no send, edit, deletion, tenant-wide export, attachment, file, recording, or transcript tools.
+Four CMD tools provide indexed message search, recent chat discovery, reading a discovered chat, and reading a discovered chat/channel message (including replies when Graph supplies the parent identity). They use Microsoft Graph v1.0 and delegated user access only. Search is a read-only POST to the fixed `/search/query` endpoint; every other Teams request is GET. There are no send, edit, deletion, tenant-wide export, attachment, file, recording, or transcript tools.
 
-Each search returns at most 25 excerpts; recent-chat discovery returns at most 25 chats with up to 20 participant names per chat; one selected chat returns at most 30 recently modified messages. These are deliberately bounded, not complete history. Search indexing can lag, result order is not chronological, and Graph's search count is not a total match count. All results report retrieval time and truncation. Each message body is converted to plain text and bounded; raw HTML is never rendered. References are valid only in the current Cora turn, paths are constructed from discovered Graph identities, and source links accept only approved Microsoft hosts.
+Each search returns at most 25 excerpts; recent-chat discovery returns at most 25 chats with up to 20 participant names per chat; one selected chat returns at most 30 recently modified messages. These are deliberately bounded, not complete history. Search indexing can lag, result order is not chronological, and Graph's search count is not a total match count. All results report retrieval time and truncation. Each message body is converted to plain text and bounded; raw HTML is never rendered. References are valid only in the current CMD turn, paths are constructed from discovered Graph identities, and source links accept only approved Microsoft hosts.
 
-Consent metadata is server-owned and contains no message content. Legacy connections default to no Teams grant; Teams consent failures do not delete working Outlook credentials. Membership and connection generation are checked before and after reads, including before returning request-local cached data. Queries and message bodies are omitted from operational audit parameters. As with Outlook, generated conversation answers and source titles may retain relevant excerpts in the user's private Cora history.
+Consent metadata is server-owned and contains no message content. Legacy connections default to no Teams grant; Teams consent failures do not delete working Outlook credentials. Membership and connection generation are checked before and after reads, including before returning request-local cached data. Queries and message bodies are omitted from operational audit parameters. As with Outlook, generated conversation answers and source titles may retain relevant excerpts in the user's private CMD history.
 
 ### Teams release verification — September 21, 2026
 
 Kevin confirmed delegated Teams permissions and administrator consent on the existing registration. Reconnection completed successfully as his HCPA identity. Production deploy `6ab1656aa5465b000813cbc5` published commit `4644dd17c28dc1f2d1f0020ef209c36951fc0380`.
 
-All four Teams readers were verified against the authorized live account. A direct check completed chat discovery, one chat read, indexed search and one message read in 3.807 seconds total (not an end-to-end AI response benchmark). It returned participant context and approved source URLs. Production Cora UI checks independently confirmed each operation, with server audit success receipts at 17:13 UTC. Search and discovery disclosed truncation; no tasks or Teams content were created or changed. The first live test identified an unsupported chat sort field; the release now uses Graph's documented `lastMessagePreview/createdDateTime desc`, covered by a regression assertion. Single channel-message/reply routing is covered with synthetic fixtures; the live smoke check did not specifically select a channel reply.
+All four Teams readers were verified against the authorized live account. A direct check completed chat discovery, one chat read, indexed search and one message read in 3.807 seconds total (not an end-to-end AI response benchmark). It returned participant context and approved source URLs. Production CMD UI checks independently confirmed each operation, with server audit success receipts at 17:13 UTC. Search and discovery disclosed truncation; no tasks or Teams content were created or changed. The first live test identified an unsupported chat sort field; the release now uses Graph's documented `lastMessagePreview/createdDateTime desc`, covered by a regression assertion. Single channel-message/reply routing is covered with synthetic fixtures; the live smoke check did not specifically select a channel reply.
 
 Validation includes 110 unit/database tests, 29 browser workflows, typecheck, lint, build, dependency audit, PWA checks, and native Supabase Auth/PostgREST/recovery checks. Browser tests cover approved Teams links and rejection of forged external links; server tests cover consent upgrade, preservation of Outlook credentials, bounded results, untrusted markup, discovered-reference enforcement, and revoked/disconnected access. Browser JS/CSS remains 161 KiB gzip. Server-only consent metadata has no browser update grant and credentials remain excluded from workspace exports.
 

@@ -230,7 +230,7 @@ try {
     JSON.stringify({ event: "cora_provider_evaluation", model: request.model, effort: request.output_config.effort, result: "pass", cases }),
   );
 } catch (error) {
-  console.error("Cora provider evaluation failed:", error instanceof Error ? error.message : "Unknown error");
+  console.error("CMD provider evaluation failed:", error instanceof Error ? error.message : "Unknown error");
   process.exitCode = 1;
 } finally {
   await vite.close();

@@ -7,7 +7,7 @@
 
 ## Recommendation
 
-Deliver Command's first daily-use pilot at the end of roadmap Phase 4. Use React, Vite, TypeScript, Supabase Auth/PostgreSQL, and Netlify. Keep the pilot deterministic: Kevin manages his day directly, with Cora introduced after the core is reliable.
+Deliver Command's first daily-use pilot at the end of roadmap Phase 4. Use React, Vite, TypeScript, Supabase Auth/PostgreSQL, and Netlify. Keep the pilot deterministic: Kevin manages his day directly, with CMD introduced after the core is reliable.
 
 This contract turns the [roadmap](COMMAND-DEVELOPMENT-ROADMAP.md) into an implementation boundary. The [architecture note](PHASE-0-ARCHITECTURE.md) describes how to build it, and the [Work Day wireframe](wireframes/work-day.html) demonstrates the proposed interface. All example records in the wireframe are synthetic. Nothing entered there is sent to a service or saved after reload.
 
@@ -25,7 +25,7 @@ This contract turns the [roadmap](COMMAND-DEVELOPMENT-ROADMAP.md) into an implem
 | Basic lookup | Search/filter titles and captured text within implemented lists | Useful results without AI or vector search |
 | Recovery and operations | Draft recovery, write/error telemetry, auditable important actions, tested backup path | Isolated restore, latency report and support runbook |
 
-Initial navigation is **Work Day, Tasks, Captures, Settings**, with Reminders inside Work Day and a dedicated expanded view reachable there. Captures is a temporary pilot destination that becomes part of Journal in Phase 5, retaining original IDs and text. Hide unfinished destinations rather than offering empty Projects, Library, or Cora screens.
+Initial navigation is **Work Day, Tasks, Captures, Settings**, with Reminders inside Work Day and a dedicated expanded view reachable there. Captures is a temporary pilot destination that becomes part of Journal in Phase 5, retaining original IDs and text. Hide unfinished destinations rather than offering empty Projects, Library, or CMD screens.
 
 “Waiting” on a Task describes its status. A Waiting On record describes the external dependency and can exist without a Task. A delegated task remains Kevin's private tracking record; the pilot sends no assignments to staff.
 

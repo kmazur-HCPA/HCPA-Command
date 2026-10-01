@@ -7,7 +7,7 @@
 
 ## Recommended development path
 
-Build a small, secure daily-use application first, then expand its work memory, introduce Cora, and connect external systems. Performance and security are release requirements throughout the project.
+Build a small, secure daily-use application first, then expand its work memory, introduce CMD, and connect external systems. Performance and security are release requirements throughout the project.
 
 The master brief's original Foundation phase is too large for one manageable release. This roadmap divides its seven broad phases into smaller increments, each with a demonstrable outcome and an acceptance gate. The repository was empty when this plan was prepared; no existing implementation is assumed.
 
@@ -15,7 +15,7 @@ Two early milestones deliberately separate **daily usefulness** from **feature c
 
 - **Daily-use pilot — after Phase 4:** secure installed PWA, Work Day, Tasks, persistent Reminders, Quick Capture, and protected drafts.
 - **Foundation complete — after Phase 8:** Projects, Initiatives, People, Journal, Learning, AI Lab, Library, traditional search, exports, and operational verification.
-- **Cora release — after Phase 10:** conversational actions and grounded contextual assistance.
+- **CMD release — after Phase 10:** conversational actions and grounded contextual assistance.
 - **Knowledge release — after Phase 12:** document processing and source-backed retrieval.
 - **Connected intelligence — Phases 13–17:** independently gated integrations and proactive assistance.
 
@@ -32,7 +32,7 @@ For each completed phase, record the actual delivery date, acceptance evidence, 
 Preserve these boundaries:
 
 - Supabase owns Command information. External systems remain authoritative for their own records.
-- Shared application services support the UI, Cora, and eventual MCP. Authorization must remain enforceable at the database and server boundaries.
+- Shared application services support the UI, CMD, and eventual MCP. Authorization must remain enforceable at the database and server boundaries.
 - Routine data operations do not depend on an AI response.
 - Original Journal entries and uploaded documents remain authoritative; derived content is separately identified.
 - Command initially serves Kevin only. Model ownership from the start without building multi-user administration.
@@ -51,8 +51,8 @@ Retain the brief's budgets below. As a proposed acceptance method, measure p95 f
 | Work Day useful render | Under 1 second | Launch/navigation to actionable core data; label cached data |
 | Reminder creation after intent resolution | Under 500 ms | Validated intent to persisted record; also track total conversational time |
 | Initial search results | Under 1 second | Submitted query to useful results |
-| Cora acknowledgement | Under 1 second | Submit to visible working state |
-| Normal Cora first streamed content | Under 2 seconds | Submit to meaningful streamed content, not a spinner |
+| CMD acknowledgement | Under 1 second | Submit to visible working state |
+| Normal CMD first streamed content | Under 2 seconds | Submit to meaningful streamed content, not a spinner |
 | Typical contextual answer | Under 5 seconds | Submit to complete normal answer |
 | Deep synthesis | Variable | Immediate working state, meaningful progress, cancellation and timeout |
 
@@ -70,7 +70,7 @@ Recommended controls for this application:
 - Validate inputs and files; limit request sizes and expensive operations. Render notes, retrieved documents, and AI output safely. Apply appropriate browser security headers.
 - Record important writes and action outcomes without copying sensitive source content or credentials into telemetry.
 - Define the permitted information classes before real use. Restricted, exempt, personnel-sensitive, and internal security material remain excluded until HCPA explicitly permits the relevant storage and processing.
-- Treat instructions embedded in documents, email, and retrieved content as untrusted data. They cannot grant Cora authority.
+- Treat instructions embedded in documents, email, and retrieved content as untrusted data. They cannot grant CMD authority.
 
 Supabase documents that grants and row-level security together control table access, and that Storage uses its own RLS policies. Both require tests; a protected UI is insufficient. Sources: [database RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) and [Storage access control](https://supabase.com/docs/guides/storage/security/access-control).
 
@@ -115,7 +115,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 3. Add manifest, icon, standalone behavior, safe areas, static-asset caching, and a predictable app-update flow.
 4. Add reusable loading, empty, error, and connection states. Establish local draft handling before writing-heavy features.
 
-**Gate:** Install and relaunch on the actual Mini; test rotation, software keyboard, text scaling, focus, and reduced motion. Cached assets must not expose authenticated data after logout. Do not display an active Ask Cora control before it works.
+**Gate:** Install and relaunch on the actual Mini; test rotation, software keyboard, text scaling, focus, and reduced motion. Cached assets must not expose authenticated data after logout. Do not display an active Ask CMD control before it works.
 
 **Dependency:** Phase 1. **Defer:** Full offline database sync, notifications, and badging.
 
@@ -199,33 +199,33 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 **Dependency:** Phases 5–7. **Milestone:** Foundation complete. Advanced AI is still unnecessary for daily use.
 
-## Phase 9 — Introduce Cora's conversational actions
+## Phase 9 — Introduce CMD's conversational actions
 
-**Outcome:** Kevin can ask Cora to perform narrow, reliable Command operations.
+**Outcome:** Kevin can ask CMD to perform narrow, reliable Command operations.
 
-1. Add server-side AI access, persistent Ask Cora, streaming, cancellation, timeouts, usage limits, and the brief's restrained personality and Pulse.
+1. Add server-side AI access, persistent Ask CMD, streaming, cancellation, timeouts, usage limits, and the brief's restrained personality and Pulse.
 2. Introduce configurable model routing without choosing permanent model names in this roadmap. Verify provider capabilities and data handling at implementation time.
 3. Convert validated natural-language intent into existing service calls for task/reminder creation, completion, snoozing, and capture. Use deterministic retrieval for simple list requests.
 4. Enforce action authority outside the model; add idempotency, audit records, and clear success/failure feedback tied to actual committed writes.
 
-**Gate:** An evaluation set distinguishes Tasks from Reminders, handles ambiguous timing, tests adversarial instructions, and proves retries do not duplicate actions. Cora cannot claim a failed write succeeded. All core manual flows work during AI outage.
+**Gate:** An evaluation set distinguishes Tasks from Reminders, handles ambiguous timing, tests adversarial instructions, and proves retries do not duplicate actions. CMD cannot claim a failed write succeeded. All core manual flows work during AI outage.
 
 **Dependency:** Phase 8. **Defer:** External writes and broad autonomous agents.
 
 **Brief clarification:** Conversational reminders appear in the brief's initial target but AI is scheduled later. This plan delivers manual/dictated reminders in the pilot and natural-language execution here. If conversation is required for pilot acceptance, move only this narrow reminder slice forward after Phase 4; do not pull all AI work into the foundation.
 
-## Phase 10 — Give Cora prepared context
+## Phase 10 — Give CMD prepared context
 
-**Outcome:** Cora explains work and proposes useful next steps with identifiable evidence.
+**Outcome:** CMD explains work and proposes useful next steps with identifiable evidence.
 
 1. Build compact context services for Work Day, Projects, Initiatives, People, and the AI Program; retrieve independent inputs concurrently.
-2. Add Cora Brief and project/learning/AI Lab summaries with source links and freshness information.
+2. Add CMD Brief and project/learning/AI Lab summaries with source links and freshness information.
 3. Add proposed Journal classification, metadata, tasks, reminders, and related-content suggestions while preserving originals.
 4. Add constructive challenge and next-step suggestions; distinguish recorded facts, inference, and incomplete context.
 
 **Gate:** Test representative questions against known records. Missing or conflicting context is disclosed. Instrument request receipt, intent, context retrieval, provider start, first token, completion, and total duration. Normal answers meet the budget under documented conditions.
 
-**Dependency:** Phase 9. **Milestone:** Cora release. **Defer:** Semantic retrieval and proactive scheduling.
+**Dependency:** Phase 9. **Milestone:** CMD release. **Defer:** Semantic retrieval and proactive scheduling.
 
 ## Phase 11 — Process documents reliably
 
@@ -242,7 +242,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 ## Phase 12 — Add grounded knowledge retrieval
 
-**Outcome:** Cora can answer research questions with verifiable source support.
+**Outcome:** CMD can answer research questions with verifiable source support.
 
 1. Add embeddings and pgvector only where traditional retrieval demonstrably misses useful content.
 2. Combine structured, full-text, and semantic retrieval across Library and relevant Journal, Learning, Projects, and AI Lab content.
@@ -281,7 +281,7 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 
 ## Phase 15 — Connect Helix context
 
-**Outcome:** Cora can explain relevant operational context without duplicating Helix.
+**Outcome:** CMD can explain relevant operational context without duplicating Helix.
 
 1. Identify the smallest useful read-only context contract and its owner.
 2. Implement authenticated, permission-scoped project/system/incident context only for approved use cases.
@@ -299,13 +299,13 @@ Test Mini portrait and landscape in dark mode, light mode, iPhone, and desktop. 
 2. Test identity binding, scopes, session expiry/revocation, limits, and auditability.
 3. Add selected low-impact writes only after read-only acceptance; preserve confirmation policy and retry safety across interfaces.
 
-**Gate:** The same identity has the same permitted data/actions through the app and MCP. Unknown clients, expired credentials, and attempts to exceed scope are rejected. No second Cora data store or independent business logic is introduced.
+**Gate:** The same identity has the same permitted data/actions through the app and MCP. Unknown clients, expired credentials, and attempts to exceed scope are rejected. No second CMD data store or independent business logic is introduced.
 
 **Dependency:** Stable services from Phases 9–10; does not require every integration. **Defer:** Broad external actions.
 
 ## Phase 17 — Add proactive intelligence incrementally
 
-**Outcome:** Cora helps maintain situational awareness without creating noise.
+**Outcome:** CMD helps maintain situational awareness without creating noise.
 
 1. Release morning, end-of-day, and weekly reviews individually, using explicit schedule and timezone settings.
 2. Add forgotten-item and delegation follow-up detection with explainable reasons and dismiss/snooze controls.
@@ -341,7 +341,7 @@ A phase closes when its deliverables are usable, its gate and applicable shared 
 | Master brief release | Roadmap coverage |
 |---|---|
 | Phase 1 — Foundation | Phases 0–8 |
-| Phase 2 — Cora Foundation | Phases 9–10 |
+| Phase 2 — CMD Foundation | Phases 9–10 |
 | Phase 3 — Knowledge | Phases 11–12 |
 | Phase 4 — Microsoft 365 | Phases 13–14 |
 | Phase 5 — Command + Helix | Phase 15 |
@@ -350,16 +350,16 @@ A phase closes when its deliverables are usable, its gate and applicable shared 
 
 The product vision and feature requirements remain in the master brief. This document governs sequencing, bounded delivery, and acceptance. Platform-specific APIs, pricing, service limits, model selections, and legal requirements must be reverified when their implementation phase begins.
 
-## Cora v0.1 scope decision — September 21, 2026
+## CMD v0.1 scope decision — September 21, 2026
 
-Kevin’s Cora implementation brief authorizes the narrow first milestone across conversational access, live read tools, page context and controlled task creation. [Cora delivery notes](CORA-DELIVERY.md) define this slice. Task-card review is the initial write boundary. Broader Phase 9 reminder/completion/snooze actions and Phase 10 automatic AI briefs remain later work; this slice does not mark those entire roadmap phases accepted.
+Kevin’s CMD implementation brief authorizes the narrow first milestone across conversational access, live read tools, page context and controlled task creation. [CMD delivery notes](CORA-DELIVERY.md) define this slice. Task-card review is the initial write boundary. Broader Phase 9 reminder/completion/snooze actions and Phase 10 automatic AI briefs remain later work; this slice does not mark those entire roadmap phases accepted.
 
 
 ## Microsoft 365 sequencing decision — September 21, 2026
 
-Kevin authorized bringing read-only Microsoft connection management, Calendar and Outlook context forward after Cora v0.1. Use a new HCPA single-tenant **Command — Microsoft 365** Entra registration. [Setup and operational notes](MICROSOFT-365-SETUP.md) define the bounded delivery and tenant activation checks. Teams remains a separate follow-on scope; the ChatGPT/MCP interface follows the shared backend integration. This does not close all of Phases 13–14: full Meeting Mode, selected Teams access and pilot acceptance remain outstanding.
+Kevin authorized bringing read-only Microsoft connection management, Calendar and Outlook context forward after CMD v0.1. Use a new HCPA single-tenant **Command — Microsoft 365** Entra registration. [Setup and operational notes](MICROSOFT-365-SETUP.md) define the bounded delivery and tenant activation checks. Teams remains a separate follow-on scope; the ChatGPT/MCP interface follows the shared backend integration. This does not close all of Phases 13–14: full Meeting Mode, selected Teams access and pilot acceptance remain outstanding.
 
 
 ### Teams extension — September 21, 2026
 
-Kevin authorized Teams integration and confirmed delegated `Chat.Read` and `ChannelMessage.Read.All` plus administrator consent on the existing registration. The release adds on-demand message search, recent chats, bounded conversation reads, and selected channel-message reads to Cora. No Teams writes, tenant-wide exports, attachments, recordings, or background synchronization are included. [Activation and operational limits](MICROSOFT-365-SETUP.md) document reconnect and validation. The ChatGPT/MCP interface and full Meeting Mode remain separate work.
+Kevin authorized Teams integration and confirmed delegated `Chat.Read` and `ChannelMessage.Read.All` plus administrator consent on the existing registration. The release adds on-demand message search, recent chats, bounded conversation reads, and selected channel-message reads to CMD. No Teams writes, tenant-wide exports, attachments, recordings, or background synchronization are included. [Activation and operational limits](MICROSOFT-365-SETUP.md) document reconnect and validation. The ChatGPT/MCP interface and full Meeting Mode remain separate work.

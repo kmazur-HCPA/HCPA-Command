@@ -74,7 +74,7 @@ export async function runCora({
       result,
       success,
     });
-    if (r.error) throw new Error("Cora could not record this interaction.");
+    if (r.error) throw new Error("CMD could not record this interaction.");
   };
   emit({ type: "status", message: "Reading the room…" });
   const history = await client
@@ -207,16 +207,16 @@ export async function runCora({
     });
     const message = await stream.finalMessage();
     if (answer.length > 20000)
-      throw new Error("Cora’s response exceeded its limit.");
+      throw new Error("CMD’s response exceeded its limit.");
     if (message.stop_reason === "refusal")
-      throw new Error("Cora declined this request.");
+      throw new Error("CMD declined this request.");
     const calls = message.content.filter(
       (block): block is Anthropic.Beta.BetaToolUseBlock =>
         block.type === "tool_use",
     );
     if (!calls.length) {
       if (!answer.trim())
-        throw new Error("Cora did not return an answer. Please try again.");
+        throw new Error("CMD did not return an answer. Please try again.");
       // A model-produced proposal is never presented as a committed write.
       if (proposal)
         answer =
@@ -247,7 +247,7 @@ export async function runCora({
         .single();
       if (saved.error)
         throw new Error(
-          "Cora could not save this conversation. Check Command for any saved records before retrying.",
+          "CMD could not save this conversation. Check Command for any saved records before retrying.",
         );
       const active = await client
         .from("app_memberships")
@@ -261,8 +261,8 @@ export async function runCora({
     }
     // A truncated tool input can still parse; never run it.
     if (message.stop_reason === "max_tokens")
-      throw new Error("Cora’s tool request was cut off. Please try again.");
-    if (calls.length > 4) throw new Error("Cora requested too many tools.");
+      throw new Error("CMD’s tool request was cut off. Please try again.");
+    if (calls.length > 4) throw new Error("CMD requested too many tools.");
     // Thinking and fallback blocks must be returned unchanged.
     messages.push({ role: "assistant", content: message.content });
     const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
@@ -361,6 +361,6 @@ export async function runCora({
     messages.push({ role: "user", content: results });
   }
   throw new Error(
-    "Cora reached the tool limit. Please narrow the question. Check Command for any saved records before retrying.",
+    "CMD reached the tool limit. Please narrow the question. Check Command for any saved records before retrying.",
   );
 }

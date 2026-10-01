@@ -1,18 +1,18 @@
-# Cora v0.1 — implementation and operating notes
+# CMD v0.1 — implementation and operating notes
 
-> **Superseded September 2026.** Cora now runs on Claude inside Command, and the ChatGPT agent is retired. See [Cora on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
+> **Superseded September 2026.** CMD now runs on Claude inside Command, and the ChatGPT agent is retired. See [CMD on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
 
-Kevin authorized the first Cora release through the September 21 implementation brief. This delivers the initial conversational, live-context and controlled task-creation milestone. It does not activate autonomous work, external systems, vector memory, voice or broad record editing.
+Kevin authorized the first CMD release through the September 21 implementation brief. This delivers the initial conversational, live-context and controlled task-creation milestone. It does not activate autonomous work, external systems, vector memory, voice or broad record editing.
 
 ## Experience
 
-Ask Cora opens a persistent desktop side panel; the center mobile control opens Cora while retaining the previous workspace. Quick Capture remains in the desktop header, Work Day and mobile More menu. The approved orange slash stays in use, with restrained activity motion and reduced-motion support.
+Ask CMD opens a persistent desktop side panel; the center mobile control opens CMD while retaining the previous workspace. Quick Capture remains in the desktop header, Work Day and mobile More menu. The approved orange slash stays in use, with restrained activity motion and reduced-motion support.
 
-Cora streams responses, retains conversations, understands the currently open record and links to retrieved sources. “Ask Cora for perspective” on Work Day uses the same intelligence layer for an on-demand brief. The deterministic Work Day summary remains available during AI outages. Automatic/cached AI briefs remain a later expansion.
+CMD streams responses, retains conversations, understands the currently open record and links to retrieved sources. “Ask CMD for perspective” on Work Day uses the same intelligence layer for an on-demand brief. The deterministic Work Day summary remains available during AI outages. Automatic/cached AI briefs remain a later expansion.
 
-Read tools cover open tasks, overdue/due work, critical/high-priority tasks, active/on-hold projects, project details and private Waiting On dependencies. Related people/project/task titles are resolved through owner RLS. Lists return exact totals and 25 records per page, with explicit truncation and bounded paging. Text context is capped; Cora must disclose missing data and distinguish inference. Microsoft Calendar and Outlook tools are now implemented as a separately configured connection; see [Microsoft 365 setup](MICROSOFT-365-SETUP.md). They remain unavailable until tenant configuration and user consent are complete.
+Read tools cover open tasks, overdue/due work, critical/high-priority tasks, active/on-hold projects, project details and private Waiting On dependencies. Related people/project/task titles are resolved through owner RLS. Lists return exact totals and 25 records per page, with explicit truncation and bounded paging. Text context is capped; CMD must disclose missing data and distinguish inference. Microsoft Calendar and Outlook tools are now implemented as a separately configured connection; see [Microsoft 365 setup](MICROSOFT-365-SETUP.md). They remain unavailable until tenant configuration and user consent are complete.
 
-Cora prepares one task card per request. The user reviews its title, due date, priority and optional project, then chooses **Add task**. This deliberate first-release boundary prevents a model or instructions hidden in records from independently writing. The server revalidates the saved proposal and uses the existing work service under the user's JWT. A stable task ID reconciles concurrent retries without duplicating or overwriting records. A saved receipt supplies the success state; model prose does not. Timed reminder creation, completion, snoozing and other writes remain manual in this release.
+CMD prepares one task card per request. The user reviews its title, due date, priority and optional project, then chooses **Add task**. This deliberate first-release boundary prevents a model or instructions hidden in records from independently writing. The server revalidates the saved proposal and uses the existing work service under the user's JWT. A stable task ID reconciles concurrent retries without duplicating or overwriting records. A saved receipt supplies the success state; model prose does not. Timed reminder creation, completion, snoozing and other writes remain manual in this release.
 
 ## Architecture and authority
 
@@ -32,9 +32,9 @@ History is limited to eight completed turns, with bounded message text. Four mod
 
 Production Functions require `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. The secret must never use a `VITE_` prefix, build scope or preview context. Netlify injects `OPENAI_API_KEY` and `OPENAI_BASE_URL` for AI Gateway; explicit keys override this behavior. Missing configuration produces a visible unavailable state while normal Command tools remain usable. Preview contexts remain disconnected.
 
-User exports now include Cora conversations, turns and activity alongside existing records. Restore in parent-before-child order: conversations, turns, activity. The local recovery harness includes these tables. Auth identities remain outside user exports. No new backup destination or external alert routing was added.
+User exports now include CMD conversations, turns and activity alongside existing records. Restore in parent-before-child order: conversations, turns, activity. The local recovery harness includes these tables. Auth identities remain outside user exports. No new backup destination or external alert routing was added.
 
-For failures, inspect request IDs and content-free `cora_request` timing in Netlify, private Cora receipts and Supabase status. A failed action may have committed before acknowledgement; retry the same task card to reconcile. Do not manually generate a new task ID to “retry.” Revoke membership to stop new access. Rotate the server secret in Netlify if necessary. Roll back the frontend/function release first; retain conversation tables and existing work records. Never delete user history to roll back code.
+For failures, inspect request IDs and content-free `cora_request` timing in Netlify, private CMD receipts and Supabase status. A failed action may have committed before acknowledgement; retry the same task card to reconcile. Do not manually generate a new task ID to “retry.” Revoke membership to stop new access. Rotate the server secret in Netlify if necessary. Roll back the frontend/function release first; retain conversation tables and existing work records. Never delete user history to roll back code.
 
 ## Acceptance and remaining expansion
 
@@ -56,16 +56,16 @@ For local development, `npm run dev:netlify` loads the ignored `.env.production.
 
 ## Release verification
 
-Revision `700d8f2` passed [Foundation checks run 35622134081](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35622134081): 83 unit/database tests, 23 pgTAP assertions, 27 browser workflows, two PWA tests, real local Auth/PostgREST/Storage integration, lint, type checking, build and dependency audit. The native Cora fixture verified context retrieval, streaming, private history, proposal-only model authority, concurrent retry-safe task creation, receipt forgery denial and revocation. The complete application recovery drill includes Cora history and activity as well as 11 records, four revisions and six originals. The browser build is 158 KiB gzip JS/CSS within the 190 KiB budget.
+Revision `700d8f2` passed [Foundation checks run 35622134081](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35622134081): 83 unit/database tests, 23 pgTAP assertions, 27 browser workflows, two PWA tests, real local Auth/PostgREST/Storage integration, lint, type checking, build and dependency audit. The native CMD fixture verified context retrieval, streaming, private history, proposal-only model authority, concurrent retry-safe task creation, receipt forgery denial and revocation. The complete application recovery drill includes CMD history and activity as well as 11 records, four revisions and six originals. The browser build is 158 KiB gzip JS/CSS within the 190 KiB budget.
 
-The production migration was applied. All three Cora tables have RLS, no anonymous access and no authenticated insert/update permission. The reservation function uses invoker rights and grants execution only to the server role. Supabase security advisors returned no findings. The configured local server secret and the provider connection were verified without exposing credentials.
+The production migration was applied. All three CMD tables have RLS, no anonymous access and no authenticated insert/update permission. The reservation function uses invoker rights and grants execution only to the server role. Supabase security advisors returned no findings. The configured local server secret and the provider connection were verified without exposing credentials.
 
 ## Record actions — September 21, 2026
 
-Cora now reads and proposes creation/editing for every Command record kind, including date-only/timed/undated reminders, snooze, complete, dismiss, conversion to a task, archive/restore, links, priority slots, Journal entries, Learning, AI Lab and Library metadata. The site and ChatGPT MCP use the same proposal validation. `get_records` provides indexed search and paginated lists; `get_record` provides current values and versions.
+CMD now reads and proposes creation/editing for every Command record kind, including date-only/timed/undated reminders, snooze, complete, dismiss, conversion to a task, archive/restore, links, priority slots, Journal entries, Learning, AI Lab and Library metadata. The site and ChatGPT MCP use the same proposal validation. `get_records` provides indexed search and paginated lists; `get_record` provides current values and versions.
 
 Writes still require the explicit Command review card. Confirmation uses the signed-in user's existing services and RLS, immutable original text, optimistic version checks, stable creation IDs and action receipts. MCP credentials cannot directly mutate work records. Microsoft remains read-only. File transfers and account/integration controls remain in their dedicated UI; record-edit tools do not perform those operations. Reminders appear in Command; this release does not add background push/email delivery.
 
-Regression example: “Please remind me tomorrow to send an email to Al and Nereia regarding lack of feedback on website.” Cora must propose a reminder with tomorrow's America/New_York date, not a task and not an invented time. It must not claim the reminder is saved until the card is confirmed.
+Regression example: “Please remind me tomorrow to send an email to Al and Nereia regarding lack of feedback on website.” CMD must propose a reminder with tomorrow's America/New_York date, not a task and not an invented time. It must not claim the reminder is saved until the card is confirmed.
 
 No database migration or new credentials are required. Roll back the application commit to restore the old tools; do not confirm newer record cards through an older release. Existing records remain usable in their normal editors.

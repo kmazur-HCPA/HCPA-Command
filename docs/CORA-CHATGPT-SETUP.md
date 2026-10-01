@@ -1,14 +1,14 @@
-# Cora in ChatGPT
+# CMD in ChatGPT
 
-> **Superseded September 2026.** Cora now runs on Claude inside Command, and the ChatGPT agent is retired. See [Cora on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
+> **Superseded September 2026.** CMD now runs on Claude inside Command, and the ChatGPT agent is retired. See [CMD on Claude](CORA-CLAUDE.md). This page is kept as a delivery record.
 
-Cora’s private ChatGPT agent uses the same Command tools and Microsoft connection as the website. Command remains the source of truth. ChatGPT conversations do not automatically appear in Command; task proposals do, with an explicit Add task review card.
+CMD’s private ChatGPT agent uses the same Command tools and Microsoft connection as the website. Command remains the source of truth. ChatGPT conversations do not automatically appear in Command; task proposals do, with an explicit Add task review card.
 
 ## Connection
 
 - MCP endpoint: `https://cmd.hillspafl.gov/api/mcp` (stateless Streamable HTTP, official TypeScript SDK).
 - ChatGPT agent builder: custom app, **Access token / API key**, **Bearer**. This option was verified in the HCPA_IT agent builder on September 21, 2026.
-- Create the personal token in Command → Settings → Cora in ChatGPT. Enter it directly in the private app’s authentication dialog. Never put it in agent instructions, URLs, source control, chats or environment screenshots.
+- Create the personal token in Command → Settings → CMD in ChatGPT. Enter it directly in the private app’s authentication dialog. Never put it in agent instructions, URLs, source control, chats or environment screenshots.
 - One token per Command owner; 90-day expiry. Replacing or revoking it immediately invalidates the previous token. Membership revocation removes it as well. A token cannot sign in to Command, access Supabase directly, manage credentials, send messages or save work.
 - Only a SHA-256 digest of a random 256-bit token is stored. Microsoft credentials stay encrypted server-side. No new Entra registration, Supabase project, OAuth server, or AI API key is needed.
 
@@ -20,9 +20,9 @@ Six Command readers cover open tasks, due/overdue tasks, priorities, active proj
 
 Microsoft references are encrypted, expire after 20 minutes and are bound to the owner, MCP credential and Microsoft connection generation. Discovery and subsequent reads work across separate HTTP requests. No mailbox/chat content is persisted by the MCP bridge. Tool results returned to ChatGPT are handled as part of that ChatGPT conversation.
 
-`prepare_task` creates a reviewable Cora turn, not a work item. A stable request UUID reconciles retries. Its link opens the owner’s existing Command session and Add task control. The MCP credential cannot call the task-save endpoint. Chat approval alone cannot bypass this boundary.
+`prepare_task` creates a reviewable CMD turn, not a work item. A stable request UUID reconciles retries. Its link opens the owner’s existing Command session and Add task control. The MCP credential cannot call the task-save endpoint. Chat approval alone cannot bypass this boundary.
 
-Every read uses the token’s owner; caller-supplied owner IDs are rejected. Membership and credential validity are checked before and after tool execution. Microsoft connection generation is also checked after each read. The database serializes tool reservations and enforces 30 calls/minute and 1,000/day per owner; token replacement does not reset quotas. Proposal creation also observes existing Cora quotas.
+Every read uses the token’s owner; caller-supplied owner IDs are rejected. Membership and credential validity are checked before and after tool execution. Microsoft connection generation is also checked after each read. The database serializes tool reservations and enforces 30 calls/minute and 1,000/day per owner; token replacement does not reset quotas. Proposal creation also observes existing CMD quotas.
 
 ## Operations and recovery
 
@@ -44,7 +44,7 @@ Local validation covers MCP negotiation/tool discovery, token and membership rej
 - Production Netlify deploy: `6ab16ce0b186a0000862147f`, published 17:44 UTC.
 - Supabase migration `cora_chatgpt_mcp` applied successfully (hosted migration version `20260921174240`; source file `20260921173141_cora_chatgpt_mcp.sql`).
 - [CI run 35633877773](https://github.com/kmazur-HCPA/HCPA-Command/actions/runs/35633877773) passed application and disposable Supabase checks. The suite includes 120 unit/database tests, 31 browser workflows, two PWA tests, native Auth/PostgREST and recovery validation. Dependency audit: no reported vulnerabilities. Compressed JS/CSS: 163 KiB against the 190 KiB budget.
-- [Cora agent](https://chatgpt.com/agents/a/agt_6ab1695d307081919f999a6dd9c2f9c6) created in HCPA_IT with the checked-in instructions. Kevin connected the private Command Cora app (`asdk_app_6ab16d7fd6788191ae60c4b5fdfabab6`); the agent update was saved and the preview confirms “Private to you.”
+- [CMD agent](https://chatgpt.com/agents/a/agt_6ab1695d307081919f999a6dd9c2f9c6) created in HCPA_IT with the checked-in instructions. Kevin connected the private Command CMD app (`asdk_app_6ab16d7fd6788191ae60c4b5fdfabab6`); the agent update was saved and the preview confirms “Private to you.”
 
 Live verification completed at 17:53 UTC through the ChatGPT agent: `get_my_tasks`, `get_outlook_calendar`, `search_outlook_mail`, `read_outlook_message`, `list_teams_chats`, `read_teams_chat`, `search_teams_messages`, and `read_teams_message` all recorded successful server-side audits. Selected Outlook and Teams reads used references discovered in earlier HTTP calls. The agent reported successful bounded reads without quoting message contents. No task proposal, work item, message or schedule was created during the live check. Unauthenticated production MCP requests return HTTP 401.
 
