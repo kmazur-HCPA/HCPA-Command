@@ -45,16 +45,16 @@ export function Consent({ client, query }: { client: AppClient; query: string })
   return <main id="main" className="entry-layout"><div className="entry-brand"><span className="brand"><span aria-hidden="true">/</span> COMMAND</span><p>Attention. Context. Action.</p></div>
     <section className="auth-panel" aria-labelledby="consent-title" aria-busy={!details && !error}>
       <p className="eyebrow">Connect an app</p>
-      <h1 id="consent-title">{details ? `Allow ${details.client_name || 'this app'} to use Cora?` : 'Checking this request…'}</h1>
+      <h1 id="consent-title">{details ? `Allow ${details.client_name || 'this app'} to use CMD?` : 'Checking this request…'}</h1>
       {details && <>
-        <p className="intro">It will act as you ({details.email}) through Command's Cora tools.</p>
+        <p className="intro">It will act as you ({details.email}) through Command's CMD tools.</p>
         <ul>
           <li>Read all of your Command records, and your Outlook calendar, mail and Teams through Command's read-only Microsoft connection.</li>
           <li>Save new reminders, tasks, people, projects, initiatives, journal entries and AI Lab records when you ask, and save Command Brief receipts.</li>
           <li>Complete or reopen tasks, complete, dismiss or snooze reminders, and change due dates (each change can be undone).</li>
           <li>Prepare all other edits for you to confirm in Command. It cannot send email or Teams messages or change meetings.</li>
         </ul>
-        <p className="muted small">Returns to: {details.redirect_host}. The connection stays active while it is used, and you can revoke it at any time in Settings → Cora in connected apps.</p>
+        <p className="muted small">Returns to: {details.redirect_host}. The connection stays active while it is used, and you can revoke it at any time in Settings → CMD in connected apps.</p>
         <div className="actions">
           <button className="primary" disabled={busy} onClick={() => void choose(true)}>{busy ? 'Please wait…' : 'Allow'}</button>
           <button disabled={busy} onClick={() => void choose(false)}>Deny</button>

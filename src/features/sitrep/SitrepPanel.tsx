@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { boldParts, problems, useSitrepLayout } from "./support";
 import type { AppClient } from "../../platform/supabase";
-import { loadSitrep, recordStatus, type SitrepState } from "../../services/sitrep";
-import { flaggedMail } from "../../services/mail";
-import { mostlyDone, reconcileSection, type Reconciled, type RecordState } from "./reconcile";
+import { useSitrep } from "./useSitrep";
+import { mostlyDone, reconcileSection, type Reconciled } from "./reconcile";
 import { sections } from "./sections";
 import type { SitrepRef } from "./schema";
 import { Icon } from "../../ui/Icon";
@@ -32,52 +31,11 @@ export function SitrepPanel({
   trigger: React.RefObject<HTMLButtonElement | null>;
   onOpen: (item: { id: string }) => void;
 }) {
-  const [state, setState] = useState<SitrepState | null>(null),
-    [error, setError] = useState(""),
-    [live, setLive] = useState<{ records: Map<string, RecordState>; openFlagged: Set<string> | null }>({ records: new Map(), openFlagged: null }),
-    [now, setNow] = useState(() => Date.now());
+  const { state, error, live, now } = useSitrep(client, date);
   const panel = useRef<HTMLElement>(null);
   const { collapsed, toggleCollapsed, drawer, setDrawer, narrow } = layout;
   const isDrawerOpen = narrow && drawer;
   const rail = !narrow && collapsed;
-
-  useEffect(() => {
-    let alive = true;
-    const refresh = () =>
-      loadSitrep(client, date)
-        .then(async (next) => {
-          const payload = next.run?.payload;
-          const refs = payload
-            ? sections.slice(1).flatMap(([k]) => payload[k as "next"].flatMap((i) => i.refs ?? []))
-            : [];
-          const ids = [...new Set(refs.filter((r) => r.kind === "record").map((r) => r.id))];
-          const [records, openFlagged] = await Promise.all([
-            recordStatus(client, ids).catch(() => new Map<string, RecordState>()),
-            refs.some((r) => r.kind === "email")
-              ? flaggedMail(client)
-                  .then((f) => (f.truncated ? null : new Set(f.messages.filter((m) => !m.capture).map((m) => m.id))))
-                  .catch(() => null)
-              : Promise.resolve(null),
-          ]);
-          if (alive) {
-            setState(next);
-            setLive({ records, openFlagged });
-            setNow(Date.now());
-            setError("");
-          }
-        })
-        .catch((caught: Error) => {
-          if (alive) setError(caught.message);
-        });
-    void refresh();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 60000);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, [client, date]);
 
   // Drawer: focus moves in, Tab stays inside, Escape closes, focus returns to the trigger.
   useEffect(() => {

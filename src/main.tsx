@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { readConfig } from './platform/config'
 import { createAppClient } from './platform/supabase'
+import './styles/stone-theme.css'
 import './styles.css'
 import { ConnectionStatus, ServiceWorkerRegistration } from './pwa/Status'
 

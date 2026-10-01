@@ -7,7 +7,7 @@ import type {
 } from "./model";
 async function authorization(client: AppClient) {
   const { data, error } = await client.auth.getSession();
-  if (error || !data.session) throw new Error("Sign in to use Cora.");
+  if (error || !data.session) throw new Error("Sign in to use CMD.");
   return { Authorization: `Bearer ${data.session.access_token}` };
 }
 async function responseError(response: Response) {
@@ -15,7 +15,7 @@ async function responseError(response: Response) {
   throw new Error(
     typeof data.message === "string"
       ? data.message
-      : "Cora is unavailable. Please retry.",
+      : "CMD is unavailable. Please retry.",
   );
 }
 export async function chat(
@@ -41,7 +41,7 @@ export async function chat(
   });
   if (!r.ok) await responseError(r);
   const reader = r.body?.getReader();
-  if (!reader) throw new Error("Cora’s response was interrupted.");
+  if (!reader) throw new Error("CMD’s response was interrupted.");
   const decoder = new TextDecoder();
   let pending = "",
     finished = false;
@@ -50,7 +50,7 @@ export async function chat(
     if (next.done) break;
     pending += decoder.decode(next.value, { stream: true });
     if (pending.length > 200000)
-      throw new Error("Cora’s response was too large.");
+      throw new Error("CMD’s response was too large.");
     let end;
     while ((end = pending.indexOf("\n")) >= 0) {
       const line = pending.slice(0, end);

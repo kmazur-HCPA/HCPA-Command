@@ -23,7 +23,7 @@ async function request(client: AppClient, action: string) {
 }
 const callbackMessages: Record<string, string> = {
   connected:
-    "Microsoft 365 connected. Cora can now read your calendar, relevant email, and Teams context.",
+    "Microsoft 365 connected. CMD can now read your calendar, relevant email, and Teams context.",
   cancelled:
     "Microsoft connection was cancelled. You can try again when ready.",
   wrong_account:
@@ -96,7 +96,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           connected: false,
         }));
         setNotice(
-          "Disconnected. Command’s stored Microsoft credentials have been removed. Existing Cora conversations remain.",
+          "Disconnected. Command’s stored Microsoft credentials have been removed. Existing CMD conversations remain.",
         );
       }
     } catch (caught) {
@@ -125,7 +125,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
         </span>
       </div>
       <p className="muted">
-        Give Cora the context behind your day: meetings, relevant conversations,
+        Give CMD the context behind your day: meetings, relevant conversations,
         and follow-ups to review.
       </p>
       {!status && !error && <p role="status">Checking connection…</p>}
@@ -153,9 +153,9 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
             </span>
           </div>
           <p className="muted small">
-            Cora can read your default calendar, mailbox, and Teams messages
+            CMD can read your default calendar, mailbox, and Teams messages
             available to your account. She cannot send messages or change
-            meetings. Relevant excerpts may appear in your saved Cora
+            meetings. Relevant excerpts may appear in your saved CMD
             conversations.
           </p>
           <div className="microsoft-actions">
@@ -187,7 +187,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           </div>
           {status.connected && (
             <div className="microsoft-prompts">
-              <p className="eyebrow">Try with Cora</p>
+              <p className="eyebrow">Try with CMD</p>
               {[
                 "Help me prepare for my next meeting.",
                 "Find recent emails that need a follow-up.",

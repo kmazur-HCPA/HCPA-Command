@@ -154,9 +154,9 @@ export function CoraConnection({ client }: { client: AppClient }) {
   const active = connection && Date.parse(connection.expires_at) > checkedAt;
   return (
     <section className="settings-panel" aria-labelledby="connector-title">
-      <h2 id="connector-title">Cora in connected apps</h2>
+      <h2 id="connector-title">CMD in connected apps</h2>
       <p className="muted">
-        Use Cora in Claude on the web, Desktop or Claude Code. Add a custom
+        Use CMD in Claude on the web, Desktop or Claude Code. Add a custom
         connector with the address below and sign in with your Command
         account. Requested tasks, reminders, people, projects, initiatives,
         journal and AI Lab records save directly, and tasks, reminders and due

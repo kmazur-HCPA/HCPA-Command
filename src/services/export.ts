@@ -65,11 +65,11 @@ export function validateSnapshot(snapshot: ExportSnapshot) {
   }
   for(const table of ['cora_conversations','cora_turns','cora_activity','cora_mcp_activity','cora_review_preferences','cora_reminder_sources','cora_workday_reviews'] as const){
     const rows=snapshot[table];
-    if(rows && (rows.length!==snapshot.counts[table]||rows.some(row=>row.user_id!==snapshot.user_id)))throw new Error('Cora export integrity mismatch.');
+    if(rows && (rows.length!==snapshot.counts[table]||rows.some(row=>row.user_id!==snapshot.user_id)))throw new Error('CMD export integrity mismatch.');
   }
   const conversations=new Set(snapshot.cora_conversations?.map(row=>row.id));
   const turns=new Set(snapshot.cora_turns?.map(row=>row.id));
-  if(snapshot.cora_turns?.some(row=>!conversations.has(row.conversation_id))||snapshot.cora_activity?.some(row=>!turns.has(row.turn_id)))throw new Error('Unresolved Cora relationship.');
+  if(snapshot.cora_turns?.some(row=>!conversations.has(row.conversation_id))||snapshot.cora_activity?.some(row=>!turns.has(row.turn_id)))throw new Error('Unresolved CMD relationship.');
   const ids = new Set(snapshot.work_items.map((row) => row.id));
   if (ids.size !== snapshot.work_items.length)
     throw new Error("Duplicate record IDs.");

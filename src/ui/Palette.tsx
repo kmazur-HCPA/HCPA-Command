@@ -12,12 +12,16 @@ export function Palette({
   onNavigate,
   onOpen,
   onCapture,
+  onNewRecord,
+  onAsk,
   onClose,
 }: {
   client: AppClient;
   onNavigate: (page: PageName) => void;
   onOpen: (item: { id: string }) => void;
   onCapture: () => void;
+  onNewRecord: (kind: "task" | "reminder") => void;
+  onAsk: (prompt: string) => void;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
@@ -89,7 +93,7 @@ export function Palette({
           type="search"
           maxLength={200}
           aria-label="Search Command"
-          placeholder="Search your entire workspace…"
+          placeholder="Capture, search, or ask CMD…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -162,17 +166,37 @@ export function Palette({
         </div>
       </details>
       <div className="palette-results" aria-busy={loading}>
-        {!query && (
-          <button className="palette-row" onClick={() => choose(onCapture)}>
-            <Icon name="plus" />
-            <span>
-              Quick Capture
-              <small>Save a thought without breaking your flow</small>
-            </span>
-            <kbd>⇧ ⌘ K</kbd>
-          </button>
-        )}
-        <p className="eyebrow">Go to</p>
+        <p className="label">Do</p>
+        <button className="palette-row" onClick={() => choose(() => onAsk(query.trim()))}>
+          <Icon name="lab" />
+          <span>
+            Ask CMD{query.trim() ? `: “${query.trim().slice(0, 60)}”` : ""}
+            <small>Plan, prepare, or look something up</small>
+          </span>
+        </button>
+        <button className="palette-row" onClick={() => choose(() => onNewRecord("task"))}>
+          <Icon name="task" />
+          <span>
+            Capture as task
+            <small>Add a task with a due date and priority</small>
+          </span>
+        </button>
+        <button className="palette-row" onClick={() => choose(() => onNewRecord("reminder"))}>
+          <Icon name="bell" />
+          <span>
+            Capture as reminder
+            <small>Keep something in front of you until it is resolved</small>
+          </span>
+        </button>
+        <button className="palette-row" onClick={() => choose(onCapture)}>
+          <Icon name="journal" />
+          <span>
+            Capture to journal
+            <small>Save a thought without breaking your flow</small>
+          </span>
+          <kbd>⇧ ⌘ K</kbd>
+        </button>
+        <p className="label">Go to</p>
         {navigation
           .filter((n) =>
             n.label.toLowerCase().includes(query.trim().toLowerCase()),
@@ -188,7 +212,7 @@ export function Palette({
               <Icon name="arrow" />
             </button>
           ))}
-        <p className="eyebrow">Your records · most relevant first</p>
+        <p className="label">Your records</p>
         {query.trim().length < 2 ? (
           <p className="muted small">
             Enter at least two characters. Use quotes for a phrase, OR for

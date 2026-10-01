@@ -56,7 +56,7 @@ export function Icon({
 export function Mark() {
   return (
     <svg className="command-mark" viewBox="0 0 512 512" aria-hidden="true">
-      <path d="M279 112h72L233 400h-72z" fill="#ff963f" />
+      <path d="M279 112h72L233 400h-72z" className="logo-slash" fill="currentColor" stroke="none" />
     </svg>
   );
 }

@@ -21,6 +21,7 @@ async function mockBackend(
     revoked?: boolean;
   } = {},
 ) {
+  await page.route("**/api/helix/**", route => route.fulfill({ status: 409, json: { message: "Connect Helix in Settings." } }));
   await page.route("**/api/cora/connection/status", route => route.fulfill({json:{connection:null}}));
   await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   let preferences = {
@@ -83,6 +84,10 @@ async function mockBackend(
     });
   });
 }
+async function askCmd(page: Page) {
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
+  await page.getByRole("button", { name: /^Ask CMD/ }).click();
+}
 async function login(page: Page) {
   await page.goto("/");
   await page.getByLabel("Email", { exact: true }).fill("owner@example.test");
@@ -105,15 +110,16 @@ test("Microsoft connection settings, callback, source prompts and disconnect", a
   const panel = page.getByRole("region", { name: "Microsoft 365" });
   await expect(panel).toContainText("Connected as owner@example.test");
   await expect(page).not.toHaveURL(/microsoft=/);
-  for (const theme of ["dark", "light"]) {
-    await page.getByRole("combobox", { name: "Appearance" }).selectOption(theme);
+  for (const theme of ["evening", "day"]) {
+    await page.getByRole("button", { name: theme === "day" ? "Day" : "Evening", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
     expect((await new AxeBuilder({ page }).include(".microsoft-panel").analyze()).violations).toEqual([]);
     await panel.screenshot({ path: `test-results/microsoft-${theme}.png` });
   }
   await panel.getByRole("button", { name: "Help me prepare for my next meeting." }).click();
-  await expect(page.getByRole("textbox", { name: "Ask Cora" })).toHaveValue("Help me prepare for my next meeting.");
-  await page.getByRole("button", { name: "Close Cora" }).click();
+  await expect(page.getByRole("textbox", { name: "Ask CMD" })).toHaveValue("Help me prepare for my next meeting.");
+  await page.getByRole("button", { name: "Close CMD" }).click();
   await panel.getByRole("button", { name: "Disconnect", exact: true }).click();
   await expect(panel).toContainText("stored Microsoft credentials have been removed");
   await expect(panel.getByRole("button", { name: "Connect Microsoft 365", exact: true })).toBeEnabled();
@@ -127,7 +133,7 @@ test("Microsoft outages do not prevent settings or ordinary workspace access", a
   await login(page);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("region", { name: "Microsoft 365" })).toContainText("status is unavailable");
-  await page.getByRole("combobox", { name: "Appearance" }).selectOption("light");
+  await page.getByRole("button", { name: "Day", exact: true }).click();
   await page.getByRole("button", { name: "Work Day", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Work Day", exact: true })).toBeVisible();
 });
@@ -136,15 +142,12 @@ test("sign in, save preference, reload, and sign out", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { name: "Work Day" })).toBeVisible();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Appearance" })
-    .selectOption("light");
+  await page.getByRole("button", { name: "Day", exact: true }).click();
   await expect(page.locator('[aria-labelledby="appearance-title"]').getByRole("status")).toHaveText("Appearance saved.");
   await page.reload();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Appearance" })).toHaveValue(
-    "light",
-  );
+  await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByLabel("Account menu").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome to Command." }),
@@ -162,7 +165,7 @@ test("authenticated but unapproved account never sees workspace", async ({
   await expect(
     page.getByRole("heading", { name: "Access is not enabled." }),
   ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Appearance" })).toHaveCount(
+  await expect(page.getByRole("group", { name: "Appearance" })).toHaveCount(
     0,
   );
 });
@@ -226,16 +229,14 @@ for (const [width, height] of [
       path: `test-results/shell-${width}.png`,
       fullPage: true,
     });
-    if (
-      await page.getByRole("button", { name: "More", exact: true }).isVisible()
-    )
+    if (width! <= 900)
       await page.getByRole("button", { name: "More", exact: true }).click();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Settings", exact: true }),
     ).toBeFocused();
     await expect(
-      page.getByRole("combobox", { name: "Appearance" }),
+      page.getByRole("group", { name: "Appearance" }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -273,11 +274,10 @@ test("workspace remains usable with doubled text size", async ({ page }) => {
     content:
       "html { font-size: 200%; } h1 { font-size: 3rem; } p, button { font-size: 1rem; }",
   });
-  if (await page.getByRole("button", { name: "More", exact: true }).isVisible())
-    await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "Appearance" }),
+    page.getByRole("group", { name: "Appearance" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -287,13 +287,13 @@ test("workspace remains usable with doubled text size", async ({ page }) => {
 });
 
 test('WCAG automated checks cover both themes, mobile navigation, search and settings',async({page})=>{
- await mockBackend(page);await login(page);await expect(page.locator('.day-stats')).toBeVisible()
- for(const theme of ['dark','light']){
-  if(theme==='light'){await page.getByRole('button',{name:'Switch color theme'}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','light')}
-  await page.evaluate(()=>Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>undefined))))
+ await mockBackend(page);await login(page);await expect(page.locator('.wd-main')).toBeVisible()
+ for(const theme of ['day','evening']){
+  await page.evaluate(t=>(window as unknown as {CommandTheme:{setMode:(m:string)=>void}}).CommandTheme.setMode(t),theme);await expect(page.locator('html')).toHaveAttribute('data-theme',theme)
+  await page.emulateMedia({reducedMotion:'reduce'})
   const scan=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();expect(scan.violations).toEqual([])
  }
- await page.getByRole('button',{name:'Search Command'}).click();await page.getByText('Filter results',{exact:true}).click()
+ await page.getByRole('button',{name:'Capture, search, or ask CMD'}).click();await page.getByText('Filter results',{exact:true}).click()
  expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
  await page.getByRole('button',{name:'Close search'}).click()
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'More',exact:true}).click()
@@ -311,10 +311,10 @@ test('Cora streams, preserves page context, and creates a task only through its 
   await route.fulfill({contentType:'application/x-ndjson',body:[{type:'status',message:'Thinking it through…'},{type:'delta',text:'Ready to add.'},{type:'complete',turn}].map(e=>JSON.stringify(e)).join('\n')+'\n'})
  })
  await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:turn.id});return r.fulfill(actions===1?{status:409,json:{message:'Task creation was not confirmed. Retry this same card.'}}:{json:{taskId:turn.task_id,created:true}})})
- await login(page);await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});await expect(panel).toBeVisible()
+ await login(page);await askCmd(page);const panel=page.getByRole('dialog',{name:'CMD',exact:true});await expect(panel).toBeVisible()
  await page.getByRole('button',{name:'Projects',exact:true}).click()
- await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Add a task for tomorrow to follow up with Erik.')
- await panel.getByRole('button',{name:'Send to Cora'}).click();await expect(panel.getByRole('heading',{name:'Follow up with Erik'})).toBeVisible();expect(actions).toBe(0)
+ await panel.getByRole('textbox',{name:'Ask CMD',exact:true}).fill('Add a task for tomorrow to follow up with Erik.')
+ await panel.getByRole('button',{name:'Send to CMD'}).click();await expect(panel.getByRole('heading',{name:'Follow up with Erik'})).toBeVisible();expect(actions).toBe(0)
  await panel.locator('summary').filter({hasText:'Sources'}).click()
  await expect(panel.getByRole('link',{name:'Teams discussion'})).toHaveAttribute('href','https://teams.microsoft.com/l/message/fixture/123')
  await expect(panel.getByRole('link',{name:'Unsafe Teams source'})).toHaveCount(0)
@@ -325,17 +325,18 @@ test('Cora streams, preserves page context, and creates a task only through its 
  await expect(panel.getByText('Unsafe source')).toHaveCount(0)
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('not confirmed');await expect(panel.getByText('Task created',{exact:true})).toHaveCount(0)
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(2)
- for(const theme of ['dark','light']){
-  if(theme==='light')await page.getByRole('button',{name:'Switch color theme'}).click()
+ for(const theme of ['evening','day']){
+  await page.evaluate(t=>(window as unknown as {CommandTheme:{setMode:(m:string)=>void}}).CommandTheme.setMode(t),theme)
   await expect(page.locator('html')).toHaveAttribute('data-theme',theme)
-  await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))))
+  await expect(page.locator('html')).not.toHaveClass(/theme-fading/)
+  await page.emulateMedia({reducedMotion:'reduce'})
   expect((await new AxeBuilder({page}).include('.cora-panel').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([])
   await page.screenshot({path:`test-results/cora-${theme}.png`})
  }
- await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('heading',{name:'Projects',exact:true})).toBeVisible()
- await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Ask Cora',exact:true}).click();await expect(panel).toBeVisible();await expect(panel.getByText('Task created',{exact:true})).toBeVisible()
+ await panel.getByRole('button',{name:'Close CMD'}).click();await expect(page.getByRole('heading',{name:'Projects',exact:true})).toBeVisible()
+ await page.setViewportSize({width:390,height:844});await askCmd(page);await expect(panel).toBeVisible();await expect(panel.getByText('Task created',{exact:true})).toBeVisible()
  await page.screenshot({path:'test-results/cora-mobile.png'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
- await panel.getByRole('button',{name:'Close Cora'}).click();await expect(page.getByRole('button',{name:'Ask Cora',exact:true})).toBeFocused()
+ await panel.getByRole('button',{name:'Close CMD'}).click();await expect(panel).toBeHidden()
 })
 
 test('Connected app token is shown once and can be revoked',async({page})=>{
@@ -361,7 +362,7 @@ test('Connected app proposal link opens a review card and never automatically cr
  await page.route('**/api/cora/action',r=>{actions++;return r.fulfill({json:{taskId:turn.task_id,created:true}})});
  await login(page);await expect(page.getByRole('heading',{name:'Work Day',exact:true})).toBeVisible();
  await page.goto('/?coraConversation='+id);
- const panel=page.getByRole('dialog',{name:'Cora',exact:true});await expect(panel.getByRole('heading',{name:'Review integration',exact:true})).toBeVisible();expect(actions).toBe(0);
+ const panel=page.getByRole('dialog',{name:'CMD',exact:true});await expect(panel.getByRole('heading',{name:'Review integration',exact:true})).toBeVisible();expect(actions).toBe(0);
  await panel.getByRole('button',{name:'Add task',exact:true}).click();await expect(panel.getByText('Task created',{exact:true})).toBeVisible();expect(actions).toBe(1);
 });
 
@@ -373,10 +374,10 @@ test('Cora reviews a date-only reminder and saves only after explicit confirmati
  await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
  await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn})+'\n'}));
  await page.route('**/api/cora/action',r=>{actions++;expect(r.request().postDataJSON()).toEqual({turnId:id});return r.fulfill({json:{taskId:id,created:true}})});
- await login(page);await page.getByRole('button',{name:'Ask Cora',exact:true}).click();
- const panel=page.getByRole('dialog',{name:'Cora',exact:true});
- await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill(turn.message);
- await panel.getByRole('button',{name:'Send to Cora'}).click();
+ await login(page);await askCmd(page);
+ const panel=page.getByRole('dialog',{name:'CMD',exact:true});
+ await panel.getByRole('textbox',{name:'Ask CMD',exact:true}).fill(turn.message);
+ await panel.getByRole('button',{name:'Send to CMD'}).click();
  const card=panel.getByRole('region',{name:'Record proposal'});
  await expect(card.getByRole('heading',{name:turn.proposal.title})).toBeVisible();
  await expect(card.getByText('2026-09-22',{exact:true})).toBeVisible();expect(actions).toBe(0);
@@ -393,9 +394,9 @@ test('automatic reminders refresh the workspace without a confirmation card and 
  await page.route('**/api/cora/history*',r=>r.fulfill({json:{conversations:[],turns:[]}}));
  await page.route('**/api/cora/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'complete',turn:{id:userId,user_id:userId,conversation_id:userId,message:'Remind me tomorrow',context:{page:'workspace',recordId:null},response:'Saved your reminder for tomorrow.',sources:[],proposal:null,task_id:userId,status:'complete',action_status:'created',created_at:new Date().toISOString(),finished_at:new Date().toISOString()}})+'\n'}));
  await login(page);
- await page.getByRole('button',{name:'Ask Cora',exact:true}).click();const panel=page.getByRole('dialog',{name:'Cora',exact:true});
- await panel.getByRole('textbox',{name:'Ask Cora',exact:true}).fill('Remind me tomorrow');await panel.getByRole('button',{name:'Send to Cora'}).click();
+ await askCmd(page);const panel=page.getByRole('dialog',{name:'CMD',exact:true});
+ await panel.getByRole('textbox',{name:'Ask CMD',exact:true}).fill('Remind me tomorrow');await panel.getByRole('button',{name:'Send to CMD'}).click();
  await expect(panel.getByText('Saved your reminder for tomorrow.')).toBeVisible();await expect(panel.getByRole('button',{name:'Confirm changes'})).toHaveCount(0);
- await panel.getByRole('button',{name:'Close Cora'}).click();await page.getByRole('button',{name:'Settings',exact:true}).click();
+ await panel.getByRole('button',{name:'Close CMD'}).click();await page.getByRole('button',{name:'Settings',exact:true}).click();
  await page.getByRole('button',{name:'Pause automatic reminders',exact:true}).click();await expect(page.getByRole('button',{name:'Enable automatic reminders',exact:true})).toBeVisible();expect(paused).toBe(true);
 });

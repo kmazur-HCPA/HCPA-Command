@@ -18,6 +18,7 @@ async function setup(page: Page) {
   await page.route("**/api/microsoft/calendar?**",r=>r.fulfill({json:{events:[],truncated:false,retrievedAt:new Date().toISOString()}}));
   await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[]}));
   await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:false}}));
+  await page.route("**/api/helix/**", route => route.fulfill({ status: 409, json: { message: "Connect Helix in Settings." } }));
   await page.route("**/api/cora/connection/status", route => route.fulfill({json:{connection:null}}));
   await page.route("**/api/microsoft/status", route => route.fulfill({ json: { configured: false, connected: false } }));
   const rows: WorkItem[] = [],
@@ -212,7 +213,7 @@ test("create a task, choose a priority, edit, and complete it", async ({
 }) => {
   const { rows } = await setup(page);
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
-  await page.getByRole("button", { name: "New task", exact: true }).click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click().then(() => page.getByRole("button", { name: /^Capture as task/ }).click());
   await page.getByLabel("Title", { exact: true }).fill("Review architecture");
   await page
     .getByRole("textbox", { name: "Notes", exact: true })
@@ -227,8 +228,8 @@ test("create a task, choose a priority, edit, and complete it", async ({
   await page.getByRole("button", { name: "Work Day", exact: true }).click();
   await expect(
     page
-      .locator(".focus-panel")
-      .getByRole("button", { name: "Review architecture" }),
+      .locator(".wd-now")
+      .getByText("Review architecture"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await page.getByRole("button", { name: "Complete Review architecture", exact: true }).click();
@@ -239,9 +240,8 @@ test("capture survives failed save and reload, then a lost acknowledgement produ
   page,
 }) => {
   const { rows, control } = await setup(page);
-  await page
-    .getByRole("button", { name: "Quick Capture", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
+  await page.getByRole("button", { name: /^Capture to journal/ }).click();
   await page
     .getByLabel("What’s on your mind?")
     .fill("  Keep the original words.\nSecond line.  ");
@@ -252,9 +252,8 @@ test("capture survives failed save and reload, then a lost acknowledgement produ
     .getByRole("button", { name: "Close · keep draft", exact: true })
     .click();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Quick Capture", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
+  await page.getByRole("button", { name: /^Capture to journal/ }).click();
   await expect(page.getByLabel("What’s on your mind?")).toHaveValue(
     "  Keep the original words.\nSecond line.  ",
   );
@@ -273,9 +272,8 @@ test("journal revisions preserve original text and drafts block logout until del
   page,
 }) => {
   const { history } = await setup(page);
-  await page
-    .getByRole("button", { name: "Quick Capture", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
+  await page.getByRole("button", { name: /^Capture to journal/ }).click();
   await page.getByLabel("What’s on your mind?").fill("Original decision");
   await page.getByRole("button", { name: "Save capture", exact: true }).click();
   await page
@@ -292,13 +290,13 @@ test("journal revisions preserve original text and drafts block logout until del
     page.locator("details").filter({ hasText: "Original entry" }),
   ).toContainText("Original decision");
   expect(history).toHaveLength(2);
-  await page
-    .getByRole("button", { name: "Quick Capture", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
+  await page.getByRole("button", { name: /^Capture to journal/ }).click();
   await page.getByLabel("What’s on your mind?").fill("Unsent note");
   await page
     .getByRole("button", { name: "Close · keep draft", exact: true })
     .click();
+  await page.getByLabel("Account menu").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
@@ -308,6 +306,7 @@ test("journal revisions preserve original text and drafts block logout until del
   await page
     .getByRole("button", { name: "Discard draft", exact: true })
     .click();
+  await page.getByLabel("Account menu").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome to Command." }),
@@ -317,9 +316,8 @@ test("reminder remains visible after its due time and converts explicitly", asyn
   page,
 }) => {
   const { rows } = await setup(page);
-  await page
-    .getByRole("button", { name: "All reminders", exact: true })
-    .click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("button", { name: "Reminders", exact: true }).click();
   await page.getByRole("button", { name: "New reminder", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Call vendor");
   await page.getByLabel("Reminder date (no time)").fill("2020-01-01");
@@ -339,7 +337,7 @@ test("conflicting edits preserve the draft until the saved version is reviewed",
 }) => {
   const { rows } = await setup(page);
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
-  await page.getByRole("button", { name: "New task", exact: true }).click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click().then(() => page.getByRole("button", { name: /^Capture as task/ }).click());
   await page.getByLabel("Title", { exact: true }).fill("Concurrent task");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page
@@ -412,6 +410,7 @@ test("learning connects to an experiment and a recorded decision", async ({
   page,
 }) => {
   const { rows } = await setup(page);
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("button", { name: "Learning", exact: true }).click();
   await page.getByRole("button", { name: "New learning", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Evaluation course");
@@ -420,6 +419,7 @@ test("learning connects to an experiment and a recorded decision", async ({
     .getByLabel("Key takeaways", { exact: true })
     .fill("Use representative synthetic examples");
   await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("button", { name: "AI Lab", exact: true }).click();
   await page.getByRole("button", { name: "Experiments", exact: true }).click();
   await page
@@ -579,8 +579,7 @@ test("designed dashboard uses real counts, completion, search, and responsive th
     });
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await page.getByRole("button", { name: "Work Day", exact: true }).click();
-  await expect(page.locator(".stat-card").first()).toContainText("4");
-  await expect(page.locator(".focus-panel")).toContainText(
+  await expect(page.locator(".wd-now")).toContainText(
     "Finalize WorkHUB improvements",
   );
   await page.screenshot({
@@ -588,8 +587,10 @@ test("designed dashboard uses real counts, completion, search, and responsive th
     path: "test-results/design-dark.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Switch color theme" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.evaluate(() => (window as unknown as { CommandTheme: { setMode: (m: string) => void } }).CommandTheme.setMode("evening"));
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "evening");
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
   await page.screenshot({
     animations: "disabled",
     path: "test-results/design-light.png",
@@ -597,15 +598,15 @@ test("designed dashboard uses real counts, completion, search, and responsive th
   });
   await page
     .getByRole("button", {
-      name: "Complete Review AI pilot notes",
+      name: "Mark done: Review AI pilot notes",
       exact: true,
     })
     .click();
-  await expect(page.locator(".stat-card").first()).toContainText("3");
+  await expect(page.getByRole("status").filter({ hasText: "Task completed" })).toBeVisible();
   expect(rows.find((r) => r.title === "Review AI pilot notes")?.status).toBe(
     "Complete",
   );
-  await page.getByRole("button", { name: "Search Command" }).click();
+  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
   await page.getByRole("searchbox", { name: "Search Command" }).fill("Settings");
   await page
     .getByRole("dialog", { name: "Command search" })
@@ -639,7 +640,7 @@ test('global search filters, source links, pagination and archive boundaries',as
  const {rows}=await setup(page)
  for(let i=0;i<30;i++)rows.push({...newItem('task',uid),title:`Spatial record ${i}`,body:'Searchable metadata',tags:['gis'],original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null})
  rows[0]!.archived=true
- await page.getByRole('button',{name:'Search Command',exact:true}).click()
+ await page.getByRole('button',{name:'Capture, search, or ask CMD'}).click()
  await page.getByRole('searchbox',{name:'Search Command'}).fill('Spatial')
  await expect(page.locator('.search-result')).toHaveCount(25)
  await page.getByRole('button',{name:'Next results'}).click();await expect(page.locator('.search-result')).toHaveCount(4)
@@ -693,19 +694,9 @@ test('compact project groups reorder persistently, complete safely and show all 
  control.failWrites=false;
  await page.getByRole('button',{name:'Complete Second task',exact:true}).click();
  await expect(page.getByRole('button',{name:'Second task',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Work Day',exact:true}).click();
- await expect(page.getByRole('button',{name:'Future task',exact:true})).toBeVisible();
- await expect(page.locator('.reminders-panel + .waiting-panel')).toBeVisible();
- const radarBox=await page.locator('.reminders-panel').boundingBox(),waitingBox=await page.locator('.waiting-panel').boundingBox();
- expect(waitingBox!.y-radarBox!.y-radarBox!.height).toBeLessThan(24);
- const scroller=page.getByRole('region',{name:'Scrollable tasks',exact:true});
- expect(await scroller.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
- await page.getByRole('button',{name:'Load more tasks',exact:true}).click();
- await expect(scroller.getByRole('button',{name:'Unassigned 51',exact:true})).toHaveCount(1);
- await scroller.evaluate(el=>el.scrollTop=0);
- await page.screenshot({path:'test-results/compact-ipad-dark.png',fullPage:true,animations:'disabled'});
  await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'Switch color theme'}).click();
+ await page.evaluate(()=>(window as unknown as {CommandTheme:{setMode:(m:string)=>void}}).CommandTheme.setMode('evening'));
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
  await expect(page.getByRole('button',{name:'Future task',exact:true})).toBeVisible();
  await expect(page.getByRole('status').filter({hasText:'Loading'})).toHaveCount(0);
  expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
@@ -757,41 +748,11 @@ test('People directory supports contact fields, CSV preview, failed acknowledgem
  await page.screenshot({path:'test-results/people-mobile.png',animations:'disabled'});
 });
 
-test('Work Day gives tasks more room and shows calendar, reminders and waiting on in both themes',async({page})=>{
- await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
- await page.setViewportSize({width:1600,height:1100});
- const {rows}=await setup(page);
- for(let i=0;i<24;i++)rows.push({...newItem('task',uid),title:`Work item ${i+1}`,original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
- let fail=false;
- await page.route('**/api/microsoft/calendar?**',r=>r.fulfill(fail?{status:503,json:{message:'Calendar temporarily unavailable.'}}:{json:{events:[{id:'one',subject:'Leadership sync',start:'2026-09-22T13:00:00.000Z',end:'2026-09-22T14:30:00.000Z',allDay:false,durationMinutes:90},{id:'two',subject:'Planning day',start:'2026-09-22T04:00:00.000Z',end:'2026-09-23T04:00:00.000Z',allDay:true,durationMinutes:1440}],truncated:false,retrievedAt:new Date().toISOString()}}));
- await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'Work Day',exact:true}).click();
- await expect(page.locator('.calendar-panel')).toContainText('Leadership sync');
- await expect(page.locator('.calendar-panel')).toContainText('9:00 AM');
- await expect(page.locator('.calendar-panel')).toContainText('1h 30m');
- await expect(page.locator('.calendar-panel')).toContainText('All day');
- await expect(page.getByRole('button',{name:'Work item 24',exact:true})).toBeAttached();
- expect((await page.locator('.task-scroll-region').boundingBox())!.height).toBeGreaterThan(650);
- await expect(page.locator('.projects-panel,.learning-panel')).toHaveCount(0);
- await expect(page.locator('.reminders-panel')).toBeVisible();await expect(page.locator('.waiting-panel')).toBeVisible();
- await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-dark.png',fullPage:true});
- await page.getByRole('button',{name:'Switch color theme'}).click();
- await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-light.png',fullPage:true});
- await expect(page.getByRole('combobox',{name:'Calendar range'})).toHaveCount(0);
- await expect(page.locator('.calendar-panel')).toContainText('Leadership sync');
- expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
- await page.setViewportSize({width:390,height:844});
- await page.screenshot({animations:'disabled',path:'test-results/workday-expanded-mobile.png',fullPage:true});
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- fail=true;await page.locator('.calendar-panel').getByRole('button',{name:'Refresh',exact:true}).click();
- await expect(page.locator('.calendar-panel')).toContainText('Calendar temporarily unavailable');
- await expect(page.getByRole('button',{name:'Work item 1',exact:true})).toBeVisible();
-});
 
 test('returning from another app keeps Tasks and the unsaved editor mounted while access is rechecked',async({page})=>{
  await setup(page);
  await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'New task',exact:true}).click();
+ await page.getByRole('button',{name:'Capture, search, or ask CMD'}).click();await page.getByRole('button',{name:/^Capture as task/}).click();
  await page.getByLabel('Title',{exact:true}).fill('Keep my place');
  await page.getByRole('textbox',{name:'Notes',exact:true}).fill('Information collected from another app');
  let finishCheck:()=>void=()=>{};
@@ -807,7 +768,7 @@ test('returning from another app keeps Tasks and the unsaved editor mounted whil
  await page.getByRole('button',{name:'Close editor',exact:true}).click();
  await page.reload();
  await expect(page.getByRole('heading',{name:'Tasks',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'New task',exact:true}).click();
+ await page.getByRole('button',{name:'Capture, search, or ask CMD'}).click();await page.getByRole('button',{name:/^Capture as task/}).click();
  await expect(page.getByLabel('Title',{exact:true})).toHaveValue('Keep my place');
  await page.route('**/rest/v1/app_memberships*',route=>route.fulfill({json:{user_id:uid,active:false}}));
  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
@@ -820,7 +781,7 @@ test('task metadata and same-dialog editing work on Work Day and Tasks', async (
  const {rows,control}=await setup(page);
  rows.push({...newItem('task',uid),title:'Review rollout',priority:'High',status:'In Progress',due_date:'2020-01-01',body:'Check deployment notes',original_body:'',version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});
  await page.getByRole('button',{name:'Tasks',exact:true}).click();
- for (const destination of ['Work Day','Tasks']) {
+ for (const destination of ['Tasks']) {
   await page.getByRole('button',{name:destination,exact:true}).click();
   const row=page.locator('.task-row').filter({hasText:'Review rollout'});
   await expect(row.locator('.task-metadata')).toContainText('High');
@@ -895,46 +856,39 @@ test('task details save priority, due date and status directly and recover from 
 });
 
 
-test('Work Day calendar hides past events and removes meetings as they end',async({page})=>{
- await page.clock.install({time:new Date('2026-09-23T15:00:00Z')});
- await setup(page);
- await page.route('**/api/microsoft/calendar?**',r=>r.fulfill({json:{events:[
-  {id:'past',subject:'Monday meeting',start:'2026-09-21T13:00:00Z',end:'2026-09-21T14:00:00Z',allDay:false,durationMinutes:60},
-  {id:'earlier',subject:'Earlier today',start:'2026-09-23T13:00:00Z',end:'2026-09-23T14:00:00Z',allDay:false,durationMinutes:60},
-  {id:'ongoing',subject:'Current meeting',start:'2026-09-23T14:00:00Z',end:'2026-09-23T15:01:00Z',allDay:false,durationMinutes:61},
-  {id:'future',subject:'Tomorrow meeting',start:'2026-09-24T13:00:00Z',end:'2026-09-24T14:00:00Z',allDay:false,durationMinutes:60},
- ],truncated:false,retrievedAt:new Date().toISOString()}}));
- await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'Work Day',exact:true}).click();
- const panel=page.locator('.calendar-panel');
- await expect(panel).toContainText('Current meeting');
- await expect(panel).toContainText('Tomorrow meeting');
- await expect(panel).not.toContainText('Monday meeting');
- await expect(panel).not.toContainText('Earlier today');
- await page.clock.fastForward(90000);
- await expect(panel).not.toContainText('Current meeting');
- await expect(panel).toContainText('Tomorrow meeting');
-});
 
-test('Work Day opens with one row of counts the width of the panels below, then tasks',async({page})=>{
- await page.setViewportSize({width:1600,height:1100});
- await setup(page);
- await page.getByRole('button',{name:'Tasks',exact:true}).click();
- await page.getByRole('button',{name:'Work Day',exact:true}).click();
- const stats=page.locator('.day-stats'),grid=page.locator('.day-grid'),tasks=page.locator('.priority-panel');
- await expect(stats.locator('.stat-card')).toHaveCount(4);
- await expect(page.getByRole('region',{name:'Command brief'})).toHaveCount(0);
- await page.waitForFunction(()=>document.getAnimations().every(a=>a.playState!=='running'));
- const s=(await stats.boundingBox())!,g=(await grid.boundingBox())!,t=(await tasks.boundingBox())!;
- expect(Math.abs(s.x-g.x)).toBeLessThan(2);
- expect(Math.abs(s.width-g.width)).toBeLessThan(2);
- // Cards arrive with a short staggered animation; compare settled positions.
- await expect.poll(async()=>new Set((await stats.locator('.stat-card').evaluateAll(els=>els.map(el=>Math.round(el.getBoundingClientRect().top))))).size).toBe(1);
- expect(t.y).toBeGreaterThan(s.y+s.height);
- expect(t.y-(s.y+s.height)).toBeLessThan(40);
- expect((await new AxeBuilder({page}).analyze()).violations).toEqual([]);
- await page.screenshot({path:'test-results/work-day-desktop.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:'test-results/work-day-mobile.png',fullPage:true});
+
+test("Work Day reads as one page: headline, Now, replies owed, week and open work, in both themes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { rows } = await setup(page);
+  const stamp = new Date().toISOString();
+  rows.push(
+    { ...newItem("task", uid), title: "Plan the budget", status: "Next", priority: "High", due_date: "2020-01-01", focus_slot: 1, original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null },
+    { ...newItem("task", uid), title: "Tidy the shared drive", status: "Inbox", original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null },
+  );
+  await page.route("**/api/microsoft/flagged", (r) => r.fulfill({ json: { messages: [{ id: "m1", conversation_id: "c1", sender: "Pat Lee", subject: "Parcel changes", received_at: stamp, flag_due: null, importance: "high", url: null, capture: null, record_id: null }], truncated: false, window_days: 30, retrievedAt: stamp } }));
+  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  await page.getByRole("button", { name: "Work Day", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Work Day" })).toContainText("deserve");
+  const now = page.locator(".wd-now");
+  await expect(now).toContainText("Plan the budget");
+  await expect(now).toContainText("Overdue");
+  await expect(page.getByText("Pat Lee")).toBeVisible();
+  await expect(page.getByRole("tab", { name: /No project/ })).toBeVisible();
+  await expect(page.locator(".stat-card, .sitrep-panel")).toHaveCount(0);
+  await page.getByRole("button", { name: /Mark done: Plan the budget/ }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Task completed" })).toBeVisible();
+  expect(rows.find((r) => r.title === "Plan the budget")?.status).toBe("Complete");
+  await page.getByRole("button", { name: "Focus", exact: true }).click();
+  await expect(page.locator(".wd-dim").first()).toHaveClass(/is-dimmed/);
+  await page.getByRole("button", { name: "Focus on", exact: true }).click();
+  for (const mode of ["day", "evening"]) {
+    await page.evaluate((m) => (window as unknown as { CommandTheme: { setMode: (m: string) => void } }).CommandTheme.setMode(m), mode);
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
+await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

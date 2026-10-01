@@ -215,7 +215,7 @@ export function CoraPanel({
     <dialog
       ref={dialog}
       className="cora-panel"
-      aria-label="Cora"
+      aria-label="CMD"
       onCancel={onClose}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -229,12 +229,12 @@ export function CoraPanel({
           <Mark />
         </span>
         <div>
-          <h2>Cora</h2>
+          <h2>CMD</h2>
           <p>Command intelligence</p>
         </div>
         <button
           className="icon-button"
-          aria-label="Close Cora"
+          aria-label="Close CMD"
           onClick={onClose}
         >
           <Icon name="close" />
@@ -352,7 +352,7 @@ export function CoraPanel({
               {turn.message}
             </p>
             <div className="cora-answer">
-              <p className="eyebrow">Cora</p>
+              <p className="eyebrow">CMD</p>
               <p className="cora-text">
                 {turn.response ||
                   "This request is still running or was interrupted. Reload history to check."}
@@ -531,7 +531,7 @@ export function CoraPanel({
       )}
       <form className="cora-composer" onSubmit={(e) => void send(e)}>
         <label className="sr-only" htmlFor="cora-message">
-          Ask Cora
+          Ask CMD
         </label>
         <textarea
           ref={input}
@@ -539,7 +539,7 @@ export function CoraPanel({
           value={draft}
           maxLength={4000}
           rows={3}
-          placeholder="Ask Cora…"
+          placeholder="Ask CMD…"
           disabled={busy}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -563,7 +563,7 @@ export function CoraPanel({
             <button
               type="submit"
               disabled={!draft.trim() || loading}
-              aria-label="Send to Cora"
+              aria-label="Send to CMD"
             >
               <Icon name="arrow" />
             </button>

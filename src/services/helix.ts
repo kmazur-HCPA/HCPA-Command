@@ -28,8 +28,11 @@ async function call(client: AppClient, action: string, method = "GET") {
 }
 export const helixStatus = (client: AppClient) =>
   call(client, "status") as Promise<HelixStatus>;
-export const helixSummary = (client: AppClient) =>
-  call(client, "summary") as Promise<HelixSummaryResponse>;
+export const helixSummary = async (client: AppClient) => {
+  const result = (await call(client, "summary")) as HelixSummaryResponse;
+  if (!result?.sections) throw new Error("Helix is unavailable. Please retry.");
+  return result;
+};
 export const helixDisconnect = (client: AppClient) =>
   call(client, "disconnect", "POST");
 export async function helixConnect(client: AppClient) {
