@@ -22,6 +22,8 @@ import { listDrafts } from "../platform/drafts";
 
 const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
 const CoraConnection=lazy(()=>import("../features/mcp/CoraConnection").then(m=>({default:m.CoraConnection})))
+const HelixPanel=lazy(()=>import("../features/helix/HelixPanel").then(m=>({default:m.HelixPanel})))
+const HelixWork=lazy(()=>import("../features/helix/HelixWork").then(m=>({default:m.HelixWork})))
 const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
@@ -379,13 +381,16 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
         ) : (
           <>
             {page === "workspace" ? (
-              <WorkDay
-                userId={user.id}
-                client={client}
-                revision={workRevision}
-                onOpen={openRecord}
-                onNavigate={navigate}
-              />
+              <>
+                <WorkDay
+                  userId={user.id}
+                  client={client}
+                  revision={workRevision}
+                  onOpen={openRecord}
+                  onNavigate={navigate}
+                />
+                <Suspense fallback={null}><HelixWork client={client} /></Suspense>
+              </>
             ) : (
               <>
                 <p className="eyebrow">Make it yours</p>
@@ -419,6 +424,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                   </p>
                 </section>
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
+                <Suspense fallback={<p role="status">Loading Helix…</p>}><HelixPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading connected apps…</p>}><CoraConnection client={client}/></Suspense>
                 <WorkdayReviews client={client} settings/>
                 <ExportPanel client={client} />
