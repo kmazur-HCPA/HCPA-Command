@@ -5,7 +5,7 @@ Command's look and feel since the October 2026 redesign. Calm, legible and quiet
 ## Theme
 
 - Tokens live in `src/styles/stone-theme.css`. Everything else in `src/styles.css` reads them; do not add hex colors elsewhere.
-- Two palettes on `<html data-theme="day|evening">`. Day is warm stone `#D5CFC4`; Evening is deep warm stone `#3A3631`. Never white, never near-black.
+- Two palettes on `<html data-theme="day|evening">`. Day is light grey stone `#E3E1DD`; Evening is deep warm stone `#3A3631`. Never white, never near-black.
 - `public/stone-theme.js` is a classic script loaded in `<head>` so the right palette paints first. Modes: **Auto** (default; Evening from 6:00 PM to 6:30 AM Eastern), **Day**, **Evening**. The mode is kept in `localStorage` (`cmd-theme-mode`) and, from Settings → Appearance, in `user_preferences.theme` (`auto`, `day`, `evening`). Older accounts may hold `system`, `dark` or `light`; Day and Auto carry over, and `dark` (the old default) is read as Auto.
 - Scheduled switches cross-fade for 1.2 seconds (not on first paint, and not with reduced motion). Anything that draws its own colors must re-read tokens on the `cmd-themechange` event.
 - Signal colors were adjusted from the original design so every text/background pair passes 4.5:1 (axe checks run in both themes). If you change a token, run `npx playwright test`.
@@ -13,7 +13,7 @@ Command's look and feel since the October 2026 redesign. Calm, legible and quiet
 
 ## Rules
 
-- The `/` logo mark is the only orange (`--brand-orange`). No orange buttons, links, borders or highlights.
+- Orange (`--brand-orange`) is for the `/` logo mark and the Work Day time line only. No orange buttons, links, borders or highlights.
 - Teal (`--accent`) is the one working accent: now, links, primary buttons, focus rings, the day line, selected states.
 - `--overdue` is always paired with the word "Overdue" or "past due". Color never carries meaning alone.
 - Priority and status are quiet mono meta text, not chips. Only overdue and "now" get color.

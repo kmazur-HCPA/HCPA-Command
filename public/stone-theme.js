@@ -7,7 +7,7 @@
   var EVENING_START = 18 * 60;      // 6:00 PM
   var DAY_START = 6 * 60 + 30;      // 6:30 AM
   var root = document.documentElement;
-  var META = { day: "#D5CFC4", evening: "#3A3631" };
+  var META = { day: "#E3E1DD", evening: "#3A3631" };
 
   function minutesET() {
     var parts = new Intl.DateTimeFormat("en-US", {

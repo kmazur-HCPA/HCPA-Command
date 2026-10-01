@@ -1,7 +1,7 @@
 /* ==========================================================================
    Command — Stone theme
    Day (warm mid-light) and Evening (deeper warm) palettes.
-   The / logo is the only orange in the product. Teal is the working accent.
+   The / logo and the Work Day time line are the only orange in the product. Teal is the working accent.
    Signal and meta colors were darkened/lightened slightly from the handoff values so
    they pass 4.5:1 on every surface (axe flagged the originals on the rail, fields and
    status text).
@@ -35,18 +35,19 @@
 :root[data-theme="day"] {
   /* Brand (fixed in both themes) */
   --brand-orange: #F28C38;
+  --brand-orange-soft: rgba(242, 140, 56, .28);
 
   /* Surfaces */
-  --bg:            #D5CFC4;  /* page ground: warm stone */
-  --bg-rail:       rgba(40, 32, 20, .06);  /* nav rail, segmented controls */
-  --surface:       rgba(255, 252, 246, .50); /* cards, reply tiles */
-  --surface-raised:rgba(255, 252, 246, .72); /* selected tab, active nav, today */
-  --surface-solid: #E6E1D7;  /* opaque layer for dialogs and menus */
-  --field:         rgba(255, 252, 246, .60); /* inputs */
-  --hover:         rgba(40, 32, 20, .05);
-  --line:          rgba(40, 32, 20, .11);   /* hairlines, dividers */
-  --line-strong:   rgba(40, 32, 20, .18);   /* button outlines */
-  --track:         rgba(40, 32, 20, .12);   /* day-line track, progress rails */
+  --bg:            #E3E1DD;  /* page ground: light grey stone */
+  --bg-rail:       rgba(32, 32, 34, .06);  /* nav rail, segmented controls */
+  --surface:       rgba(255, 255, 255, .55); /* cards, reply tiles */
+  --surface-raised:rgba(255, 255, 255, .78); /* selected tab, active nav, today */
+  --surface-solid: #EFEEEB;  /* opaque layer for dialogs and menus */
+  --field:         rgba(255, 255, 255, .62); /* inputs */
+  --hover:         rgba(32, 32, 34, .05);
+  --line:          rgba(32, 32, 34, .11);   /* hairlines, dividers */
+  --line-strong:   rgba(32, 32, 34, .20);   /* button outlines */
+  --track:         rgba(32, 32, 34, .12);   /* day-line track, progress rails */
   --scrim:         rgba(31, 29, 26, .45);
 
   /* Text */
