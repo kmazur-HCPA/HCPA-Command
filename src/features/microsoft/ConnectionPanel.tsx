@@ -154,7 +154,7 @@ export function ConnectionPanel({ client }: { client: AppClient }) {
           </div>
           <p className="muted small">
             CMD can read your default calendar, mailbox, and Teams messages
-            available to your account. She cannot send messages or change
+            available to your account. It cannot send messages or change
             meetings. Relevant excerpts may appear in your saved CMD
             conversations.
           </p>

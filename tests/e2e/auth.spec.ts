@@ -287,6 +287,7 @@ test("workspace remains usable with doubled text size", async ({ page }) => {
 });
 
 test('WCAG automated checks cover both themes, mobile navigation, search and settings',async({page})=>{
+ await page.emulateMedia({reducedMotion:'reduce'})
  await mockBackend(page);await login(page);await expect(page.locator('.wd-main')).toBeVisible()
  for(const theme of ['day','evening']){
   await page.evaluate(t=>(window as unknown as {CommandTheme:{setMode:(m:string)=>void}}).CommandTheme.setMode(t),theme);await expect(page.locator('html')).toHaveAttribute('data-theme',theme)

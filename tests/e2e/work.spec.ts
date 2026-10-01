@@ -508,7 +508,7 @@ test("Library preserves metadata links and recovers an interrupted original uplo
     },
   );
   await page.getByRole("button", { name: "Library", exact: true }).click();
-  await page.getByRole("button", { name: "New library", exact: true }).click();
+  await page.getByRole("button", { name: "New item", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Reference document");
   await page
     .getByRole("combobox", { name: "Classification", exact: true })
@@ -891,4 +891,25 @@ await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("every page keeps the Stone layout and passes accessibility checks in both themes", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const { rows } = await setup(page);
+  const stamp = new Date().toISOString();
+  for (const [kind, title] of [["task", "Plan the budget"], ["project", "GIS modernization"], ["journal", "Met with Erik"], ["person", "Tatiana English"], ["library", "Parcel data dictionary"], ["reminder", "Call vendor"], ["waiting", "Vendor estimate"], ["initiative", "Front counter"], ["learning", "Public services"]] as const)
+    rows.push({ ...newItem(kind, uid), title, original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null });
+  for (const mode of ["day", "evening"]) {
+    await page.evaluate((m) => (window as unknown as { CommandTheme: { setMode: (m: string) => void } }).CommandTheme.setMode(m), mode);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
+    await expect(page.locator("html")).not.toHaveClass(/theme-fading/);
+    for (const name of ["task", "project", "journal", "person", "library", "reminder", "waiting", "initiative", "learning", "lab", "settings"]) {
+      await page.goto(`/?page=${name}`);
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      await expect(page.getByText("Loading…")).toHaveCount(0);
+      await expect(page.locator(".rail")).toBeVisible();
+      expect((await new AxeBuilder({ page }).analyze()).violations, `${name} in ${mode}`).toEqual([]);
+    }
+  }
 });

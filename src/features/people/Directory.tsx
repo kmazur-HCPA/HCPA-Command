@@ -84,7 +84,6 @@ export function Directory({
     <section className="work-list-view directory" aria-label="People directory">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">YOUR WORKSPACE / DIRECTORY</p>
           <h1 tabIndex={-1}>People</h1>
           <p className="muted small">The people behind your work.</p>
         </div>
@@ -92,14 +91,14 @@ export function Directory({
           <button onClick={() => setImporting(true)}>
             <Icon name="library" /> Import CSV
           </button>
-          <button onClick={() => setCreating(true)}>
+          <button className="btn btn--primary" onClick={() => setCreating(true)}>
             <Icon name="plus" /> New person
           </button>
         </div>
       </div>
-      <div className="directory-filters">
+      <div className="directory-filters filter-row">
         <label>
-          Search directory
+          <span className="visually-hidden">Search directory</span>
           <input
             type="search"
             maxLength={200}
@@ -112,7 +111,7 @@ export function Directory({
           />
         </label>
         <label>
-          View
+          <span className="visually-hidden">View</span>
           <select
             value={String(archived)}
             onChange={(e) => {

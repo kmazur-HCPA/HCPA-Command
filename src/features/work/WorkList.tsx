@@ -22,6 +22,7 @@ import { TaskMetadata } from "./TaskMetadata";
 import { Editor } from "./Editor";
 import { Icon } from "../../ui/Icon";
 
+const newLabel: Partial<Record<Kind, string>> = { library: "item", use_case: "use case", program: "program note" };
 type Project = Awaited<ReturnType<typeof projectDirectory>>[number];
 export function WorkList({
   client,
@@ -234,8 +235,9 @@ export function WorkList({
                     .join(" · ") || "No role or organization yet"
                 ) : (
                   <>
-                    {effectiveStatus(item, now)} ·{" "}
-                    {displayDate(item.due_date, item.remind_at)}
+                    {kind === "journal"
+                      ? displayDate(null, item.created_at).split(",")[0]
+                      : `${effectiveStatus(item, now)} · ${displayDate(item.due_date, item.remind_at)}`}
                     {item.status === "Snoozed" &&
                       ` · Snoozed until ${displayDate(null, item.snoozed_until)}`}
                     {kind === "journal" && ` · ${item.entry_type}`}
@@ -243,7 +245,7 @@ export function WorkList({
                 )}
               </p>}
             </div>
-            {kind !== "person" && kind !== "task" && (
+            {kind !== "person" && kind !== "task" && item.priority !== "Normal" && (
               <span
                 className={`priority-pill priority-${item.priority.toLowerCase()}`}
               >
@@ -311,6 +313,7 @@ export function WorkList({
       })}
     </ul>
   );
+  const filtered = !!(search || priority || tag || entryType || archived || (status && status !== "__open"));
   const GroupHeading = embedded ? "h3" : "h2";
   const groups =
     kind === "task"
@@ -350,22 +353,20 @@ export function WorkList({
       {!embedded && (
         <div className="section-heading">
           <div>
-            <p className="eyebrow">
-              YOUR WORKSPACE / {labels[kind].toUpperCase()}
-            </p>
             <h1 tabIndex={-1}>{labels[kind]}</h1>
           </div>
-          <button onClick={() => setEditor("new")}>
-            <Icon name="plus" /> New {kind}
+          <button className="btn btn--primary" onClick={() => setEditor("new")}>
+            <Icon name="plus" /> New {newLabel[kind] ?? kind}
           </button>
         </div>
       )}
       {!embedded && (
-        <div className="filters">
+        <div className="filters filter-row">
           <label>
-            Search titles and notes
+            <span className="visually-hidden">Search titles and notes</span>
             <input
               type="search"
+              placeholder="Search titles and notes"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -374,7 +375,7 @@ export function WorkList({
             />
           </label>
           <label>
-            Filter status
+            <span className="visually-hidden">Filter status</span>
             <select
               value={status}
               onChange={(e) => {
@@ -390,7 +391,7 @@ export function WorkList({
             </select>
           </label>
           <label>
-            Filter priority
+            <span className="visually-hidden">Filter priority</span>
             <select
               value={priority}
               onChange={(e) => {
@@ -405,7 +406,7 @@ export function WorkList({
             </select>
           </label>
           <label>
-            View
+            <span className="visually-hidden">View</span>
             <select
               value={String(archived)}
               onChange={(e) => {
@@ -420,9 +421,9 @@ export function WorkList({
         </div>
       )}
       {kind === "journal" && (
-        <div className="form-grid">
+        <div className="filters filter-row">
           <label>
-            Filter entry type
+            <span className="visually-hidden">Filter entry type</span>
             <select
               value={entryType}
               onChange={(e) => {
@@ -437,7 +438,7 @@ export function WorkList({
             </select>
           </label>
           <label>
-            Filter tag
+            <span className="visually-hidden">Filter tag</span>
             <input
               value={tag}
               onChange={(e) => {
@@ -466,9 +467,13 @@ export function WorkList({
       )}
       {!loading && !rows.length && !error && (
         <div className="state-panel">
-          <h2>No matching {labels[kind].toLowerCase()}.</h2>
+          <h2>{filtered ? "No matching records." : `Nothing in ${labels[kind]} yet.`}</h2>
           <p className="muted">
-            {embedded ? "No open tasks." : "Create one or adjust your filters."}
+            {embedded
+              ? "No open tasks."
+              : filtered
+                ? "Adjust your filters or search."
+                : `Add the first one with New ${kind.replace("_", " ")}.`}
           </p>
         </div>
       )}

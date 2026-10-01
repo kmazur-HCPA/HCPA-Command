@@ -241,5 +241,6 @@ a:hover { color: var(--accent-hover); }
 .breathe { animation: stone-breathe 3.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after,
+  html.theme-fading, html.theme-fading * { animation: none !important; transition: none !important; }
 }
