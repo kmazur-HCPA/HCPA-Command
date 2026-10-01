@@ -1,3 +1,4 @@
+import { Journal } from "../features/journal/Journal";
 import { Directory } from "../features/people/Directory";
 import {WorkdayReviews} from "../features/reviews/WorkdayReviews";
 import { lazy, Suspense, useEffect, useState, useRef } from "react";
@@ -28,7 +29,7 @@ const HelixPanel=lazy(()=>import("../features/helix/HelixPanel").then(m=>({defau
 const HelixWork=lazy(()=>import("../features/helix/HelixWork").then(m=>({default:m.HelixWork})))
 const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
-const railPages: string[] = ["workspace", "task", "project", "journal", "person", "library"];
+const railPages: string[] = ["workspace", "task", "project", "journal", "person"];
 const clockTime = () =>
   new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date());
 function EasternClock() {
@@ -348,6 +349,8 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           />
         ) : page === "person" ? (
           <Directory client={client} userId={user.id} onOpen={openRecord} revision={workRevision}/>
+        ) : page === "journal" ? (
+          <Journal client={client} userId={user.id} onOpen={openRecord} onCapture={() => setCapture(true)} revision={workRevision} />
         ) : page === "lab" ? (
           <Lab client={client} userId={user.id} onOpen={openRecord} />
         ) : page !== "workspace" && page !== "settings" ? (

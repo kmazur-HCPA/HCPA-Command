@@ -1,6 +1,6 @@
 import type { AppClient } from '../platform/supabase'
 import { measured } from '../platform/telemetry'
-import type { Kind, WorkInput, WorkItem } from '../features/work/model'
+import type { Kind, WorkInput, WorkItem, WorkSummary } from '../features/work/model'
 const summaryColumns='sort_order,id,user_id,kind,title,status,priority,due_date,remind_at,snoozed_until,converted_task_id,completed_at,archived,version,created_at,updated_at,project_id,initiative_id,person_id,task_id,source_entry_id,entry_type,tags,organization,person_role,focus_slot,learning_id,program_id,use_case_id,experiment_id,decision_id' as const
 export type WorkFilter = {kind?:Kind; search?:string; status?:string; priority?:string; archived?:boolean; offset?:number; openOnly?:boolean; projectId?:string;personId?:string;initiativeId?:string;sourceId?:string;taskId?:string;entryType?:string;tag?:string;learningId?:string;programId?:string;useCaseId?:string;experimentId?:string;decisionId?:string}
 export async function listWork(client:AppClient, filter:WorkFilter) {
@@ -110,4 +110,16 @@ export async function projectDirectory(client:AppClient) {
 export async function swapWorkOrder(client:AppClient,a:Pick<WorkItem,'id'|'version'>,b:Pick<WorkItem,'id'|'version'>) {
  const {error}=await client.rpc('swap_work_order',{first_id:a.id,second_id:b.id,first_version:a.version,second_version:b.version});
  if(error)throw new Error('Order was not confirmed. Reload the list before retrying; another device may have changed it.');
+}
+
+// Journal feed: summary columns plus the entry text, newest first. Read-only.
+export async function listJournal(client:AppClient, filter:{search?:string;entryType?:string;tag?:string;archived?:boolean;offset?:number}) {
+ return measured('work.read',async()=>{
+  let q=client.from('work_items').select(summaryColumns+',body').eq('kind','journal').eq('archived',filter.archived??false).order('created_at',{ascending:false}).order('id').range(filter.offset??0,(filter.offset??0)+19)
+  if(filter.search)q=q.textSearch('search_vector',filter.search,{type:'websearch',config:'english'})
+  if(filter.entryType)q=q.eq('entry_type',filter.entryType)
+  if(filter.tag)q=q.contains('tags',[filter.tag])
+  const {data,error}=await q; if(error)throw new Error('Could not load your journal. Reconnect and retry.')
+  return data as unknown as (WorkSummary&{body:string})[]
+ })
 }

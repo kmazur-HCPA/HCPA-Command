@@ -11,7 +11,7 @@ export const navigation: {
   { page: "project", label: "Projects", icon: "project", group: "Work" },
   { page: "journal", label: "Journal", icon: "journal", group: "Work" },
   { page: "learning", label: "Learning", icon: "learning", group: "Explore" },
-  { page: "library", label: "Library", icon: "library", group: "Explore" },
+  // Library is hidden for now: no navigation entry. Its records and code are untouched.
   { page: "lab", label: "AI Lab", icon: "lab", group: "Explore" },
   { page: "person", label: "People", icon: "person", group: "Context" },
   {
