@@ -885,6 +885,8 @@ test("Work Day reads as one page: headline, Now, replies owed, week and open wor
   await expect(now).toContainText("Overdue");
   await expect(page.getByText("Pat Lee")).toBeVisible();
   await expect(page.getByRole("tab", { name: /No project/ })).toBeVisible();
+  await expect(page.getByRole("tabpanel")).toContainText("Plan the budget");
+  await expect(page.getByRole("tabpanel")).not.toContainText("Tidy the shared drive");
   await expect(page.locator(".stat-card, .sitrep-panel")).toHaveCount(0);
   await page.getByRole("button", { name: /Mark done: Plan the budget/ }).click();
   await expect(page.getByRole("status").filter({ hasText: "Task completed" })).toBeVisible();
@@ -934,6 +936,8 @@ test("Work Day: completing from Now or Open work saves the task and it does not 
   );
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await page.getByRole("button", { name: "Work Day", exact: true }).click();
+  await expect(page.getByRole("tab", { name: /^Priority/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: /No project/ }).click();
   await page.getByRole("button", { name: "Complete task: Tidy the shared drive" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Task completed" })).toBeVisible();
   expect(rows.find((r) => r.title === "Tidy the shared drive")?.status).toBe("Complete");

@@ -66,6 +66,7 @@ function useDaily(name: string, date: string) {
   return [ids, add] as const;
 }
 
+const priorityTab = "Priority";
 const ignoreCount = () => undefined; // Stable, so FlaggedMail does not refetch on every render.
 
 const label = (children: ReactNode, id: string, accent = false) => (
@@ -287,18 +288,23 @@ export function WorkDay({
   const waiting = data?.waiting ?? [];
 
   // ---- Open work by area (project).
+  // The first tab is Priority (High and Critical tasks from every area); the rest are the largest areas.
   const groups = useMemo(() => {
+    const tasks = openTasks?.tasks ?? [];
     const map = new Map<string, WorkSummary[]>();
-    for (const t of openTasks?.tasks ?? []) {
+    for (const t of tasks) {
       const name = (t.project_id && openTasks!.projects.get(t.project_id)) || "No project";
       map.set(name, [...(map.get(name) ?? []), t]);
     }
-    return [...map.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 4);
+    const areas = [...map.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 4);
+    const urgent = tasks.filter((t) => t.priority === "Critical" || t.priority === "High");
+    return [[priorityTab, urgent] as [string, WorkSummary[]], ...areas];
   }, [openTasks]);
-  const activeArea = groups.find(([n]) => n === area) ?? groups[0];
-  const areaTasks = [...(activeArea?.[1] ?? [])]
-    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
-    .slice(0, 4);
+  const activeArea = groups.find(([n]) => n === area) ?? groups[0]!;
+  const rank = (t: WorkSummary) => (t.priority === "Critical" ? 0 : 1);
+  const areaTasks = [...activeArea[1]]
+    .sort((a, b) => (activeArea[0] === priorityTab ? rank(a) - rank(b) : 0) || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
+    .slice(0, activeArea[0] === priorityTab ? 6 : 4);
 
   // ---- Tidy up: prompts that open the record for review. Nothing is edited from here.
   const tidy: { id: string; text: string; record: string }[] = [];
@@ -571,10 +577,10 @@ export function WorkDay({
               All tasks
             </button>
           </div>
-          {groups.length > 0 && (
+          {openTasks && (
             <div className="segmented" role="tablist" aria-label="Areas">
               {groups.map(([name, list]) => (
-                <button key={name} role="tab" aria-selected={name === activeArea?.[0]} onClick={() => setArea(name)}>
+                <button key={name} role="tab" aria-selected={name === activeArea[0]} onClick={() => setArea(name)}>
                   {name} <span className="meta">{list.length}</span>
                 </button>
               ))}
@@ -598,7 +604,11 @@ export function WorkDay({
                 </div>
               );
             })}
-            {openTasks && groups.length === 0 && <p className="wd-note">No open tasks. Capture one from the bar above.</p>}
+            {openTasks && areaTasks.length === 0 && (
+              <p className="wd-note">
+                {activeArea[0] === priorityTab ? "No High or Critical tasks are open." : "No open tasks here. Capture one from the bar above."}
+              </p>
+            )}
           </div>
         </section>
 

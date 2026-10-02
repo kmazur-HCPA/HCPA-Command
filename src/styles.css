@@ -2376,3 +2376,9 @@ span.standup-text {
 .standup-list .standup-remove {
   margin-top: -4px;
 }
+.wd-ledger .segmented > button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
