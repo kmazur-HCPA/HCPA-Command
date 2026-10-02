@@ -6,6 +6,7 @@ create table public.standup_items (
   user_id uuid not null references public.app_memberships(user_id),
   week_start date not null check (extract(isodow from week_start) = 2),
   body text not null check (length(btrim(body)) between 1 and 300),
+  done boolean not null default false,
   carried_from uuid references public.standup_items(id) on delete set null,
   created_at timestamptz not null default now()
 );
@@ -13,7 +14,7 @@ create index standup_items_week_idx on public.standup_items(user_id, week_start 
 alter table public.standup_items enable row level security;
 revoke all on public.standup_items from public, anon, authenticated;
 grant select, insert, delete on public.standup_items to authenticated;
-grant update (body) on public.standup_items to authenticated;
+grant update (body, done) on public.standup_items to authenticated;
 grant all on public.standup_items to service_role;
 create policy standup_owner on public.standup_items for all to authenticated
   using (user_id = (select auth.uid()) and exists (select 1 from public.app_memberships m where m.user_id = (select auth.uid()) and m.active))

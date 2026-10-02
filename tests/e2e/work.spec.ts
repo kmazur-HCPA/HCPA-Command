@@ -30,7 +30,7 @@ async function setup(page: Page) {
       created_at: string;
     }[] = [];
   const control = { failWrites: false, loseAck: false };
-  const standup: { id: string; week_start: string; body: string; carried_from: string | null; user_id: string; created_at: string }[] = [];
+  const standup: { id: string; week_start: string; body: string; done: boolean; carried_from: string | null; user_id: string; created_at: string }[] = [];
   let theme = "dark";
   await page.route("https://command-test.supabase.co/**", async (route) => {
     const request = route.request(),
@@ -39,7 +39,7 @@ async function setup(page: Page) {
       method = request.method();
     if (url.pathname.endsWith('/standup_items')) {
       const m = request.method();
-      if (m === 'POST') { standup.push(request.postDataJSON()); return route.fulfill({ status: 201, json: [] }); }
+      if (m === 'POST') { standup.push({ done: false, created_at: new Date().toISOString(), ...request.postDataJSON() }); return route.fulfill({ status: 201, json: [] }); }
       if (m === 'DELETE') { const id = p.get('id')?.replace('eq.', ''); standup.splice(0, standup.length, ...standup.filter((r) => r.id !== id)); return route.fulfill({ status: 204 }); }
       if (m === 'PATCH') { const id = p.get('id')?.replace('eq.', ''); const row = standup.find((r) => r.id === id); if (row) Object.assign(row, request.postDataJSON()); return route.fulfill({ status: 204 }); }
       const week = p.get('week_start'), before = p.get('week_start')?.startsWith('lt.');
@@ -962,10 +962,13 @@ test("Stand-up: add, edit, remove, and carry an item over from a past week", asy
   await section.getByLabel("Edit stand-up item").fill("Duo MFA rollout: next steps");
   await section.getByRole("button", { name: "Save", exact: true }).click();
   await expect(section.getByText("Duo MFA rollout: next steps")).toBeVisible();
+  await section.getByRole("button", { name: "Mark done: Duo MFA rollout: next steps" }).click();
+  await expect(section.getByRole("button", { name: "Mark not done: Duo MFA rollout: next steps" })).toHaveAttribute("aria-pressed", "true");
+  expect(standup[0]!.done).toBe(true);
   await section.getByRole("button", { name: /^Remove: Duo MFA rollout/ }).click();
   await expect(section.getByText("Duo MFA rollout: next steps")).toHaveCount(0);
   expect(standup).toHaveLength(0);
-  standup.push({ id: crypto.randomUUID(), user_id: uid, week_start: "2020-01-07", body: "Barracuda renewal", carried_from: null, created_at: new Date().toISOString() });
+  standup.push({ id: crypto.randomUUID(), user_id: uid, week_start: "2020-01-07", body: "Barracuda renewal", done: false, carried_from: null, created_at: new Date().toISOString() });
   await section.getByRole("button", { name: "Past weeks" }).click();
   const dialog = page.getByRole("dialog", { name: "Past stand-up weeks" });
   await expect(dialog).toContainText("Jan 7 – Jan 13");

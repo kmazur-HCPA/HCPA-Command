@@ -61,6 +61,8 @@ describe('Stand-up items', () => {
     await add(owner, '2026-10-06', 'Original')
     await db.query("update public.standup_items set body='Edited'")
     expect((await db.query('select body from public.standup_items')).rows).toEqual([{ body: 'Edited' }])
+    await db.query("update public.standup_items set done=true")
+    expect((await db.query('select done from public.standup_items')).rows).toEqual([{ done: true }])
     await db.exec('savepoint u')
     await expect(db.query("update public.standup_items set week_start='2026-10-13'")).rejects.toThrow(/permission denied/)
   })

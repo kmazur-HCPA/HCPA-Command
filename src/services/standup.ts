@@ -6,6 +6,7 @@ export type StandupItem = {
   user_id: string;
   week_start: string;
   body: string;
+  done: boolean;
   carried_from: string | null;
   created_at: string;
 };
@@ -60,5 +61,11 @@ export async function removeStandupItem(client: AppClient, id: string) {
   return measured("work.write", async () => {
     const { error } = await client.from("standup_items").delete().eq("id", id);
     if (error) throw new Error("The item was not removed. Try again.");
+  });
+}
+export async function setStandupDone(client: AppClient, id: string, done: boolean) {
+  return measured("work.write", async () => {
+    const { error } = await client.from("standup_items").update({ done }).eq("id", id);
+    if (error) throw new Error("The change was not saved. Try again.");
   });
 }

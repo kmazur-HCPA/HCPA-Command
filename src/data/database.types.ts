@@ -21,7 +21,7 @@ export type Database = {
       cora_oauth_grants: {Row:{id:string;user_id:string;client_id:string;refresh_hashes:string[];refresh_expires_at:string;created_at:string;refreshed_at:string|null;last_used_at:string|null};Insert:never;Update:never;Relationships:[{foreignKeyName:"cora_oauth_grants_client_id_fkey";columns:["client_id"];isOneToOne:false;referencedRelation:"cora_oauth_clients";referencedColumns:["id"]}]}
       cora_mcp_activity: {Row:{id:string;user_id:string;connection_id:string;tool:string;success:boolean;created_at:string};Insert:never;Update:{success:boolean};Relationships:[]}
 
-      standup_items:{Row:{id:string;user_id:string;week_start:string;body:string;carried_from:string|null;created_at:string};Insert:{id?:string;user_id:string;week_start:string;body:string;carried_from?:string|null};Update:{body?:string};Relationships:[]}
+      standup_items:{Row:{id:string;user_id:string;week_start:string;body:string;done:boolean;carried_from:string|null;created_at:string};Insert:{id?:string;user_id:string;week_start:string;body:string;carried_from?:string|null};Update:{body?:string;done?:boolean};Relationships:[]}
       helix_connections:{Row:HelixConnection;Insert:Partial<HelixConnection>&{user_id:string;generation:string};Update:Partial<HelixConnection>;Relationships:[]}
       microsoft_connections:{Row:MicrosoftConnection;Insert:MicrosoftConnection;Update:Partial<MicrosoftConnection>;Relationships:[]}
       cora_conversations:{Row:CoraConversation;Insert:CoraConversation;Update:Partial<CoraConversation>;Relationships:[]}

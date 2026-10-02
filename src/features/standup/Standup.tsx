@@ -5,6 +5,7 @@ import {
   listStandupHistory,
   listStandupWeek,
   removeStandupItem,
+  setStandupDone,
   updateStandupItem,
 } from "../../services/standup";
 import type { StandupItem } from "../../services/standup";
@@ -74,8 +75,8 @@ export function Standup({ client, userId, date, revision }: { client: AppClient;
         <p className="wd-note standup-empty">Nothing yet. Add what you want to raise on Monday. This list starts fresh every Tuesday.</p>
       )}
       <ul className="standup-list">
-        {(items ?? []).map((item) => (
-          <li key={item.id} className="row">
+        {[...(items ?? [])].sort((a, b) => Number(a.done) - Number(b.done)).map((item) => (
+          <li key={item.id} className="row" style={{ opacity: item.done ? 0.45 : 1 }}>
             {editing === item.id ? (
               <form
                 className="standup-edit"
@@ -99,7 +100,17 @@ export function Standup({ client, userId, date, revision }: { client: AppClient;
             ) : (
               <>
                 <button
+                  className="check"
+                  aria-pressed={item.done}
+                  aria-label={`${item.done ? "Mark not done" : "Mark done"}: ${item.body}`}
+                  disabled={busy}
+                  onClick={() => void run(() => setStandupDone(client, item.id, !item.done))}
+                >
+                  {item.done && <Icon name="check" />}
+                </button>
+                <button
                   className="standup-text"
+                  style={{ textDecoration: item.done ? "line-through" : "none" }}
                   title="Edit"
                   onClick={() => {
                     setEditing(item.id);
@@ -201,7 +212,7 @@ function History({
           <Icon name="close" />
         </button>
       </div>
-      <p className="muted small">Carry an item into this week to bring it up again. The original stays where it was.</p>
+      <p className="muted small">Carry an item into this week to bring it up again. The original stays where it was. Items you marked done are crossed out; Carry over all skips them.</p>
       {error && (
         <p role="alert" className="error-message">
           {error}
@@ -209,7 +220,7 @@ function History({
       )}
       {past && weeks.size === 0 && <p className="wd-note">No earlier weeks yet.</p>}
       {[...weeks.entries()].map(([start, rows]) => {
-        const left = rows.filter((r) => !carried.has(r.id));
+        const left = rows.filter((r) => !carried.has(r.id) && !r.done);
         return (
           <section key={start} className="standup-week" aria-label={`Week of ${weekRangeLabel(start)}`}>
             <div className="wd-heading">
@@ -223,7 +234,7 @@ function History({
             <ul className="standup-list">
               {rows.map((r) => (
                 <li key={r.id} className="row">
-                  <span className="standup-text">{r.body}</span>
+                  <span className="standup-text" style={{ textDecoration: r.done ? "line-through" : "none", opacity: r.done ? 0.6 : 1 }}>{r.body}</span>
                   {carried.has(r.id) ? (
                     <span className="meta">Carried over</span>
                   ) : (
