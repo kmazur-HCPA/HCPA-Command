@@ -14,6 +14,7 @@ export function Palette({
   onCapture,
   onNewRecord,
   onAsk,
+  onStandup,
   onClose,
 }: {
   client: AppClient;
@@ -22,6 +23,7 @@ export function Palette({
   onCapture: () => void;
   onNewRecord: (kind: "task" | "reminder") => void;
   onAsk: (prompt: string) => void;
+  onStandup: (text: string) => void;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
@@ -188,6 +190,15 @@ export function Palette({
             <small>Keep something in front of you until it is resolved</small>
           </span>
         </button>
+        {query.trim() && (
+          <button className="palette-row" onClick={() => choose(() => onStandup(query.trim()))}>
+            <Icon name="flag" />
+            <span>
+              Add to stand-up: “{query.trim().slice(0, 60)}”
+              <small>Something to bring up on Monday</small>
+            </span>
+          </button>
+        )}
         <button className="palette-row" onClick={() => choose(onCapture)}>
           <Icon name="journal" />
           <span>

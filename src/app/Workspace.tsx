@@ -1,3 +1,6 @@
+import { addStandupItem } from "../services/standup";
+import { weekStart } from "../features/standup/model";
+import { today } from "../features/work/dates";
 import { Journal } from "../features/journal/Journal";
 import { Directory } from "../features/people/Directory";
 import {WorkdayReviews} from "../features/reviews/WorkdayReviews";
@@ -87,6 +90,17 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
     return () => {window.removeEventListener("command:capture", open);window.removeEventListener("command:cora",ask)};
   }, []);
   const [workRevision, setWorkRevision] = useState(0);
+  const [toast, setToast] = useState("");
+  async function addToStandup(text: string) {
+    try {
+      await addStandupItem(client, user.id, weekStart(today()), text);
+      setWorkRevision((v) => v + 1);
+      setToast("Added to stand-up");
+    } catch (caught) {
+      setToast((caught as Error).message);
+    }
+    window.setTimeout(() => setToast(""), 4000);
+  }
   const [recordId, setRecordId] = useState<string | null>(() =>
     new URLSearchParams(location.search).get("record"),
   );
@@ -443,8 +457,15 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           onCapture={() => setCapture(true)}
           onNewRecord={setNewRecord}
           onAsk={(prompt) => openCora(prompt)}
+          onStandup={(text) => void addToStandup(text)}
           onClose={() => setPalette(false)}
         />
+      )}
+      {toast && (
+        <p className="success-toast" role="status">
+          <Icon name="check" />
+          {toast}
+        </p>
       )}
       {newRecord && <Editor client={client} userId={user.id} kind={newRecord} onClose={() => setNewRecord(null)} onSaved={() => { setNewRecord(null); setWorkRevision(v => v + 1); }} />}
       {capture && (

@@ -30,12 +30,22 @@ async function setup(page: Page) {
       created_at: string;
     }[] = [];
   const control = { failWrites: false, loseAck: false };
+  const standup: { id: string; week_start: string; body: string; carried_from: string | null; user_id: string; created_at: string }[] = [];
   let theme = "dark";
   await page.route("https://command-test.supabase.co/**", async (route) => {
     const request = route.request(),
       url = new URL(request.url()),
       p = url.searchParams,
       method = request.method();
+    if (url.pathname.endsWith('/standup_items')) {
+      const m = request.method();
+      if (m === 'POST') { standup.push(request.postDataJSON()); return route.fulfill({ status: 201, json: [] }); }
+      if (m === 'DELETE') { const id = p.get('id')?.replace('eq.', ''); standup.splice(0, standup.length, ...standup.filter((r) => r.id !== id)); return route.fulfill({ status: 204 }); }
+      if (m === 'PATCH') { const id = p.get('id')?.replace('eq.', ''); const row = standup.find((r) => r.id === id); if (row) Object.assign(row, request.postDataJSON()); return route.fulfill({ status: 204 }); }
+      const week = p.get('week_start'), before = p.get('week_start')?.startsWith('lt.');
+      const out = standup.filter((r) => (before ? r.week_start < week!.slice(3) : week ? r.week_start === week.replace('eq.', '') : true));
+      return route.fulfill({ json: out });
+    }
     if(url.pathname.endsWith('/cora_workday_reviews'))return route.fulfill({json:[]});
     if(url.pathname.endsWith('/cora_review_preferences'))return route.fulfill({json:{automatic_reminders:false}});
     if (url.pathname === "/auth/v1/token")
@@ -206,7 +216,7 @@ async function setup(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Work Day", exact: true }),
   ).toBeVisible();
-  return { rows, control, history };
+  return { rows, control, history, standup };
 }
 test("create a task, choose a priority, edit, and complete it", async ({
   page,
@@ -934,4 +944,34 @@ test("Work Day: completing from Now or Open work saves the task and it does not 
   await expect(page.getByRole("heading", { name: "Work Day" })).toBeVisible();
   await expect(page.getByText("Plan the budget")).toHaveCount(0);
   await expect(page.getByText("Tidy the shared drive")).toHaveCount(0);
+});
+
+test("Stand-up: add, edit, remove, and carry an item over from a past week", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { standup } = await setup(page);
+  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  await page.getByRole("button", { name: "Work Day", exact: true }).click();
+  const section = page.getByRole("region", { name: /Stand-up/ });
+  await expect(section).toContainText("starts fresh every Tuesday");
+  await section.getByPlaceholder("Add something to bring up…").fill("Duo MFA rollout status");
+  await page.keyboard.press("Enter");
+  await expect(section.getByText("Duo MFA rollout status")).toBeVisible();
+  expect(standup).toHaveLength(1);
+  expect(new Date(`${standup[0]!.week_start}T12:00:00Z`).getUTCDay()).toBe(2);
+  await section.getByRole("button", { name: "Duo MFA rollout status", exact: true }).click();
+  await section.getByLabel("Edit stand-up item").fill("Duo MFA rollout: next steps");
+  await section.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(section.getByText("Duo MFA rollout: next steps")).toBeVisible();
+  await section.getByRole("button", { name: /^Remove: Duo MFA rollout/ }).click();
+  await expect(section.getByText("Duo MFA rollout: next steps")).toHaveCount(0);
+  expect(standup).toHaveLength(0);
+  standup.push({ id: crypto.randomUUID(), user_id: uid, week_start: "2020-01-07", body: "Barracuda renewal", carried_from: null, created_at: new Date().toISOString() });
+  await section.getByRole("button", { name: "Past weeks" }).click();
+  const dialog = page.getByRole("dialog", { name: "Past stand-up weeks" });
+  await expect(dialog).toContainText("Jan 7 – Jan 13");
+  await dialog.getByRole("button", { name: "Carry over: Barracuda renewal" }).click();
+  await expect(dialog.getByText("Carried over")).toBeVisible();
+  await dialog.getByRole("button", { name: "Close past weeks" }).click();
+  await expect(section.getByText("Barracuda renewal")).toContainText("carried over");
+  expect(standup.filter((r) => r.carried_from)).toHaveLength(1);
 });

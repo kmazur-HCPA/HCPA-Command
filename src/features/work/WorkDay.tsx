@@ -30,6 +30,7 @@ import { useSitrep } from "../sitrep/useSitrep";
 import { boldParts } from "../sitrep/support";
 import { reconcileSection } from "../sitrep/reconcile";
 import { Icon } from "../../ui/Icon";
+import { Standup } from "../standup/Standup";
 
 type NowItem = {
   key: string;
@@ -86,7 +87,6 @@ export function WorkDay({
   onOpen: (item: Pick<WorkItem, "id">) => void;
   onNavigate: (kind: Kind) => void;
 }) {
-  void userId;
   const [data, setData] = useState<Awaited<ReturnType<typeof workDay>> | null>(null),
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0),
@@ -561,6 +561,8 @@ export function WorkDay({
           )}
           {data && reminders.length === 0 && <p className="wd-note">No reminders need a nudge.</p>}
         </section>
+
+        <Standup client={client} userId={userId} date={date} revision={revision} />
 
         <section aria-labelledby="ow-h">
           <div className="wd-heading">

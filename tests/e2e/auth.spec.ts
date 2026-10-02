@@ -33,6 +33,7 @@ async function mockBackend(
   };
   await page.route("https://command-test.supabase.co/**", async (route) => {
     const url = new URL(route.request().url());
+    if(url.pathname.endsWith('/standup_items'))return route.fulfill({json:[]});
     if(url.pathname.endsWith('/cora_workday_reviews'))return route.fulfill({json:[]});
     if(url.pathname.endsWith('/cora_review_preferences'))return route.fulfill({json:{automatic_reminders:false}});
     if (url.pathname === "/auth/v1/token") {

@@ -2425,3 +2425,79 @@ details > summary {
   text-align: left;
   font-weight: 400;
 }
+
+/* Stand-up list */
+.standup-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.standup-list .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% + 24px);
+  margin: 0 -12px;
+  padding: 8px 12px;
+}
+.standup-text {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+span.standup-text {
+  display: block;
+}
+.standup-remove {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+}
+.standup-remove .icon {
+  width: 16px;
+  height: 16px;
+}
+.standup-edit {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.standup-edit input,
+.standup-add input {
+  margin: 0;
+  height: 40px;
+  min-height: 44px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  color: var(--text-strong);
+  font-size: var(--fs-small);
+  padding: 0 16px;
+}
+.standup-add {
+  margin-top: 6px;
+}
+.standup-add label {
+  margin: 0;
+}
+.standup-empty {
+  margin: 0 0 8px;
+}
+.standup-week {
+  margin-top: var(--sp-6);
+}
