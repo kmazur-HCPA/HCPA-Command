@@ -421,20 +421,9 @@ p {
 .side-dialog::backdrop {
   background: var(--scrim);
 }
-.stat-label {
-  font-size: 12px;
-  color: var(--text-3);
-  display: block;
-}
 .day-panel {
   padding: 20px 0;
   min-width: 0;
-}
-.reminders-panel {
-  grid-area: radar;
-}
-.waiting-panel {
-  grid-area: waiting;
 }
 .panel-heading {
   display: flex;
@@ -471,23 +460,6 @@ p {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-.priority-list li {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-  padding: 12px 0;
-}
-.priority-list li:first-child {
-  padding-top: 0;
-}
-.priority-list li:last-child {
-  border: 0;
-}
-.priority-list li > div {
-  flex: 1;
-  min-width: 0;
 }
 .row-title {
   background: none;
@@ -553,54 +525,6 @@ p {
 .priority-critical {
   color: var(--text-strong);
 }
-.panel-footer {
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-  margin-top: 10px;
-  padding-top: 8px;
-}
-.panel-footer > span {
-  color: var(--text-3);
-  font-size: 9px;
-  line-height: 1.5;
-}
-.panel-footer button {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  background: none;
-  border: 0;
-  font-size: 10px;
-  padding: 8px 0;
-  white-space: nowrap;
-}
-.panel-footer .icon {
-  width: 13px;
-}
-.day-empty {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 22px 0;
-}
-.day-empty > .icon {
-  color: var(--text-3);
-  opacity: 0.6;
-  margin-top: 3px;
-}
-.day-empty strong {
-  font-size: 13px;
-  font-weight: 500;
-}
-.day-empty p {
-  font-size: 12px;
-  color: var(--text-3);
-  margin: 7px 0 0;
-  max-width: 420px;
-}
 .day-list li {
   display: flex;
   align-items: center;
@@ -614,38 +538,6 @@ p {
 .day-list li > div {
   flex: 1;
   min-width: 0;
-}
-.timeline-dot,
-.status-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--accent);
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.row-open {
-  color: var(--text-3);
-}
-.status-dot {
-  background: var(--ok);
-}
-.status-dot.on-hold {
-  background: var(--text-3);
-}
-.day-loading {
-  padding: 50px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  color: var(--text-3);
-}
-.loading-orbit {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--line-strong);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: orbit 1s linear infinite;
 }
 .success-toast {
   display: flex;
@@ -1074,9 +966,6 @@ summary {
   .workspace-content {
     padding: 24px 16px;
   }
-  .stat-label {
-    font-size: 10px;
-  }
   .day-panel {
     padding: 17px;
   }
@@ -1086,21 +975,9 @@ summary {
   .panel-heading h2 > .icon {
     width: 18px;
   }
-  .priority-list li {
-    gap: 7px;
-  }
   .priority-pill {
     font-size: 8px;
     padding: 4px 6px;
-  }
-  .priority-list .row-title {
-    font-size: 12px;
-  }
-  .panel-footer {
-    align-items: flex-start;
-  }
-  .panel-footer > span {
-    max-width: 180px;
   }
   .more-grid button {
     font-size: 12px;
@@ -1134,17 +1011,6 @@ summary {
     animation: none !important;
   }
 }
-.priority-list li {
-  padding: 7px 0;
-}
-.priority-list .record-meta {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.4;
-}
-.priority-list .row-title {
-  min-height: 27px;
-}
 .day-panel .record-meta {
   font-size: 11px;
 }
@@ -1159,12 +1025,6 @@ summary {
 }
 .day-panel {
   padding: 18px;
-}
-.day-empty {
-  padding: 18px 0;
-}
-.panel-footer {
-  margin-top: 8px;
 }
 .search-filters { margin:0; padding:0 20px; border-bottom: 1px solid var(--line); }
 .search-filters summary { font-size:12px; }
@@ -1190,7 +1050,6 @@ summary {
 @media(prefers-reduced-motion:reduce){.cora-mark.is-active,.cora-status span{animation:none}}
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.mobile-capture .command-mark{width:34px;height:30px}
 @media(min-width:1150px){.cora-open .day-grid,.cora-open .day-stats{grid-template-columns:1fr}.cora-open .day-heading{flex-wrap:wrap}}
 .microsoft-panel .panel-heading{flex-wrap:wrap;gap:.8rem}
 .microsoft-panel .panel-heading h2{display:flex;align-items:center;gap:.6rem}
@@ -1317,7 +1176,6 @@ summary {
 .sitrep-panel { position: sticky; top: env(safe-area-inset-top, 0px); height: 100dvh; overflow-y: auto; box-sizing: border-box; padding: 16px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); }
 .sitrep-panel[data-rail] { padding: 0; overflow: hidden; }
 .sitrep-heading button, .sitrep-open { min-height: 36px; min-width: 36px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-raised); color: var(--text); font: inherit; cursor: pointer; }
-.sitrep-open { padding: 0 14px; font-weight: 600; align-self: flex-start; }
 .sitrep-status { font-size: 12px; color: var(--text-3); }
 .sitrep-status p { margin: 0 0 4px; }
 .sitrep-body h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }

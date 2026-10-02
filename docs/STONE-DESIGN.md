@@ -51,3 +51,7 @@ Searching `src` and `public` for hex colors finds only these, each unable to rea
 ## Naming
 
 The assistant is called **CMD** everywhere a person sees or reads it, including its prompts and the connector name. Internal identifiers (`cora_*` tables, `/api/cora`, `handleCora`, file names) keep the old name to avoid breaking stored data and connected apps.
+
+## Build budget
+
+`scripts/check-build.mjs` fails the build when compressed JS and CSS exceed a fixed size. It was 190 KiB; the Stone redesign, Journal feed and stand-up list brought a clean build to about 190 KiB, so it is now 200 KiB. Fonts are not counted. Remove dead code before raising it again.

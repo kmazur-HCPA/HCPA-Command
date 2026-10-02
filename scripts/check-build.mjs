@@ -12,7 +12,7 @@ for (const name of files) {
     catch (error) { if (error.message === 'Privileged JWT detected') throw error }
   }
 }
-if (gzipBytes > 190 * 1024) throw new Error(`Initial assets exceed 190 KiB gzip: ${gzipBytes}`)
+if (gzipBytes > 200 * 1024) throw new Error(`Initial assets exceed 200 KiB gzip: ${gzipBytes}`)
 const headers = await readFile('dist/_headers', 'utf8')
 if (!headers.includes("frame-ancestors 'none'") || headers.includes("'unsafe-inline'") || headers.includes("'unsafe-eval'")) throw new Error('Security headers are missing or unsafe')
 console.log(`Build verified: ${Math.round(gzipBytes / 1024)} KiB gzip JS/CSS, restrictive headers, no privileged key markers.`)
