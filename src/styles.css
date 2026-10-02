@@ -2292,7 +2292,7 @@ details > summary {
 }
 .standup-list .row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   width: calc(100% + 24px);
   margin: 0 -12px;
@@ -2358,4 +2358,21 @@ span.standup-text {
 }
 .standup-week {
   margin-top: var(--sp-6);
+}
+
+.standup-list .check {
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  margin-top: 3px;
+}
+.standup-list .check .icon {
+  width: 14px;
+  height: 14px;
+}
+.standup-list .standup-remove {
+  margin-top: -4px;
 }
