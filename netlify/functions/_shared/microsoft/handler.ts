@@ -285,6 +285,7 @@ export async function handleMicrosoft(
                 end,
                 allDay: row.isAllDay === true,
                 durationMinutes,
+                url: typeof row.url === "string" ? row.url : undefined,
               },
             ];
           } catch {

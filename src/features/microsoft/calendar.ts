@@ -6,6 +6,7 @@ export type CalendarEvent = {
   end: string;
   allDay: boolean;
   durationMinutes: number;
+  url?: string;
 };
 export type CalendarAgenda = {
   events: CalendarEvent[];

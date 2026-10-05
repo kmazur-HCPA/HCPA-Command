@@ -1496,38 +1496,78 @@ summary {
 .wd-ledger .label {
   margin-bottom: 12px;
 }
-.wd-week {
+.wd-agenda {
+  display: flex;
+  flex-direction: column;
+}
+.wd-agenda-day {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-.wd-week > div {
-  padding: 12px 0 14px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  margin: 0 -12px;
   border-radius: 12px;
-  text-align: center;
 }
-.wd-week > .is-today {
+.wd-agenda-day.is-today {
   background: var(--surface-raised);
 }
-.wd-week > .is-today .meta {
+.wd-agenda-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wd-agenda-day.is-today .meta {
   color: var(--accent);
 }
-.wd-week b {
-  display: block;
-  margin-top: 4px;
+.wd-agenda-head b {
   font-size: 20px;
   font-weight: 500;
   color: var(--text-strong);
 }
-.wd-week i {
-  display: block;
-  width: 4px;
-  height: 4px;
-  margin: 8px auto 0;
-  border-radius: 50%;
+.wd-agenda ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.wd-week i.has-meeting {
-  background: var(--accent);
+.wd-agenda li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.wd-agenda li a {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: inherit;
+  text-decoration: none;
+}
+.wd-agenda li a:hover .wd-agenda-title {
+  text-decoration: underline;
+}
+.wd-agenda-more {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.wd-agenda li.is-past {
+  opacity: 0.55;
+}
+.wd-agenda-title {
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  color: var(--text-strong);
+}
+.wd-agenda-none {
+  margin: 0;
+  padding-top: 2px;
+  font-size: 14px;
+  color: var(--text-2);
 }
 .wd-note {
   margin: 12px 0 0;

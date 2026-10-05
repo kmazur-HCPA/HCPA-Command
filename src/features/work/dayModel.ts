@@ -66,6 +66,7 @@ export function scheduleLine(events: CalendarEvent[], now: number) {
   return `Next: ${next.subject} · ${day}${clock(next.start)}`;
 }
 
+export const DAY_LIMIT = 3;
 export function weekStrip(date: string, events: CalendarEvent[]) {
   const base = new Date(`${date}T12:00:00Z`);
   const offset = (base.getUTCDay() + 6) % 7; // Monday = 0
@@ -81,6 +82,10 @@ export function weekStrip(date: string, events: CalendarEvent[]) {
       num: d.getUTCDate(),
       today: iso === date,
       busy: events.some((e) => !e.allDay && etParts(e.start).date === iso),
+      meetings: events
+        .filter((e) => !e.allDay && etParts(e.start).date === iso)
+        .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+        .map((e) => ({ id: e.id, url: e.url, subject: e.subject, start: clock(e.start), end: clock(e.end), startMs: Date.parse(e.start), endMs: Date.parse(e.end) })),
     };
   });
 }

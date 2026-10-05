@@ -20,6 +20,7 @@ import {
   scheduleLine,
   taskMeta,
   weekStrip,
+  DAY_LIMIT,
   daysBetween,
 } from "./dayModel";
 import { useAgenda } from "../microsoft/useAgenda";
@@ -88,6 +89,7 @@ export function WorkDay({
   onOpen: (item: Pick<WorkItem, "id">) => void;
   onNavigate: (kind: Kind) => void;
 }) {
+  const [expandedDays, setExpandedDays] = useState<string[]>([]);
   const [data, setData] = useState<Awaited<ReturnType<typeof workDay>> | null>(null),
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0),
@@ -519,18 +521,63 @@ export function WorkDay({
       <aside className={`wd-ledger wd-dim${dim}`} aria-label="Ledger">
         <section aria-labelledby="wk-h">
           {label("THIS WEEK", "wk-h")}
-          <div className="wd-week">
-            {weekStrip(date, events).map((d) => (
-              <div key={d.iso} className={d.today ? "is-today" : ""} aria-current={d.today ? "date" : undefined}>
-                <span className="meta">{d.label}</span>
-                <b>{d.num}</b>
-                <i className={d.busy ? "has-meeting" : ""} aria-label={d.busy ? "Has meetings" : "No meetings"} role="img" />
-              </div>
-            ))}
-          </div>
-          <p className="wd-note">
-            {agenda.data ? (events.some((e) => !e.allDay) ? "Meetings are marked with a dot." : "Open through Friday — a good window for focused work.") : "Calendar details appear when Outlook responds."}
-          </p>
+          {agenda.data ? (
+            <div className="wd-agenda">
+              {weekStrip(date, events)
+                .filter((d) => d.iso >= date)
+                .map((d) => (
+                  <div key={d.iso} className={d.today ? "wd-agenda-day is-today" : "wd-agenda-day"} aria-current={d.today ? "date" : undefined}>
+                    <div className="wd-agenda-head">
+                      <span className="meta">{d.today ? "TODAY" : d.label}</span>
+                      <b>{d.num}</b>
+                    </div>
+                    {d.meetings.length ? (
+                      <ul>
+                        {(expandedDays.includes(d.iso) ? d.meetings : d.meetings.slice(0, DAY_LIMIT)).map((m) => {
+                          const href = outlookLink(m.url);
+                          const body = (
+                            <>
+                              <span className="meta">
+                                {m.start} – {m.end}
+                              </span>
+                              <span className="wd-agenda-title">{m.subject}</span>
+                            </>
+                          );
+                          return (
+                            <li key={m.id} className={m.endMs < now ? "is-past" : ""}>
+                              {href ? (
+                                <a href={href} target="_blank" rel="noreferrer">
+                                  {body}
+                                </a>
+                              ) : (
+                                body
+                              )}
+                            </li>
+                          );
+                        })}
+                        {d.meetings.length > DAY_LIMIT && (
+                          <li>
+                            <button
+                              className="wd-agenda-more"
+                              aria-expanded={expandedDays.includes(d.iso)}
+                              onClick={() =>
+                                setExpandedDays((old) => (old.includes(d.iso) ? old.filter((x) => x !== d.iso) : [...old, d.iso]))
+                              }
+                            >
+                              {expandedDays.includes(d.iso) ? "Show fewer" : `+${d.meetings.length - DAY_LIMIT} more`}
+                            </button>
+                          </li>
+                        )}
+                      </ul>
+                    ) : (
+                      <p className="wd-agenda-none">No meetings</p>
+                    )}
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="wd-note">{agenda.error ? "Calendar unavailable" : "Calendar details appear when Outlook responds."}</p>
+          )}
         </section>
 
         <section aria-labelledby="kt-h">
