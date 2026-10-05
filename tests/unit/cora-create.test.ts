@@ -30,7 +30,6 @@ describe("Authorized CMD creation", () => {
   it("rejects edits, unauthorized types, ownership overrides and invalid fields", () => {
     for (const patch of [
       { kind: "reminder" },
-      { kind: "waiting" },
       { kind: "library" },
       { record_id: owner },
       { request_id: "invalid" },

@@ -9,9 +9,11 @@ import {
 } from "../../../../src/features/microsoft/model";
 import { validateFields } from "./actions";
 import { definition } from "../microsoft/tools";
+import { standupTools } from "./standup";
 import { sitrepTools, saveSitrep, getSitrepRuns } from "../sitrep";
 export const automaticTools = [
   ...sitrepTools,
+  ...standupTools,
   createRecordDefinition,
   quickUpdateDefinition,
   definition(

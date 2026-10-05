@@ -144,7 +144,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(28);
+    expect(list.result.tools).toHaveLength(32);
     expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("get_reminders_due");
     expect(
       list.result.tools
@@ -153,7 +153,7 @@ describe("Private connected-app MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task", "save_sitrep", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
+    ).toEqual(["prepare_record", "prepare_task", "save_sitrep", "add_standup_item", "update_standup_item", "remove_standup_item", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
     // Searchable by name: every mail/Teams/SITREP tool is listed with a description and schema.
     for (const name of ["get_flagged_mail", "get_direct_mail", "list_teams_chats", "save_sitrep", "get_sitrep_runs"]) {
