@@ -90,7 +90,9 @@ describe("portable verified exports", () => {
     const s = snapshot(),
       bytes = new TextEncoder().encode("Verified original");
     const document = {
-      ...newItem("library", uid),
+      ...newItem("task", uid),
+      kind: "library" as never,
+      status: "Recorded",
       original_body: "",
       version: 1,
       created_at: "",

@@ -42,7 +42,7 @@ const page = {
 export const tools = [
   definition(
     "get_day_snapshot",
-    "Read the whole current attention picture in ONE call: tasks due today or overdue, reminders due, open critical/high-priority tasks, active waiting-on items and active/on-hold projects. Start briefs, check-ins and 'what needs attention' questions here instead of calling each list tool. Each list is the first 25 with an exact total and has_more; page a single list with its own tool when has_more is true. Records are compact (no bodies); use get_record for full text.",
+    "Read the whole current attention picture in ONE call: tasks due today or overdue, reminders due, open critical/high-priority tasks, active waiting-on items and active/on-hold projects. Start briefs, check-ins and 'what needs attention' questions here instead of calling each list tool. Each list is the first 25 with an exact total and has_more; page a single list with its own tool when has_more is true. Records are compact (no bodies); use get_record for full text. last_day_close is the latest Close the Day receipt (counts and tomorrow's first_item), or null.",
   ),
   definition(
     "get_records",
@@ -205,7 +205,32 @@ async function daySnapshot(
       ] as const;
     }),
   );
-  return { today: today(), ...Object.fromEntries(lists) };
+  // The latest Close the Day receipt, so a morning SITREP can start from tomorrow's first item.
+  let lastClose: unknown = null;
+  if (ownerId) {
+    const receipt = await client
+      .from("day_closes")
+      .select("for_date,completed_at,counts,first_item_id")
+      .eq("user_id", ownerId)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!receipt.error && receipt.data) {
+      let first: unknown = null;
+      if (receipt.data.first_item_id) {
+        const item = await client
+          .from("work_items")
+          .select("id,title,priority,due_date,status,version,archived")
+          .eq("id", receipt.data.first_item_id)
+          .eq("user_id", ownerId)
+          .maybeSingle();
+        if (!item.error && item.data && !item.data.archived)
+          first = { ...item.data, archived: undefined };
+      }
+      lastClose = { ...receipt.data, first_item_id: undefined, first_item: first };
+    }
+  }
+  return { today: today(), last_day_close: lastClose, ...Object.fromEntries(lists) };
 }
 export async function readTool(
   client: AppClient,

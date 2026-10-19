@@ -42,6 +42,8 @@ export async function flaggedMail(client: AppClient, signal?: AbortSignal) {
         result.message ||
           "Flagged email is unavailable. Check Microsoft 365 in Settings.",
       );
+    if (!Array.isArray(result.messages))
+      throw new Error("Flagged email is unavailable. Check Microsoft 365 in Settings.");
     return result as FlaggedMail;
   });
 }

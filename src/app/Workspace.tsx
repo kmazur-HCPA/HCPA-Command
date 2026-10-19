@@ -20,6 +20,7 @@ import { Palette } from "../ui/Palette";
 import { WorkList } from "../features/work/WorkList";
 import { WorkDay } from "../features/work/WorkDay";
 import { Capture } from "../features/work/Capture";
+import { AutomaticReminders } from "../features/settings/AutomaticReminders";
 import { ExportPanel } from '../features/export/ExportPanel';
 import { Drafts } from "../features/work/Drafts";
 import { listDrafts } from "../platform/drafts";
@@ -430,6 +431,7 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading Helix…</p>}><HelixPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading connected apps…</p>}><CoraConnection client={client}/></Suspense>
+                <AutomaticReminders client={client} />
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />
                 <section className="settings-panel">

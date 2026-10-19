@@ -55,7 +55,7 @@ describe("automatic reminder boundary", () => {
   });
 });
 
-it('rejects a report at the review write boundary before persisting it',async()=>{
+it('no longer offers Command Brief tools to a connected app',async()=>{
  vi.stubGlobal('fetch',async(input:RequestInfo|URL)=>{
   const path=new URL(String(input)).pathname;
   if(path.endsWith('app_memberships'))return Response.json({active:true});
@@ -63,5 +63,6 @@ it('rejects a report at the review write boundary before persisting it',async()=
   throw new Error('Unexpected write');
  });
  const client=createClient<Database>('https://fixture.supabase.co','fixture');
- await expect(automaticTool(client,owner,'record_workday_review',{run_id:owner,status:'complete',summary:'word '.repeat(121)})).rejects.toThrow('Rewrite the Command Brief');
+ for(const name of ['record_workday_review','get_workday_reviews'])
+  await expect(automaticTool(client,owner,name,{run_id:owner,status:'complete',summary:'word '.repeat(10)})).rejects.toThrow('Tool not available');
 });

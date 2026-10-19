@@ -76,11 +76,13 @@ describe("stand-up tools", () => {
   });
 });
 
-describe("direct creation of Waiting On and Learning", () => {
+describe("direct creation of Waiting On items", () => {
   it("builds owner-scoped records with the right default status", () => {
     const waiting = directRecordInput(owner, { kind: "waiting", request_id: owner, fields_json: JSON.stringify({ title: "Quote from vendor", organization: "Acme", due_date: "2026-10-12" }) });
     expect(waiting).toMatchObject({ kind: "waiting", user_id: owner, status: "Active", organization: "Acme" });
-    const learning = directRecordInput(owner, { kind: "learning", request_id: owner, fields_json: JSON.stringify({ title: "Spatial stats course" }) });
-    expect(learning).toMatchObject({ kind: "learning", status: "Saved" });
+  });
+  it("no longer creates the retired kinds", () => {
+    for (const kind of ["learning", "journal", "initiative", "program", "use_case", "experiment", "library"])
+      expect(() => directRecordInput(owner, { kind, request_id: owner, fields_json: JSON.stringify({ title: "Anything" }) })).toThrow();
   });
 });

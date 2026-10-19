@@ -1,3 +1,4 @@
+import { attribution } from "./attribution";
 import { applyDayCloseTool, dayCloseDefinitions, getDayClose } from "./dayclose";
 import { createRecord, createRecordDefinition } from "./create";
 import { quickUpdate, quickUpdateDefinition } from "./quick";
@@ -64,7 +65,7 @@ export function reminderArgs(args: Record<string, unknown>) {
     fields,
     hash,
     body:
-      args.body + (url ? "\n\nSource: " + url : "") + "\n\nCreated by CMD.",
+      args.body + (url ? "\n\nSource: " + url : "") + "\n\n" + attribution,
   };
 }
 export async function automaticTool(
