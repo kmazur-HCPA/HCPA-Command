@@ -18,12 +18,17 @@ export async function testCora({
       ? { text: "Ready to add." }
       : {
           tool: {
-            name: "prepare_task",
+            name: "prepare_record",
             input: {
-              title: "CMD synthetic follow-up",
-              due_date: "2026-09-22",
-              priority: "Normal",
-              project_id: null,
+              operation: "create",
+              kind: "task",
+              record_id: null,
+              expected_version: null,
+              fields_json: JSON.stringify({
+                title: "CMD synthetic follow-up",
+                due_date: "2026-09-22",
+                priority: "Normal",
+              }),
             },
           },
         },
