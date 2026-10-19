@@ -45,7 +45,7 @@ File counts across `src`, `netlify`, `supabase/functions`, `tests` and `.claude`
 
 - **Table:** `cora_workday_reviews` (19 rows: 10 complete, 9 partial; newest 2026-09-25). Nothing has run since.
 - **MCP:** `get_workday_reviews` (22 calls in the last 30 days) and `record_workday_review` (38 calls). All calls fall in September.
-- **UI:** `src/features/reviews/WorkdayReviews.tsx` is mounted only in **Settings** (`Workspace.tsx:421`, `settings` mode). The Work Day card was already removed, so §1.4 reduces to removing the Settings panel, the two tools, `brief.ts` (the brief style shared with the skill) and the `command_brief` MCP prompt and skill `brief.md`.
+- **UI:** `src/features/reviews/WorkdayReviews.tsx` is mounted only in **Settings**. Despite its name it is no longer a brief panel: it is the **"Automatic reminders" switch**, the kill switch for automatic writes that `save_sitrep` and `create_reminder` check. The Work Day card was already removed. (Correction: an earlier version of this report said the panel could simply be removed. It cannot; Phase 1 keeps the switch under a new name and removes only the two tools, `brief.ts`, the `command_brief` prompt and the skill's `brief.md`.)
 - **Scheduler:** none in this repo. There are no Netlify scheduled functions and no cron in `netlify.toml`. The Claude Code scheduled-task list on this machine is empty. A claude.ai-side task (not visible here) may still exist.
 
 ## 4. SITREP stack
