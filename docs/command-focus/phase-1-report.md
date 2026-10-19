@@ -54,9 +54,11 @@ Root cause I can establish from the data: Teams is `partial` in 25 of 26 partial
 2. **Re-upload the CMD skill** to claude.ai from `.claude/skills/cmd/` (`SKILL.md` changed; `brief.md` is gone).
 3. **Entra:** the stored Microsoft grant includes send and read-write Teams scopes that Command never requests (see `discovery.md`). Consider trimming them in the app registration.
 
-## Preview
+## Preview and CI
 
-See the section added below by the last commit of this phase.
+- **There is no deploy preview yet.** Netlify does not build this branch on its own (`https://feature-command-focus--hcpa-command.netlify.app` returns 404 after more than five minutes), and previews appear once a pull request is open. I have not opened one; say the word and I will open a draft.
+- **A preview cannot show real data.** `netlify.toml` and `vite.config.ts` deliberately give previews no Supabase connection, so a preview would show the app without your records and `/close` would have nothing to load. To review the screens with real data, run it locally against production with `npm run dev:netlify` (it reads `.env.production.local`), or point previews at a staging Supabase project. Both need your decision.
+- **CI on the branch:** the real local Supabase run (Auth, REST, Storage, Edge Function and pgTAP, applying both new migrations) **passes**, and so does `npm run check` (280 tests, build). The `application` job still fails on its `npm audit --audit-level=high` step, which has failed on `main` for several commits already (the dev dependencies `braces` and `node-forge`; `npm audit fix --force` is the suggested fix). That failure also skips CI's browser tests, which I ran locally instead: 44 of 44 pass, and the 2 offline-install tests pass.
 
 ## Deferred
 
