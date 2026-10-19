@@ -1,8 +1,10 @@
 export const taskStatuses = ['Inbox','Next','In Progress','Waiting','Scheduled','Someday','Complete','Cancelled'] as const
 export const reminderStatuses = ['Active','Snoozed','Complete','Dismissed'] as const
 export const priorities = ['Critical','High','Normal','Low'] as const
-export type Kind = 'task' | 'reminder' | 'project' | 'initiative' | 'person' | 'journal' | 'waiting' | 'learning' | 'program' | 'use_case' | 'experiment' | 'library'
-export const entryTypes = ['Capture','Thought','Idea','Research','Decision','Meeting','Learning','Experiment','Observation','Progress','Problem','Opportunity'] as const
+// The kinds Command works with. Initiative, program, journal, learning, use case, experiment and library
+// were retired: their rows (if any) stay in the database, archived, and are never shown or created.
+export type Kind = 'task' | 'reminder' | 'project' | 'person' | 'waiting'
+export const kindList: readonly Kind[] = ['task','reminder','project','person','waiting']
 export type WorkItem = {
   sort_order?:number;
   details:Record<string,string>;learning_id:string|null;program_id:string|null;use_case_id:string|null;experiment_id:string|null;decision_id:string|null;
@@ -14,8 +16,9 @@ export type WorkItem = {
 }
 export type WorkSummary = Omit<WorkItem,'body'|'original_body'|'goals'|'current_state'|'next_milestone'|'search_vector'|'details'>
 export type WorkInput = Omit<WorkItem,'original_body'|'version'|'created_at'|'updated_at'|'completed_at'|'search_vector'|'sort_order'>
-export const labels:Record<Kind,string> = { task:'Tasks', reminder:'Reminders',project:'Projects',initiative:'Initiatives',person:'People',journal:'Journal',waiting:'Waiting On',learning:'Learning',program:'AI Program',use_case:'Use Case Registry',experiment:'Experiments',library:'Library' }
-export function statuses(kind:Kind): readonly string[] { return kind==='learning'?['Saved','Planned','In Progress','Complete','Abandoned']:kind==='use_case'?['Idea','Researching','Proposed','Approved','Pilot','Production','Rejected','Retired']:kind==='experiment'?['Planned','In Progress','Complete','Abandoned']:kind==='library'?['Recorded']:kind==='task'?taskStatuses:kind==='reminder'?reminderStatuses:kind==='journal'?['Recorded']:kind==='person'?['Active']:kind==='waiting'?['Active','Complete']:['Active','On Hold','Complete'] }
+export const labels:Record<Kind,string> = { task:'Tasks', reminder:'Reminders',project:'Projects',person:'People',waiting:'Waiting On' }
+export const projectStatuses = ['Active','On Hold','Proposed','Complete'] as const
+export function statuses(kind:Kind): readonly string[] { return kind==='task'?taskStatuses:kind==='reminder'?reminderStatuses:kind==='person'?['Active']:kind==='waiting'?['Active','Complete']:projectStatuses }
 export function newItem(kind:Kind,userId:string): WorkInput {
   return {details:{},learning_id:null,program_id:null,use_case_id:null,experiment_id:null,decision_id:null,focus_slot:null,project_id:null,initiative_id:null,person_id:null,task_id:null,source_entry_id:null,entry_type:'Thought',tags:[],goals:'',current_state:'',next_milestone:'',organization:'',person_role:'',id:crypto.randomUUID(),user_id:userId,kind,title:'',body:'',status:statuses(kind)[0]!,priority:'Normal',due_date:null,remind_at:null,snoozed_until:null,converted_task_id:null,archived:false}
 }

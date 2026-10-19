@@ -6,7 +6,6 @@ import {
   newItem,
   statuses,
   priorities,
-  entryTypes,
   type Kind,
   type WorkInput,
 } from "../../../../src/features/work/model";
@@ -19,18 +18,7 @@ import {
 const uuid =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 export const kinds = Object.keys(labels) as Kind[];
-const links = [
-  "project_id",
-  "initiative_id",
-  "person_id",
-  "task_id",
-  "source_entry_id",
-  "learning_id",
-  "program_id",
-  "use_case_id",
-  "experiment_id",
-  "decision_id",
-];
+const links = ["project_id", "person_id", "task_id"];
 const textFields = [
   "title",
   "body",
@@ -59,8 +47,6 @@ export function validateFields(kind: Kind, value: unknown): Partial<WorkInput> {
       valid = typeof v === "string" && statuses(kind).includes(v);
     if (key === "priority")
       valid = priorities.includes(v as (typeof priorities)[number]);
-    if (key === "entry_type")
-      valid = entryTypes.includes(v as (typeof entryTypes)[number]);
     if (key === "archived") valid = typeof v === "boolean";
     if (key === "focus_slot")
       valid =

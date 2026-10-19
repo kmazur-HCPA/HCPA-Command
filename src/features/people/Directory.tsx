@@ -6,7 +6,7 @@ import { getWork, patchWork } from "../../services/work";
 import { Editor } from "../work/Editor";
 import { Icon } from "../../ui/Icon";
 import { ImportPeople } from "./ImportPeople";
-import { telephoneLink, type DirectoryPerson } from "./model";
+import { type DirectoryPerson } from "./model";
 export function Directory({
   client,
   userId,
@@ -102,7 +102,7 @@ export function Directory({
           <input
             type="search"
             maxLength={200}
-            placeholder="Name, email, title, organization, phone or notes"
+            placeholder="Name, email, title, organization or notes"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -146,7 +146,7 @@ export function Directory({
         <>
           <div className="directory-columns" aria-hidden="true">
             <span>Person / organization</span>
-            <span>Email / phone</span>
+            <span>Email</span>
             <span>Notes</span>
             <span />
           </div>
@@ -191,23 +191,9 @@ export function Directory({
                       {person.details.email}
                     </a>
                   )}
-                  {person.details.phone && (
-                    <a href={telephoneLink(person.details.phone)}>
-                      Phone · {person.details.phone}
-                    </a>
+                  {!person.details.email && (
+                    <span className="muted small">No email yet</span>
                   )}
-                  {person.details.mobile && (
-                    <a href={telephoneLink(person.details.mobile)}>
-                      Mobile · {person.details.mobile}
-                    </a>
-                  )}
-                  {!person.details.email &&
-                    !person.details.phone &&
-                    !person.details.mobile && (
-                      <span className="muted small">
-                        No contact details yet
-                      </span>
-                    )}
                 </div>
                 <p className="directory-notes">{person.notes_excerpt || "—"}</p>
                 <details className="row-actions-menu">

@@ -2422,3 +2422,41 @@ span.standup-text {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Command Focus: Close the Day, Proposed projects, SITREP status, weekly habit line.
+   Colors come from the Stone theme tokens only. Touch targets are at least 44px for the iPad. */
+.proposed-group { margin: 22px 0 0; border-top: 1px solid var(--line); padding-top: 12px; }
+.proposed-group > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
+.proposed-group > summary span { color: var(--text-3); }
+.wd-sitrep-status { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; font-size: 13px; color: var(--text-2); }
+.wd-sitrep-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.wd-sitrep-status--partial i { background: var(--brand-orange); }
+.wd-sitrep-status--failed i { background: var(--overdue); }
+.wd-close-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 12px 0; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-raised); }
+.wd-close-card p { margin: 4px 0 0; color: var(--text-2); font-size: 14px; }
+.wd-close-card .btn { min-height: 44px; flex-shrink: 0; }
+.wd-week { margin: 4px 0 12px; }
+.close-day { max-width: 760px; }
+.close-section { margin: 26px 0; }
+.close-section > .label { margin-bottom: 8px; }
+.close-list { list-style: none; margin: 0; padding: 0; }
+.close-list > li { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.close-list strong { font-weight: 600; color: var(--text-strong); overflow-wrap: anywhere; }
+.close-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.close-actions button { min-height: 44px; min-width: 64px; padding: 0 14px; }
+.close-proposal { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
+.close-date { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.close-date label { display: grid; gap: 4px; font-size: 13px; }
+.close-date input { min-height: 44px; }
+.close-first { border: 0; margin: 0; padding: 0; display: grid; gap: 4px; }
+.close-first label { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.close-first label:hover { background: var(--hover); }
+.close-first input { width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0; }
+.close-first small { display: block; color: var(--text-3); font-size: 12px; }
+.close-finish { align-items: center; gap: 14px; margin-top: 8px; }
+.close-finish .btn { min-height: 48px; padding: 0 24px; }
+.close-receipt { font-size: 18px; color: var(--text-strong); }
+@media (max-width: 700px) {
+  .wd-close-card { flex-direction: column; align-items: stretch; }
+  .close-actions button { flex: 1 1 calc(50% - 8px); }
+}

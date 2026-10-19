@@ -16,6 +16,7 @@ const user = {
 const jwt = `${Buffer.from('{"alg":"HS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub: uid, role: "authenticated", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test`;
 async function setup(page: Page) {
   await page.route("**/api/microsoft/calendar?**",r=>r.fulfill({json:{events:[],truncated:false,retrievedAt:new Date().toISOString()}}));
+  await page.route("**/api/microsoft/flagged", r => r.fulfill({ json: { messages: [], truncated: false, window_days: 90, retrievedAt: new Date().toISOString() } }));
   await page.route('**/rest/v1/cora_workday_reviews*',r=>r.fulfill({json:[]}));
   await page.route('**/rest/v1/cora_review_preferences*',r=>r.fulfill({json:{automatic_reminders:false}}));
   await page.route("**/api/helix/**", route => route.fulfill({ status: 409, json: { message: "Connect Helix in Settings." } }));
@@ -30,6 +31,8 @@ async function setup(page: Page) {
       created_at: string;
     }[] = [];
   const control = { failWrites: false, loseAck: false };
+  const closes: Record<string, unknown>[] = [],
+    closeCalls: Record<string, unknown>[] = [];
   const standup: { id: string; week_start: string; body: string; done: boolean; carried_from: string | null; user_id: string; created_at: string }[] = [];
   let theme = "dark";
   await page.route("https://command-test.supabase.co/**", async (route) => {
@@ -91,6 +94,26 @@ async function setup(page: Page) {
       rows.push({...newItem('person',uid),id:c.id,title:c.name,person_role:c.job_title,organization:c.organization,body:c.notes,original_body:c.notes,details:{email:c.email,phone:c.phone,mobile:c.mobile,department:c.department,location:c.location},version:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),completed_at:null});created++;}
       if(control.loseAck){control.loseAck=false;return route.abort('failed');}
       return route.fulfill({json:{created,skipped,results:[]}});
+    }
+    if (url.pathname.endsWith('/usage_events')) return route.fulfill({ status: method === 'POST' ? 201 : 200, json: [] });
+    if (url.pathname.endsWith('/day_closes')) {
+      if (method === 'POST') { closes.push(request.postDataJSON()); return route.fulfill({ status: 201, json: [] }); }
+      return route.fulfill({ json: closes });
+    }
+    if (url.pathname.endsWith('/rpc/apply_day_close')) {
+      const input = request.postDataJSON();
+      closeCalls.push(input);
+      if (control.failWrites) return route.fulfill({ status: 400, json: { message: 'Record changed since it was read: stale' } });
+      for (const a of input.p_actions as { id: string; op: string; date?: string }[]) {
+        const row = rows.find((r) => r.id === a.id)!;
+        if (a.op === 'done') { row.status = 'Complete'; row.completed_at = new Date().toISOString(); }
+        if (a.op === 'drop') row.archived = true;
+        if (a.op === 'date') row.due_date = a.date!;
+        row.version++;
+      }
+      if (input.p_first) rows.forEach((r) => { r.focus_slot = r.id === input.p_first ? 1 : r.focus_slot === 1 ? null : r.focus_slot; });
+      if (input.p_finish) closes.push({ for_date: input.p_for_date, counts: input.p_counts, first_item_id: input.p_first, completed_at: new Date().toISOString() });
+      return route.fulfill({ json: { applied: { done: 0, rolled: 0, dropped: 0, converted: 0 }, counts: input.p_counts, receipt_id: input.p_finish ? uid : null } });
     }
     if (url.pathname.endsWith('/rpc/swap_work_order')) {
       if(control.failWrites)return route.fulfill({status:503,json:{message:'Synthetic failure'}});
@@ -182,7 +205,7 @@ async function setup(page: Page) {
     }
     if (method !== "GET") {
       selected
-        .filter((r) => r.kind === "journal")
+        .filter((r) => (r.kind as string) === "journal")
         .forEach((row) =>
           history.push({
             id: crypto.randomUUID(),
@@ -216,7 +239,7 @@ async function setup(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Work Day", exact: true }),
   ).toBeVisible();
-  return { rows, control, history, standup };
+  return { rows, control, history, standup, closes, closeCalls };
 }
 test("create a task, choose a priority, edit, and complete it", async ({
   page,
@@ -246,12 +269,12 @@ test("create a task, choose a priority, edit, and complete it", async ({
   await page.getByRole("combobox",{name:"Filter status",exact:true}).selectOption("Complete");
   await expect(page.locator(".task-metadata")).toContainText("Complete");
 });
-test("capture survives failed save and reload, then a lost acknowledgement produces one entry", async ({
+test("quick capture survives a failed save and reload, then a lost acknowledgement produces one Inbox task", async ({
   page,
 }) => {
   const { rows, control } = await setup(page);
   await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
-  await page.getByRole("button", { name: /^Capture to journal/ }).click();
+  await page.getByRole("button", { name: /^Quick capture/ }).click();
   await page
     .getByLabel("What’s on your mind?")
     .fill("  Keep the original words.\nSecond line.  ");
@@ -263,45 +286,26 @@ test("capture survives failed save and reload, then a lost acknowledgement produ
     .click();
   await page.reload();
   await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
-  await page.getByRole("button", { name: /^Capture to journal/ }).click();
+  await page.getByRole("button", { name: /^Quick capture/ }).click();
   await expect(page.getByLabel("What’s on your mind?")).toHaveValue(
     "  Keep the original words.\nSecond line.  ",
   );
   control.failWrites = false;
   control.loseAck = true;
   await page.getByRole("button", { name: "Save capture", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Journal", exact: true }),
-  ).toBeVisible();
-  expect(rows.filter((r) => r.kind === "journal")).toHaveLength(1);
+  await expect(page.getByText("Saved to your Inbox")).toBeVisible();
+  expect(rows.filter((r) => r.kind === "task")).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ kind: "task", status: "Inbox", title: "Keep the original words." });
   expect(rows[0]?.original_body).toBe(
     "  Keep the original words.\nSecond line.  ",
   );
 });
-test("journal revisions preserve original text and drafts block logout until deliberately discarded", async ({
+test("unsent drafts block logout until deliberately discarded", async ({
   page,
 }) => {
-  const { history } = await setup(page);
+  await setup(page);
   await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
-  await page.getByRole("button", { name: /^Capture to journal/ }).click();
-  await page.getByLabel("What’s on your mind?").fill("Original decision");
-  await page.getByRole("button", { name: "Save capture", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Original decision", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Edit", exact: true }).click();
-  await page
-    .getByRole("textbox", { name: "Notes", exact: true })
-    .fill("Revised decision");
-  await page.getByLabel("Entry type").selectOption("Decision");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByText("Original entry", { exact: true }).click();
-  await expect(
-    page.locator("details").filter({ hasText: "Original entry" }),
-  ).toContainText("Original decision");
-  expect(history).toHaveLength(2);
-  await page.getByRole("button", { name: "Capture, search, or ask CMD" }).click();
-  await page.getByRole("button", { name: /^Capture to journal/ }).click();
+  await page.getByRole("button", { name: /^Quick capture/ }).click();
   await page.getByLabel("What’s on your mind?").fill("Unsent note");
   await page
     .getByRole("button", { name: "Close · keep draft", exact: true })
@@ -375,187 +379,6 @@ test("conflicting edits preserve the draft until the saved version is reviewed",
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".full-text").first()).toHaveText("My unsent edit");
 });
-test("a decision links to a project and generates a traceable task", async ({
-  page,
-}) => {
-  const { rows } = await setup(page);
-  await page.getByRole("button", { name: "Projects", exact: true }).click();
-  await page.getByRole("button", { name: "New project", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Service improvement");
-  await page
-    .getByRole("textbox", { name: "Goals", exact: true })
-    .fill("Reduce interruptions");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("button", { name: "Journal", exact: true }).click();
-  await page.getByRole("button", { name: "New journal", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Adopt the new process");
-  await page
-    .getByRole("textbox", { name: "Notes", exact: true })
-    .fill("Evidence and reasoning");
-  await page
-    .getByRole("combobox", { name: "Entry type", exact: true })
-    .selectOption("Decision");
-  await page.getByText("Links and context", { exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Project", exact: true })
-    .selectOption(rows[0]!.id);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Adopt the new process", exact: true })
-    .click();
-  await expect(
-    page.getByRole("link", { name: "Service improvement", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Create resulting task" }).click();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  const task = rows.find((r) => r.kind === "task")!;
-  expect(task.source_entry_id).toBe(rows.find((r) => r.kind === "journal")!.id);
-  expect(task.project_id).toBe(rows[0]!.id);
-  await expect(
-    page.getByRole("link", { name: "Adopt the new process", exact: true }),
-  ).toBeVisible();
-});
-
-test("learning connects to an experiment and a recorded decision", async ({
-  page,
-}) => {
-  const { rows } = await setup(page);
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("button", { name: "Learning", exact: true }).click();
-  await page.getByRole("button", { name: "New learning", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Evaluation course");
-  await page.getByLabel("Progress (%)", { exact: true }).fill("100");
-  await page
-    .getByLabel("Key takeaways", { exact: true })
-    .fill("Use representative synthetic examples");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("button", { name: "AI Lab", exact: true }).click();
-  await page.getByRole("button", { name: "Experiments", exact: true }).click();
-  await page
-    .getByRole("button", { name: "New experiment", exact: true })
-    .click();
-  await page
-    .getByLabel("Title", { exact: true })
-    .fill("Compare evaluation methods");
-  await page
-    .getByLabel("Hypothesis", { exact: true })
-    .fill("A rubric improves agreement");
-  await page.getByLabel("Conclusion", { exact: true }).fill("Adopt rubric");
-  await page.getByText("Links and context", { exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Learning source", exact: true })
-    .selectOption(rows[0]!.id);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("button", { name: "Journal", exact: true }).click();
-  await page.getByRole("button", { name: "New journal", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Use the rubric");
-  await page
-    .getByRole("combobox", { name: "Entry type", exact: true })
-    .selectOption("Decision");
-  await page.getByText("Links and context", { exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Experiment", exact: true })
-    .selectOption(rows.find((r) => r.kind === "experiment")!.id);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Use the rubric", exact: true })
-    .click();
-  await expect(
-    page.getByRole("link", { name: "Compare evaluation methods", exact: true }),
-  ).toBeVisible();
-  expect(rows.find((r) => r.kind === "experiment")!.learning_id).toBe(
-    rows[0]!.id,
-  );
-});
-test.skip("Library preserves metadata links and recovers an interrupted original upload", async ({
-  page,
-}) => {
-  const { rows } = await setup(page);
-  const versions: Record<string, unknown>[] = [];
-  let fail = true;
-  await page.route(
-    "https://command-test.supabase.co/rest/v1/library_versions*",
-    (route) => route.fulfill({ json: versions }),
-  );
-  await page.route(
-    "https://command-test.supabase.co/functions/v1/library",
-    async (route) => {
-      if (
-        route.request().headers()["content-type"]?.includes("application/json")
-      )
-        return route.fulfill({
-          contentType: "application/octet-stream",
-          body: "Synthetic original",
-        });
-      const raw = route.request().postDataBuffer()!.toString(),
-        id = raw.match(/name="id"\r\n\r\n([^\r]+)/)![1]!;
-      if (!versions.length)
-        versions.push({
-          id,
-          user_id: uid,
-          document_id: rows.find((r) => r.kind === "library")!.id,
-          filename: "reference.txt",
-          media_type: "text/plain",
-          size_bytes: 18,
-          sha256: "a".repeat(64),
-          state: "pending",
-          created_at: new Date().toISOString(),
-        });
-      if (fail) {
-        fail = false;
-        return route.fulfill({
-          status: 503,
-          json: {
-            error:
-              "Original uploaded; finalization is pending. Retry the same version and file.",
-          },
-        });
-      }
-      expect(id).toBe(versions[0]!.id);
-      versions[0]!.state = "ready";
-      return route.fulfill({ json: versions[0] });
-    },
-  );
-  await page.getByRole("button", { name: "Library", exact: true }).click();
-  await page.getByRole("button", { name: "New item", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Reference document");
-  await page
-    .getByRole("combobox", { name: "Classification", exact: true })
-    .selectOption("Internal");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Reference document", exact: true })
-    .click();
-  const fixture = {
-    name: "reference.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("Synthetic original"),
-  };
-  await page.getByLabel("Choose original file").setInputFiles(fixture);
-  await page
-    .getByRole("button", { name: "Upload new version", exact: true })
-    .click();
-  await expect(page.getByRole("alert")).toContainText(
-    "finalization is pending",
-  );
-  await page.reload();
-  await expect(
-    page.getByText("Pending attempt:", { exact: false }),
-  ).toBeVisible();
-  await page.getByLabel("Choose original file").setInputFiles(fixture);
-  await page.getByRole("button", { name: "Retry upload", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Original verified and saved",
-  );
-  const downloaded = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Download original", exact: true })
-    .click();
-  expect((await downloaded).suggestedFilename()).toBe("reference.txt");
-  expect(versions).toHaveLength(1);
-});
-
 test("designed dashboard uses real counts, completion, search, and responsive themes", async ({
   page,
 }) => {
@@ -569,7 +392,6 @@ test("designed dashboard uses real counts, completion, search, and responsive th
     ["project", "WorkHUB", "Active", null],
     ["project", "Website redesign", "On Hold", null],
     ["project", "AI Pilot", "Active", null],
-    ["learning", "Designing better public services", "In Progress", null],
     ["reminder", "Prepare for the leadership sync", "Active", null],
     ["waiting", "Vendor implementation estimate", "Active", null],
   ];
@@ -657,7 +479,7 @@ test('global search filters, source links, pagination and archive boundaries',as
  await page.getByText('Filter results',{exact:true}).click()
  await page.getByRole('combobox',{name:'Archive',exact:true}).selectOption('archived');await expect(page.locator('.search-result')).toHaveCount(1)
  await expect(page.locator('.search-result')).toContainText('Archived')
- await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('learning');await expect(page.getByText('No matching records. Try fewer words or include archived records.')).toBeVisible()
+ await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('person');await expect(page.getByText('No matching records. Try fewer words or include archived records.')).toBeVisible()
  await page.getByRole('combobox',{name:'Module',exact:true}).selectOption('task')
  await expect(page.locator('.search-result')).toHaveCount(1)
  for(const width of [1440,744,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:`test-results/search-${width}.png`,animations:'disabled'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
@@ -717,7 +539,7 @@ await expect(page.locator('html')).not.toHaveClass(/theme-fading/);
  await page.screenshot({path:'test-results/compact-tasks-mobile.png',animations:'disabled'});
 });
 
-test('People directory supports contact fields, CSV preview, failed acknowledgement retry and mobile contact links',async({page})=>{
+test('People directory supports email, CSV preview and failed acknowledgement retry, and keeps phone numbers out of view',async({page})=>{
  const {rows,control}=await setup(page);
  await page.getByRole('button',{name:'People',exact:true}).click();
  await page.getByRole('button',{name:'New person',exact:true}).click();
@@ -725,7 +547,6 @@ test('People directory supports contact fields, CSV preview, failed acknowledgem
  await page.getByLabel('Job title',{exact:true}).fill('GIS Manager');
  await page.getByLabel('Organization',{exact:true}).fill('HCPA');
  await page.getByLabel('Email',{exact:true}).fill('alex@example.org');
- await page.getByLabel('Phone',{exact:true}).fill('813-555-0100');
  await page.getByLabel('Notes',{exact:true}).fill('GIS liaison');
  await expect(page.getByLabel('Due date',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Save',exact:true}).click();
@@ -745,7 +566,8 @@ test('People directory supports contact fields, CSV preview, failed acknowledgem
  await expect(modal.getByRole('status')).toContainText('already present');
  expect(rows.filter(row=>row.kind==='person')).toHaveLength(2);
  await modal.getByRole('button',{name:'Done',exact:true}).click();
- await page.getByRole('searchbox',{name:'Search directory'}).fill('0111');
+ await expect(page.getByText('813-555-0111')).toHaveCount(0);
+ await page.getByRole('searchbox',{name:'Search directory'}).fill('Morgan');
  await expect(page.getByRole('button',{name:'Morgan Reed',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Alex Chen',exact:true})).toHaveCount(0);
  await page.getByRole('searchbox',{name:'Search directory'}).fill('');
@@ -910,14 +732,14 @@ test("every page keeps the Stone layout and passes accessibility checks in both 
   await page.setViewportSize({ width: 1280, height: 900 });
   const { rows } = await setup(page);
   const stamp = new Date().toISOString();
-  for (const [kind, title] of [["task", "Plan the budget"], ["project", "GIS modernization"], ["journal", "Met with Erik"], ["person", "Tatiana English"], ["reminder", "Call vendor"], ["waiting", "Vendor estimate"], ["initiative", "Front counter"], ["learning", "Public services"]] as const)
+  for (const [kind, title] of [["task", "Plan the budget"], ["project", "GIS modernization"], ["person", "Tatiana English"], ["reminder", "Call vendor"], ["waiting", "Vendor estimate"]] as const)
     rows.push({ ...newItem(kind, uid), title, original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null });
   for (const mode of ["day", "evening"]) {
     await page.evaluate((m) => (window as unknown as { CommandTheme: { setMode: (m: string) => void } }).CommandTheme.setMode(m), mode);
     await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
     await expect(page.locator("html")).not.toHaveClass(/theme-fading/);
-    for (const name of ["task", "project", "journal", "person", "reminder", "waiting", "initiative", "learning", "lab", "settings"]) {
-      await page.goto(`/?page=${name}`);
+    for (const name of ["task", "project", "person", "reminder", "waiting", "close", "settings"]) {
+      await page.goto(name === "close" ? "/close" : `/?page=${name}`);
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       await expect(page.getByText("Loading…")).toHaveCount(0);
       await expect(page.locator(".rail")).toBeVisible();
@@ -981,4 +803,103 @@ test("Stand-up: add, edit, remove, and carry an item over from a past week", asy
   await dialog.getByRole("button", { name: "Close past weeks" }).click();
   await expect(section.getByText("Barracuda renewal")).toContainText("carried over");
   expect(standup.filter((r) => r.carried_from)).toHaveLength(1);
+});
+
+const seed = (rows: WorkItem[], kind: WorkItem["kind"], title: string, extra: Partial<WorkItem> = {}) => {
+  const stamp = new Date().toISOString();
+  const row = { ...newItem(kind, uid), id: crypto.randomUUID(), title, original_body: "", version: 1, created_at: stamp, updated_at: stamp, completed_at: null, ...extra } as WorkItem;
+  rows.push(row);
+  return row;
+};
+const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
+test("Close the Day: finish, move and drop with one tap each, pick tomorrow's first item, and get a receipt", async ({ page }) => {
+  await page.setViewportSize({ width: 744, height: 1133 });
+  const { rows, closes, closeCalls } = await setup(page);
+  const today = daysAgo(0);
+  const due = seed(rows, "task", "Send the budget memo", { due_date: today, status: "Next" });
+  const roll = seed(rows, "task", "Review vendor quote", { due_date: daysAgo(2), status: "Next" });
+  const datto = seed(rows, "task", "Draft email regarding Datto upgrade", { due_date: daysAgo(24), status: "Inbox" });
+  const barracuda = seed(rows, "reminder", "Ensure Barracuda renewal moves forward", { due_date: daysAgo(19), status: "Active", updated_at: new Date(Date.now() - 20 * 86400000).toISOString() });
+  const first = seed(rows, "task", "Plan the GIS rollout", { priority: "High", due_date: null, status: "Next" });
+  await page.goto("/close");
+  await expect(page.getByRole("heading", { name: "Close the Day", level: 1 })).toBeVisible();
+  // Stale shows the two old items with a suggestion, not an action already taken.
+  const stale = page.locator(".close-section").filter({ hasText: "Stale" });
+  await expect(stale).toContainText(datto.title);
+  await expect(stale).toContainText(barracuda.title);
+  await expect(stale).toContainText("Suggested: Never started and 24 days overdue");
+  expect(closeCalls).toHaveLength(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  // One tap each.
+  const open = page.locator(".close-section").filter({ hasText: "Still open" });
+  await open.getByRole("group", { name: `Actions for ${due.title}` }).getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText(`Done: ${due.title}`)).toBeVisible();
+  await open.getByRole("group", { name: `Actions for ${roll.title}` }).getByRole("button", { name: /^(Tomorrow|Monday)$/ }).click();
+  await expect(open).not.toContainText(roll.title);
+  await stale.getByRole("button", { name: "Drop it" }).first().click();
+  await expect(page.getByText(/Dropped \(archived\)/)).toBeVisible();
+  expect(closeCalls.map((c) => (c.p_actions as { op: string }[])[0]!.op)).toEqual(["done", "date", "drop"]);
+  expect(rows.find((r) => r.id === datto.id)!.archived).toBe(true);
+  expect(rows.find((r) => r.id === datto.id)!.status).toBe("Inbox");
+  await page.getByLabel(new RegExp(first.title)).check();
+  await page.getByRole("button", { name: "Finish the day" }).click();
+  await expect(page.getByRole("heading", { name: "Day closed" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "1 done · 1 moved · 1 dropped" })).toContainText(`First thing tomorrow: ${first.title}`);
+  expect(closes.at(-1)).toMatchObject({ first_item_id: first.id, counts: { done: 1, rolled: 1, dropped: 1, converted: 0 } });
+  expect(rows.find((r) => r.id === first.id)!.focus_slot).toBe(1);
+});
+
+test("Close the Day: a stale record is reported plainly and nothing is half applied", async ({ page }) => {
+  const { rows, control } = await setup(page);
+  const task = seed(rows, "task", "Edited elsewhere", { due_date: daysAgo(0), status: "Next" });
+  await page.goto("/close");
+  control.failWrites = true;
+  await page.locator(".close-section").filter({ hasText: "Still open" }).getByRole("group", { name: `Actions for ${task.title}` }).getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("alert")).toContainText("Something changed since you opened Close the Day");
+  control.failWrites = false;
+  expect(rows.find((r) => r.id === task.id)!.status).toBe("Next");
+});
+
+test("Projects keeps Proposed projects in their own collapsed group below the rest", async ({ page }) => {
+  const { rows } = await setup(page);
+  seed(rows, "project", "Active project", { status: "Active" });
+  seed(rows, "project", "Paused project", { status: "On Hold" });
+  seed(rows, "project", "Variance maps idea", { status: "Proposed" });
+  await page.getByRole("button", { name: "Projects", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Active project", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Paused project", exact: true })).toBeVisible();
+  const group = page.locator("details.proposed-group");
+  await expect(group.locator(":scope > summary")).toContainText("Proposed");
+  await expect(group).not.toHaveAttribute("open", "");
+  await expect(page.getByRole("button", { name: "Variance maps idea", exact: true })).toBeHidden();
+  await group.locator(":scope > summary").click();
+  await expect(page.getByRole("button", { name: "Variance maps idea", exact: true })).toBeVisible();
+});
+
+test("a person shows what they owe me and what I owe them, and keeps phone numbers out of view", async ({ page }) => {
+  const { rows } = await setup(page);
+  const person = seed(rows, "person", "Alex Chen", { person_role: "GIS Manager", organization: "HCPA", details: { email: "alex@example.org", phone: "813-555-0100" } });
+  seed(rows, "waiting", "Parcel export from Alex", { status: "Active", person_id: person.id });
+  seed(rows, "task", "Send Alex the schema", { status: "Next", person_id: person.id });
+  seed(rows, "reminder", "Call Alex Friday", { status: "Active", person_id: person.id });
+  await page.goto(`/?record=${person.id}`);
+  const owe = page.getByRole("heading", { name: "They owe me" });
+  await expect(owe).toBeVisible();
+  await expect(page.locator("#ctx-waiting").locator("xpath=..")).toContainText("Parcel export from Alex");
+  await expect(page.getByRole("heading", { name: "I owe them" })).toBeVisible();
+  const mine = page.locator("#ctx-owe").locator("xpath=..");
+  await expect(mine).toContainText("Send Alex the schema");
+  await expect(mine).toContainText("Call Alex Friday");
+  await expect(page.getByText("813-555-0100")).toHaveCount(0);
+});
+
+test("Work Day names the SITREP source that was the problem", async ({ page }) => {
+  const { rows } = await setup(page);
+  void rows;
+  await page.route("**/rest/v1/sitrep_runs*", (r) =>
+    r.fulfill({ json: [{ run_id: uid, for_date: daysAgo(0), run_slot: "am", status: "partial", started_at: new Date().toISOString(), generated_at: new Date().toISOString(), sources: { command: "ok", calendar: "ok", mail: "ok", teams: "failed", helix: "partial", flagged: "ok" }, payload: null, error_note: null }] }),
+  );
+  await page.reload();
+  await expect(page.locator(".wd-sitrep-status")).toContainText(/SITREP is partial: Teams unavailable, Helix incomplete (this morning|this afternoon|this evening)\./);
 });

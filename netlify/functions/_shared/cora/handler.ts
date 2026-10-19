@@ -243,6 +243,7 @@ export async function handleCora(
     const context = (body.context ?? {}) as CoraContext;
     const pages = [
       "workspace",
+      "close",
       "command-brief",
       "settings",
       "lab",

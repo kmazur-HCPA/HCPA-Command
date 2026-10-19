@@ -42,7 +42,7 @@ const page = {
 export const tools = [
   definition(
     "get_day_snapshot",
-    "Read the whole current attention picture in ONE call: tasks due today or overdue, reminders due, open critical/high-priority tasks, active waiting-on items and active/on-hold projects. Start briefs, check-ins and 'what needs attention' questions here instead of calling each list tool. Each list is the first 25 with an exact total and has_more; page a single list with its own tool when has_more is true. Records are compact (no bodies); use get_record for full text.",
+    "Read the whole current attention picture in ONE call: tasks due today or overdue, reminders due, open critical/high-priority tasks, active waiting-on items and active/on-hold projects. Start briefs, check-ins and 'what needs attention' questions here instead of calling each list tool. Each list is the first 25 with an exact total and has_more; page a single list with its own tool when has_more is true. Records are compact (no bodies); use get_record for full text. last_day_close is the latest Close the Day receipt (counts and tomorrow's first_item), or null.",
   ),
   definition(
     "get_records",
@@ -61,7 +61,7 @@ export const tools = [
   ),
   definition(
     "prepare_record",
-    'Prepare a reviewed update/convert action or a creation not supported by direct tools. For new Tasks, People, Projects, Initiatives, Journal and AI Lab records use create_record; for new reminders use create_reminder. No write occurs until confirmed. Update only requested fields. For convert, kind=reminder and fields_json="{}". For create use null record_id and expected_version. Read current record before update. fields_json is a JSON object with editable fields: title, body, status, priority, due_date (YYYY-MM-DD or null), remind_at and snoozed_until (ISO timestamp WITH timezone or null), archived, focus_slot (task 1-3 or null), tags (string array), entry_type, goals, current_state, next_milestone, organization, person_role, details (string-valued object), project_id, initiative_id, person_id, task_id, source_entry_id, learning_id, program_id, use_case_id, experiment_id, decision_id (UUID or null). For reminder snooze set status=Snoozed and snoozed_until; dismiss=Dismissed, complete=Complete. Tomorrow without a time means due_date only; do not invent a time. Preserve all existing details when editing details. Detail field definitions: ' +
+    'Prepare a reviewed update/convert action or a creation not supported by direct tools. For new Tasks, People, Projects and Waiting On items use create_record; for new reminders use create_reminder; to complete or reopen a task, complete/dismiss/snooze a reminder or change a due date use quick_update. This tool is for every other edit (titles, notes, priority, links, archive, focus slot) and for conversions. No write occurs until Kevin confirms in Command. Update only requested fields. For convert, kind=reminder and fields_json="{}". For create use null record_id and expected_version. Read current record before update. fields_json is a JSON object with editable fields: title, body, status, priority, due_date (YYYY-MM-DD or null), remind_at and snoozed_until (ISO timestamp WITH timezone or null), archived, focus_slot (task 1-3 or null), tags (string array), goals, current_state, next_milestone, organization, person_role, details (string-valued object), project_id, person_id, task_id (UUID or null). A Project may be Proposed (an idea not yet committed to), Active, On Hold or Complete. Tomorrow without a time means due_date only; do not invent a time. Preserve all existing details when editing details. Detail field definitions: ' +
       JSON.stringify(detailFields),
     {
       operation: { type: "string", enum: ["create", "update", "convert"] },
@@ -106,19 +106,6 @@ export const tools = [
     "Read active private dependencies on others, including linked people and tasks.",
     page,
   ),
-  definition(
-    "prepare_task",
-    "Legacy reviewed task proposal. For new requested tasks use create_record instead, which saves immediately.",
-    {
-      title: { type: "string" },
-      due_date: {
-        type: ["string", "null"],
-        description: "YYYY-MM-DD, or null when not requested.",
-      },
-      priority: { type: "string", enum: [...priorities] },
-      project_id: { type: ["string", "null"] },
-    },
-  ),
 ];
 // The small attention snapshot preloaded for every chat turn and brief.
 export const baselineTools = [
@@ -160,7 +147,7 @@ export function validateProposal(value: unknown): TaskProposal {
   };
 }
 const columns =
-  "id,title,kind,status,priority,due_date,remind_at,snoozed_until,version,archived,details,tags,entry_type,focus_slot,initiative_id,learning_id,program_id,use_case_id,experiment_id,decision_id,source_entry_id,organization,person_role,project_id,person_id,task_id,current_state,next_milestone,goals,body,updated_at" as const;
+  "id,title,kind,status,priority,due_date,remind_at,snoozed_until,version,archived,details,tags,focus_slot,organization,person_role,project_id,person_id,task_id,current_state,next_milestone,goals,body,updated_at" as const;
 const snapshotLists = [
   ["tasks_due_today", "get_tasks_due_today"],
   ["reminders_due", "get_reminders_due"],
@@ -218,7 +205,32 @@ async function daySnapshot(
       ] as const;
     }),
   );
-  return { today: today(), ...Object.fromEntries(lists) };
+  // The latest Close the Day receipt, so a morning SITREP can start from tomorrow's first item.
+  let lastClose: unknown = null;
+  if (ownerId) {
+    const receipt = await client
+      .from("day_closes")
+      .select("for_date,completed_at,counts,first_item_id")
+      .eq("user_id", ownerId)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!receipt.error && receipt.data) {
+      let first: unknown = null;
+      if (receipt.data.first_item_id) {
+        const item = await client
+          .from("work_items")
+          .select("id,title,priority,due_date,status,version,archived")
+          .eq("id", receipt.data.first_item_id)
+          .eq("user_id", ownerId)
+          .maybeSingle();
+        if (!item.error && item.data && !item.data.archived)
+          first = { ...item.data, archived: undefined };
+      }
+      lastClose = { ...receipt.data, first_item_id: undefined, first_item: first };
+    }
+  }
+  return { today: today(), last_day_close: lastClose, ...Object.fromEntries(lists) };
 }
 export async function readTool(
   client: AppClient,

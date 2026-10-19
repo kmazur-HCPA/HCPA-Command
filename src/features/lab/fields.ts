@@ -1,79 +1,10 @@
 import {contactFields} from "../people/model"
+// Detail fields Command still validates: a person's contact details, and the program fields a
+// project may carry after an AI Program was folded into it (plus its migration markers).
 export type Field = {key:string;label:string;type:string;options?:string[]}
 export const fields:Record<string,Field[]> = {
   person: [...contactFields],
-  "learning": [
-    {
-      "key": "provider",
-      "label": "Provider / author",
-      "type": "text"
-    },
-    {
-      "key": "type",
-      "label": "Learning type",
-      "type": "select",
-      "options": [
-        "Course",
-        "Article",
-        "Paper",
-        "Video",
-        "Webinar",
-        "Conference",
-        "Podcast",
-        "Book",
-        "Documentation",
-        "Tutorial",
-        "Other"
-      ]
-    },
-    {
-      "key": "url",
-      "label": "Source URL",
-      "type": "url"
-    },
-    {
-      "key": "start_date",
-      "label": "Start date",
-      "type": "date"
-    },
-    {
-      "key": "completion_date",
-      "label": "Completion date",
-      "type": "date"
-    },
-    {
-      "key": "progress",
-      "label": "Progress (%)",
-      "type": "number"
-    },
-    {
-      "key": "topic",
-      "label": "Topic",
-      "type": "text"
-    },
-    {
-      "key": "takeaways",
-      "label": "Key takeaways",
-      "type": "textarea"
-    },
-    {
-      "key": "usefulness",
-      "label": "Usefulness",
-      "type": "select",
-      "options": [
-        "Not assessed",
-        "Low",
-        "Moderate",
-        "High"
-      ]
-    },
-    {
-      "key": "applicability",
-      "label": "HCPA applicability",
-      "type": "textarea"
-    }
-  ],
-  "program": [
+  "project": [
     {
       "key": "definition",
       "label": "Program definition",
@@ -134,158 +65,16 @@ export const fields:Record<string,Field[]> = {
       "label": "Human review requirements",
       "type": "textarea"
     }
-  ],
-  "use_case": [
+  ,
     {
-      "key": "problem",
-      "label": "Problem",
-      "type": "textarea"
-    },
-    {
-      "key": "proposed_use",
-      "label": "Proposed AI use",
-      "type": "textarea"
-    },
-    {
-      "key": "department",
-      "label": "Department / function",
+      "key": "migrated_from",
+      "label": "Migrated from",
       "type": "text"
     },
     {
-      "key": "owner",
-      "label": "Accountable owner",
+      "key": "migrated_to",
+      "label": "Migrated to",
       "type": "text"
-    },
-    {
-      "key": "data_involved",
-      "label": "Data involved",
-      "type": "textarea"
-    },
-    {
-      "key": "risk",
-      "label": "Risk level",
-      "type": "select",
-      "options": [
-        "Not assessed",
-        "Low",
-        "Moderate",
-        "High"
-      ]
-    },
-    {
-      "key": "expected_benefit",
-      "label": "Expected benefit",
-      "type": "textarea"
-    },
-    {
-      "key": "actual_benefit",
-      "label": "Actual benefit",
-      "type": "textarea"
-    },
-    {
-      "key": "requirements",
-      "label": "Technical requirements",
-      "type": "textarea"
-    },
-    {
-      "key": "decision",
-      "label": "Decision and rationale",
-      "type": "textarea"
-    }
-  ],
-  "experiment": [
-    {
-      "key": "question",
-      "label": "Question",
-      "type": "textarea"
-    },
-    {
-      "key": "hypothesis",
-      "label": "Hypothesis",
-      "type": "textarea"
-    },
-    {
-      "key": "tool",
-      "label": "Tool / provider",
-      "type": "text"
-    },
-    {
-      "key": "model",
-      "label": "Model and version",
-      "type": "text"
-    },
-    {
-      "key": "setup",
-      "label": "Setup",
-      "type": "textarea"
-    },
-    {
-      "key": "inputs",
-      "label": "Inputs / data used",
-      "type": "textarea"
-    },
-    {
-      "key": "results",
-      "label": "Results",
-      "type": "textarea"
-    },
-    {
-      "key": "problems",
-      "label": "Problems",
-      "type": "textarea"
-    },
-    {
-      "key": "conclusion",
-      "label": "Conclusion",
-      "type": "textarea"
-    },
-    {
-      "key": "next_action",
-      "label": "Next action",
-      "type": "textarea"
-    }
-  ],
-  "library": [
-    {
-      "key": "category",
-      "label": "Category",
-      "type": "select",
-      "options": [
-        "HCPA",
-        "AI Governance",
-        "Research",
-        "Learning",
-        "Command"
-      ]
-    },
-    {
-      "key": "classification",
-      "label": "Classification",
-      "type": "select",
-      "options": [
-        "Public",
-        "Internal"
-      ]
-    },
-    {
-      "key": "source",
-      "label": "Source",
-      "type": "text"
-    },
-    {
-      "key": "author",
-      "label": "Author",
-      "type": "text"
-    },
-    {
-      "key": "url",
-      "label": "Source URL",
-      "type": "url"
-    },
-    {
-      "key": "document_date",
-      "label": "Document date",
-      "type": "date"
     }
   ]
 }

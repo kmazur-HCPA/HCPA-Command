@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import type { AppClient } from "../../platform/supabase";
-// Kevin's standing consent for connected apps (CMD in Claude) to save the
-// reminders he asks for without a confirmation card. Enforced in the database.
-export function WorkdayReviews({
+// The kill switch for automatic writes: Kevin's standing consent for CMD in Claude to save
+// reminders (and SITREP runs) without a confirmation card. Enforced in the database.
+// Pausing it blocks those saves from every connected app.
+export function AutomaticReminders({
   client,
-  settings = false,
+  settings = true,
 }: {
   client: AppClient;
   settings?: boolean;

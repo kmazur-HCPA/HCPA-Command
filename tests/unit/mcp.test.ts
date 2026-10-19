@@ -25,7 +25,8 @@ let active: boolean,
   revoked: boolean,
   requests: Request[],
   queries: URL[],
-  prepared: Record<string, unknown> | null;
+  prepared: Record<string, unknown> | null,
+  closeCalls: Record<string, unknown>[];
 const req = (body: unknown, credential = token) =>
   new Request(cfg.origin + "/api/mcp", {
     method: "POST",
@@ -53,6 +54,7 @@ beforeEach(() => {
   requests = [];
   queries = [];
   prepared = null;
+  closeCalls = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -96,6 +98,12 @@ beforeEach(() => {
       if (u.pathname.endsWith("/work_items")) {
         expect(u.searchParams.get("user_id")).toBe("eq." + owner);
         return Response.json([], { headers: { "Content-Range": "0-0/0" } });
+      }
+      if (u.pathname.endsWith("/day_closes"))
+        return Response.json({ for_date: "2026-10-16", completed_at: "2026-10-16T19:30:00Z", counts: { done: 2, rolled: 1, dropped: 0, converted: 0 }, first_item_id: null });
+      if (u.pathname.endsWith("/rpc/apply_day_close")) {
+        closeCalls.push(await r.json());
+        return Response.json({ applied: { done: 1, rolled: 0, dropped: 0, converted: 0 }, counts: { done: 1, rolled: 0, dropped: 0, converted: 0 }, receipt_id: closeCalls.at(-1)!.p_finish ? owner : null });
       }
       throw new Error("Unexpected network access");
     }),
@@ -144,7 +152,7 @@ describe("Private connected-app MCP boundary", () => {
         "test",
       ),
     );
-    expect(list.result.tools).toHaveLength(32);
+    expect(list.result.tools).toHaveLength(31);
     expect(list.result.tools.map((t: { name: string }) => t.name)).toContain("get_reminders_due");
     expect(
       list.result.tools
@@ -153,8 +161,17 @@ describe("Private connected-app MCP boundary", () => {
             !t.annotations.readOnlyHint,
         )
         .map((t: { name: string }) => t.name),
-    ).toEqual(["prepare_record", "prepare_task", "save_sitrep", "add_standup_item", "update_standup_item", "remove_standup_item", "create_record", "quick_update", "create_reminder", "record_workday_review"]);
+    ).toEqual(["prepare_record", "save_sitrep", "add_standup_item", "update_standup_item", "remove_standup_item", "create_record", "quick_update", "create_reminder", "apply_day_close"]);
     expect(mcpDefinitions.map((t) => t.name)).not.toContain("create_task");
+    // Retired: one path per write, and no second briefing.
+    for (const retired of ["prepare_task", "get_workday_reviews", "record_workday_review"])
+      expect(mcpDefinitions.map((t) => t.name)).not.toContain(retired);
+    // The record-kind enums no longer offer retired kinds.
+    const kindEnum = (name: string) =>
+      (mcpDefinitions.find((t) => t.name === name)!.parameters.properties as { kind: { enum: (string | null)[] } }).kind.enum;
+    expect(kindEnum("create_record")).toEqual(["task", "person", "project", "waiting"]);
+    expect(kindEnum("prepare_record")).toEqual(["task", "reminder", "project", "person", "waiting"]);
+    expect(kindEnum("get_records")).toEqual(["task", "reminder", "project", "person", "waiting", null]);
     // Searchable by name: every mail/Teams/SITREP tool is listed with a description and schema.
     for (const name of ["get_flagged_mail", "get_direct_mail", "list_teams_chats", "save_sitrep", "get_sitrep_runs"]) {
       const tool = list.result.tools.find((t: { name: string }) => t.name === name);
@@ -175,6 +192,7 @@ describe("Private connected-app MCP boundary", () => {
     for (const key of ["tasks_due_today", "reminders_due", "priority_tasks", "waiting_on", "active_projects"])
       expect(data[key]).toEqual({ total: 0, has_more: false, records: [] });
     expect(data.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(data.last_day_close).toMatchObject({ for_date: "2026-10-16", counts: { done: 2 }, first_item: null });
     expect(queries.filter((q) => q.pathname.endsWith("/cora_mcp_reserve"))).toHaveLength(1);
     const bad = await result(
       await handleMcp(
@@ -185,12 +203,12 @@ describe("Private connected-app MCP boundary", () => {
     );
     expect(bad.error || bad.result?.isError).toBeTruthy();
   });
-  it("offers the brief, meeting prep, weekly review and capture routines as prompts", async () => {
+  it("offers close-the-day, meeting prep, weekly review and capture routines as prompts", async () => {
     const list = await result(
       await handleMcp(req({ jsonrpc: "2.0", id: 22, method: "prompts/list", params: {} }), cfg, "test"),
     );
     expect(list.result.prompts.map((p: { name: string }) => p.name)).toEqual([
-      "command_brief",
+      "close_day",
       "meeting_prep",
       "weekly_review",
       "capture",
@@ -204,6 +222,50 @@ describe("Private connected-app MCP boundary", () => {
     );
     expect(prep.result.messages[0].content.text).toContain('"Budget review"');
     expect(requests.some((r) => new URL(r.url).pathname.endsWith("/work_items"))).toBe(false);
+  });
+  it("reads Close the Day without changing anything, and never lets a mail problem hide it", async () => {
+    const value = await result(
+      await handleMcp(
+        req({ jsonrpc: "2.0", id: 30, method: "tools/call", params: { name: "get_day_close", arguments: {} } }),
+        cfg,
+        "test",
+      ),
+    );
+    expect(value.result.isError).not.toBe(true);
+    const data = value.result.structuredContent.data;
+    expect(data).toMatchObject({ done_today: [], still_open: [], stale: [], first_item_candidates: [] });
+    expect(data.flagged_mail).toMatchObject({ available: false });
+    expect(requests.every((r) => r.method === "GET" || new URL(r.url).pathname.includes("/rpc/cora_mcp") || new URL(r.url).pathname.endsWith("/cora_mcp_activity"))).toBe(true);
+    expect(closeCalls).toHaveLength(0);
+  });
+  it("applies only validated, confirmed Close the Day choices in one atomic call", async () => {
+    const call = async (args: object) =>
+      result(
+        await handleMcp(
+          req({ jsonrpc: "2.0", id: 31, method: "tools/call", params: { name: "apply_day_close", arguments: args } }),
+          cfg,
+          "test",
+        ),
+      );
+    const id = "66666666-6666-4666-8666-666666666666";
+    const ok = await call({ actions_json: JSON.stringify([{ id, version: 3, op: "done" }]), mail_json: "[]", first_item_id: null, finish: true });
+    expect(ok.result.isError).not.toBe(true);
+    expect(ok.result.structuredContent.data).toMatchObject({ saved: true, finished: true, receipt_id: owner });
+    expect(closeCalls).toHaveLength(1);
+    expect(closeCalls[0]).toMatchObject({ p_user: owner, p_finish: true, p_source: "chat", p_actions: [{ id, version: 3, op: "done" }] });
+    for (const bad of [
+      { actions_json: JSON.stringify([{ id, version: 3, op: "delete" }]) },
+      { actions_json: JSON.stringify([{ id, op: "done" }]) },
+      { actions_json: JSON.stringify([{ id, version: 1, op: "date", date: "tomorrow" }]) },
+      { actions_json: "[]", mail_json: JSON.stringify([{ message_id: "m", action: "reminder", title: "No date" }]) },
+      { actions_json: "[]", mail_json: JSON.stringify([{ message_id: "m", action: "task", title: "Bad link", url: "https://evil.test/x" }]) },
+      { actions_json: "[]", first_item_id: "not-a-uuid" },
+      { actions_json: "[]", finish: false },
+    ]) {
+      const value = await call(Object.assign({ actions_json: "[]", mail_json: "[]", first_item_id: null, finish: true }, bad));
+      expect(value.error || value.result?.isError, JSON.stringify(bad)).toBeTruthy();
+    }
+    expect(closeCalls).toHaveLength(1);
   });
   it("reads only the token owner and audits the tool call without writing work", async () => {
     const value = await result(
@@ -249,10 +311,11 @@ describe("Private connected-app MCP boundary", () => {
   });
   it("prepares an idempotent review link without saving work or accepting confirmation arguments", async () => {
     const args = {
-      title: "Review synthetic proposal",
-      due_date: null,
-      priority: "Normal",
-      project_id: null,
+      operation: "create",
+      kind: "task",
+      record_id: null,
+      expected_version: null,
+      fields_json: JSON.stringify({ title: "Review synthetic proposal" }),
       request_id: owner,
     };
     const call = () =>
@@ -261,7 +324,7 @@ describe("Private connected-app MCP boundary", () => {
           jsonrpc: "2.0",
           id: 5,
           method: "tools/call",
-          params: { name: "prepare_task", arguments: args },
+          params: { name: "prepare_record", arguments: args },
         }),
         cfg,
         "test",
@@ -285,7 +348,7 @@ describe("Private connected-app MCP boundary", () => {
           id: 6,
           method: "tools/call",
           params: {
-            name: "prepare_task",
+            name: "prepare_record",
             arguments: { ...args, confirmed: true },
           },
         }),

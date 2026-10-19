@@ -15,7 +15,6 @@ import {
   readTool,
   tools,
   today,
-  validateProposal,
 } from "./tools";
 import { modelSettings, type ProviderConfig } from "./provider";
 import type { MicrosoftConfig } from "../microsoft/config";
@@ -303,22 +302,6 @@ export async function runCora({
             );
           proposal = await prepareRecord(client, args, turn.user_id);
           result = { state: "proposed_not_saved", proposal };
-        } else if (name === "prepare_task") {
-          if (proposal)
-            throw new Error("Only one task proposal per request is supported.");
-          const task = validateProposal(args);
-          if (task.project_id) {
-            const p = await client
-              .from("work_items")
-              .select("id")
-              .eq("id", task.project_id)
-              .eq("kind", "project")
-              .eq("archived", false)
-              .maybeSingle();
-            if (p.error || !p.data) throw new Error("Project unavailable.");
-          }
-          proposal = task;
-          result = { state: "proposed_not_saved", task };
         } else if (readMicrosoft && has(microsoftTools, name))
           result = await readMicrosoft(name, args);
         else if (readTeams && has(teamsTools, name))

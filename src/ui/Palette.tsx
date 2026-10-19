@@ -200,10 +200,10 @@ export function Palette({
           </button>
         )}
         <button className="palette-row" onClick={() => choose(onCapture)}>
-          <Icon name="journal" />
+          <Icon name="task" />
           <span>
-            Capture to journal
-            <small>Save a thought without breaking your flow</small>
+            Quick capture
+            <small>Save a thought to your Inbox without breaking your flow</small>
           </span>
           <kbd>⇧ ⌘ K</kbd>
         </button>
@@ -274,7 +274,7 @@ export function Palette({
                 <span>
                   <strong>{row.title}</strong>
                   <small>
-                    {labels[row.kind]} · {row.status}
+                    {labels[row.kind] ?? row.kind} · {row.status}
                     {row.archived ? " · Archived" : ""}
                     {row.tags.length ? ` · ${row.tags.join(", ")}` : ""}
                   </small>

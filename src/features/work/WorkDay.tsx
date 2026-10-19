@@ -6,7 +6,8 @@ import { flaggedMail, type FlaggedMail as Flagged } from "../../services/mail";
 import { helixSummary } from "../../services/helix";
 import type { HelixItem } from "../helix/model";
 import { effectiveStatus } from "./model";
-import type { Kind, WorkItem, WorkSummary } from "./model";
+import type { WorkItem, WorkSummary } from "./model";
+import type { PageName } from "../../ui/navigation";
 import { displayDate, today } from "./dates";
 import {
   clock,
@@ -32,6 +33,9 @@ import { boldParts } from "../sitrep/support";
 import { reconcileSection } from "../sitrep/reconcile";
 import { Icon } from "../../ui/Icon";
 import { Standup } from "../standup/Standup";
+import { sitrepStatus } from "../sitrep/status";
+import { closeIsOffered, addDays, isWeekday } from "../close/rules";
+import { closeReceipt, recordUsage, weekSummary, type WeekSummary } from "../../services/usage";
 
 type NowItem = {
   key: string;
@@ -87,7 +91,7 @@ export function WorkDay({
   userId: string;
   revision: number;
   onOpen: (item: Pick<WorkItem, "id">) => void;
-  onNavigate: (kind: Kind) => void;
+  onNavigate: (page: PageName) => void;
 }) {
   const [expandedDays, setExpandedDays] = useState<string[]>([]);
   const [data, setData] = useState<Awaited<ReturnType<typeof workDay>> | null>(null),
@@ -104,7 +108,9 @@ export function WorkDay({
     [flagged, setFlagged] = useState<Flagged | null>(null),
     [openTasks, setOpenTasks] = useState<{ tasks: WorkSummary[]; projects: Map<string, string> } | null>(null),
     [area, setArea] = useState(""),
-    [helix, setHelix] = useState<HelixItem | null>(null);
+    [helix, setHelix] = useState<HelixItem | null>(null),
+    [week, setWeek] = useState<WeekSummary | null>(null),
+    [closedAt, setClosedAt] = useState<string | null>(null);
   const date = today(new Date(now));
   const [snoozed, snooze] = useDaily("snoozed", date),
     [doneIds, markDone] = useDaily("done", date),
@@ -120,6 +126,24 @@ export function WorkDay({
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, []);
+  // Habit line and today's close receipt. Both are quiet extras: a failure just hides them.
+  useEffect(() => {
+    let alive = true;
+    let monday = date,
+      weekdays = 0;
+    while (new Date(`${monday}T12:00:00Z`).getUTCDay() !== 1) monday = addDays(monday, -1);
+    for (let d = monday; d <= date; d = addDays(d, 1)) if (isWeekday(d)) weekdays += 1;
+    Promise.all([weekSummary(client, userId, monday, Math.min(weekdays, 5)), closeReceipt(client, userId, date)])
+      .then(([summary, receipt]) => {
+        if (!alive) return;
+        setWeek(summary);
+        setClosedAt(receipt?.completed_at ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [client, userId, date, revision]);
   useEffect(() => {
     let alive = true;
     workDay(client, date)
@@ -320,6 +344,7 @@ export function WorkDay({
   }
   const tidyShown = tidy.filter((t) => !leftAlone.includes(t.id));
 
+  const sitrepNote = sitrepStatus(sitrep.state?.isToday ? sitrep.state.run : null, !!sitrep.state?.todayFailure && !run);
   const refreshed = run?.generated_at ? clock(run.generated_at) : null;
   const synced = agenda.data ? clock(agenda.data.retrievedAt) : null;
   const dim = focusMode ? " is-dimmed" : "";
@@ -353,11 +378,37 @@ export function WorkDay({
           ) : (
             "Bringing your day into focus…"
           )}{" "}
-          <button className="wd-link" ref={sitrepButton} aria-haspopup="dialog" aria-expanded={sitrepOpen} onClick={() => setSitrepOpen(true)}>
+          <button className="wd-link" ref={sitrepButton} aria-haspopup="dialog" aria-expanded={sitrepOpen} onClick={() => { setSitrepOpen(true); void recordUsage(client, userId, "sitrep_opened"); }}>
             Open the full SITREP
           </button>
         </p>
 
+        {sitrepNote && (
+          <p className={`wd-sitrep-status wd-sitrep-status--${sitrepNote.tone}`} role="status">
+            <i aria-hidden="true" />
+            {sitrepNote.text}
+          </p>
+        )}
+        {closeIsOffered(new Date(now)) && (
+          <section className="wd-close-card" aria-labelledby="wd-close-h">
+            <div>
+              <h2 id="wd-close-h" className="label label--accent">CLOSE THE DAY</h2>
+              <p>
+                {closedAt
+                  ? `Day closed at ${clock(closedAt)}. Tomorrow's SITREP starts from it.`
+                  : "Take a few minutes to finish, move or drop what is still open, and pick tomorrow's first item."}
+              </p>
+            </div>
+            <button className="btn btn--primary" onClick={() => onNavigate("close")}>
+              {closedAt ? "Review" : "Close the day"}
+            </button>
+          </section>
+        )}
+        {week && (
+          <p className="meta wd-week">
+            This week: {week.closedDays}/{week.weekdays} days closed · {week.captures} capture{week.captures === 1 ? "" : "s"}
+          </p>
+        )}
         {error && (
           <p role="alert" className="error-message">
             {error} <button onClick={() => setRetry((v) => v + 1)}>Retry Work Day</button>
@@ -674,7 +725,7 @@ export function WorkDay({
               <li>
                 <i />
                 <span>
-                  Brief refreshed <span className="meta">· {refreshed}</span>
+                  SITREP refreshed <span className="meta">· {refreshed}</span>
                 </span>
               </li>
             )}
