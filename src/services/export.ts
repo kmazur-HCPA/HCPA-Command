@@ -88,7 +88,7 @@ export function validateSnapshot(snapshot: ExportSnapshot) {
     if (
       !ids.has(version.document_id) ||
       !snapshot.work_items.some(
-        (row) => row.id === version.document_id && row.kind === "library",
+        (row) => row.id === version.document_id && (row.kind as string) === "library",
       )
     )
       throw new Error("Export contains an unresolved original.");

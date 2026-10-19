@@ -11,7 +11,7 @@ export type FlaggedMessage = {
   flag_due: string | null;
   importance: string;
   url: string | null;
-  capture: "task" | "reminder" | "dismissed" | null;
+  capture: "task" | "reminder" | "waiting" | "dismissed" | null;
   record_id: string | null;
 };
 const zone = "America/New_York";

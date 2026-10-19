@@ -7,7 +7,7 @@ const other = '22222222-2222-4222-8222-222222222222'
 let db: PGlite
 type Row = Record<string, unknown>
 const item = (kind: string, title: string, extra: Row = {}) => {
-  const row = { kind, title, status: kind === 'task' ? 'Inbox' : kind === 'person' ? 'Active' : 'Active', user_id: owner, ...extra }
+  const row: Row = { kind, title, status: kind === 'task' ? 'Inbox' : 'Active', user_id: owner, ...extra }
   const keys = Object.keys(row)
   return db.query<{ id: string }>(`insert into public.work_items(${keys.join(',')}) values (${keys.map((_, i) => `$${i + 1}`).join(',')}) returning id`, keys.map(k => row[k] as never)).then(r => r.rows[0]!.id)
 }

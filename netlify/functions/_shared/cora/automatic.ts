@@ -1,4 +1,4 @@
-import { briefInstructions, isCompactBrief } from "../../../../src/features/reviews/brief";
+import { applyDayCloseTool, dayCloseDefinitions, getDayClose } from "./dayclose";
 import { createRecord, createRecordDefinition } from "./create";
 import { quickUpdate, quickUpdateDefinition } from "./quick";
 import { createHash } from "node:crypto";
@@ -17,11 +17,6 @@ export const automaticTools = [
   createRecordDefinition,
   quickUpdateDefinition,
   definition(
-    "get_workday_reviews",
-    "Read the five most recent review receipts to establish the last successful review and any missed/partial coverage.",
-    {},
-  ),
-  definition(
     "create_reminder",
     "Save a Command reminder immediately under Kevin’s explicit authorization. No confirmation needed. Only clear obligations/follow-ups; not every email or meeting. Search existing records first, including resolved/archived items. Never recreate a dismissed/completed source. For external evidence source_url MUST be its original Outlook/Teams link, and source_key its stable original message/event ID (never expiring reference or run ID). For direct user requests source_url=null and source_key a new UUID reused on retry. One reminder per source; combine related actions. Date-only=due_date, timed=remind_at with timezone; never both. Body is a short reason, not copied email/chat contents. Never change other record types with this tool.",
     {
@@ -33,18 +28,7 @@ export const automaticTools = [
       source_url: { type: ["string", "null"] },
     },
   ),
-  definition(
-    "record_workday_review",
-    briefInstructions + '\nRecord a workday review in Command. Begin with status=running, summary="", and a new UUID run_id. Reuse that run_id to finish with complete/partial/failed and only the compact current-state check-in as summary. Complete and partial summaries must satisfy the word, character and paragraph limits above. Keep run diagnostics out of the brief.',
-    {
-      run_id: { type: "string" },
-      status: {
-        type: "string",
-        enum: ["running", "complete", "partial", "failed"],
-      },
-      summary: { type: "string" },
-    },
-  ),
+  ...dayCloseDefinitions,
 ];
 const uuid =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -96,20 +80,18 @@ export async function automaticTool(
     .maybeSingle();
   if (membership.error || !membership.data?.active)
     throw new Error("Command access unavailable.");
-  if (name === "get_workday_reviews") {
+  if (name === "get_day_close") {
     if (Object.keys(args).length) throw new Error("No arguments accepted.");
-    const r = await store
-      .from("cora_workday_reviews")
-      .select("*")
-      .eq("user_id", userId)
-      .order("started_at", { ascending: false })
-      .limit(5);
-    if (r.error) throw new Error("Review history unavailable.");
-    return { reviews: r.data, current_time: new Date().toISOString(), command_brief_instructions: briefInstructions };
+    return getDayClose(store, userId);
   }
+  if (name === "apply_day_close") return applyDayCloseTool(store, userId, args);
   if (name === "get_sitrep_runs") return getSitrepRuns(store, userId, args);
   if (name === "save_sitrep") return saveSitrep(store, userId, args);
-  if (name === "create_record") return createRecord(store,userId,args);
+  if (name === "create_record") {
+    const saved = await createRecord(store, userId, args);
+    if (saved.created) await captureEvent(store, userId);
+    return saved;
+  }
   if (name === "quick_update") return quickUpdate(store,userId,args);
   const pref = await store
     .from("cora_review_preferences")
@@ -139,46 +121,12 @@ export async function automaticTool(
       throw new Error(
         "Reminder save was not confirmed. Retry the same source; check Command Settings if the daily limit was reached.",
       );
+    if (result.data?.created) await captureEvent(store, userId);
     return result.data;
   }
-  if (
-    name !== "record_workday_review" ||
-    Object.keys(args).sort().join() !== "run_id,status,summary" ||
-    typeof args.run_id !== "string" ||
-    !uuid.test(args.run_id) ||
-    !["running", "complete", "partial", "failed"].includes(
-      String(args.status),
-    ) ||
-    typeof args.summary !== "string" ||
-    args.summary.length > 6000
-  )
-    throw new Error("Invalid review receipt.");
-  if (["complete", "partial"].includes(String(args.status)) && !isCompactBrief(args.summary)) {
-    throw new Error("Rewrite the Command Brief as a current-state check-in: at most 120 words, 1000 characters and 3 short paragraphs. One or two next priorities only. No raw URLs, review logs or task inventories. Reuse the same run_id.");
-  }
-  if (args.status === "running") {
-    const r = await store
-      .from("cora_workday_reviews")
-      .upsert(
-        { id: args.run_id, user_id: userId, status: "running", summary: "" },
-        { onConflict: "id", ignoreDuplicates: true },
-      )
-      .select("id");
-    if (r.error) throw new Error("Could not start review.");
-  } else {
-    const r = await store
-      .from("cora_workday_reviews")
-      .update({
-        status: String(args.status),
-        summary: args.summary,
-        finished_at: new Date().toISOString(),
-      })
-      .eq("id", args.run_id)
-      .eq("user_id", userId)
-      .select("id")
-      .maybeSingle();
-    if (r.error || !r.data)
-      throw new Error("Review unavailable. Start the review first.");
-  }
-  return { saved: true, run_id: args.run_id, status: args.status };
+  throw new Error("Tool not available.");
+}
+// Habit metric: one capture made from chat. Best effort; a metric never blocks a save.
+async function captureEvent(store: AppClient, userId: string) {
+  await store.from("usage_events").insert({ user_id: userId, event: "capture", source: "chat" });
 }

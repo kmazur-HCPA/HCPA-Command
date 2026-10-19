@@ -10,7 +10,7 @@ export type FlaggedMessage = {
   flag_due: string | null;
   importance: string;
   url: string | null;
-  capture: "task" | "reminder" | "dismissed" | null;
+  capture: "task" | "reminder" | "waiting" | "dismissed" | null;
   record_id: string | null;
 };
 export type FlaggedMail = {
@@ -49,7 +49,7 @@ export async function flaggedMail(client: AppClient, signal?: AbortSignal) {
 export async function captureFlagged(
   client: AppClient,
   message: Pick<FlaggedMessage, "id" | "conversation_id" | "url">,
-  action: "task" | "reminder" | "dismissed",
+  action: "task" | "reminder" | "waiting" | "dismissed",
   fields: { title?: string; due?: string | null; priority?: string } = {},
 ) {
   const { data, error } = await client.rpc("capture_flagged_email", {

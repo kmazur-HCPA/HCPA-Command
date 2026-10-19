@@ -1,6 +1,6 @@
 import type { WorkItem, WorkSummary } from "./model";
 import { dueMeta } from "./dayModel";
-import { displayDate, today } from "./dates";
+import { today } from "./dates";
 
 const closed = ["Complete", "Cancelled", "Dismissed"];
 const isOpen = (r: WorkSummary) => !closed.includes(r.status) && !r.archived;
@@ -18,7 +18,7 @@ function Rows({ rows, date, empty }: { rows: WorkSummary[]; date: string; empty:
             <a href={`/?record=${r.id}`}>{r.title}</a>
             {" · "}
             <span className={due.overdue ? "meta--overdue" : undefined}>
-              {r.kind === "journal" ? displayDate(null, r.created_at).split(",")[0] : r.due_date ? due.text : r.status}
+              {r.due_date ? due.text : r.status}
             </span>
             {r.kind !== "task" && ` · ${r.kind.replace("_", " ")}`}
             {r.kind === "task" && r.due_date ? ` · ${r.status}` : ""}
@@ -29,7 +29,7 @@ function Rows({ rows, date, empty }: { rows: WorkSummary[]; date: string; empty:
   );
 }
 
-// Project and initiative: summary sentence, what's next, open work, activity.
+// Project: summary sentence, what's next, open work, activity.
 export function ProjectView({ item, related, more, onMore }: { item: WorkItem; related: WorkSummary[]; more: boolean; onMore: () => void }) {
   const date = today();
   const open = related.filter((r) => (r.kind === "task" || r.kind === "waiting") && isOpen(r)).sort(byDue);
@@ -61,26 +61,21 @@ export function ProjectView({ item, related, more, onMore }: { item: WorkItem; r
   );
 }
 
-// Person: meeting-prep order — what they owe you, what you owe them, recent notes.
+// Person: what they owe you, then what you owe them. Both lists are open work linked to this person.
 export function PersonView({ item, related, more, onMore }: { item: WorkItem; related: WorkSummary[]; more: boolean; onMore: () => void }) {
   const date = today();
   const waiting = related.filter((r) => r.kind === "waiting" && isOpen(r)).sort(byDue);
   const owed = related.filter((r) => (r.kind === "task" || r.kind === "reminder") && isOpen(r)).sort(byDue);
-  const notes = related.filter((r) => r.kind === "journal").sort(newest).slice(0, 5);
   const first = item.title.split(/\s+/)[0];
   return (
     <>
       <section className="ctx-section" aria-labelledby="ctx-waiting">
-        <h2 id="ctx-waiting" className="label label--accent">Waiting on {first}</h2>
+        <h2 id="ctx-waiting" className="label label--accent">They owe me</h2>
         <Rows rows={waiting} date={date} empty={`Nothing waiting on ${first}. Track a dependency when work is in their hands.`} />
       </section>
       <section className="ctx-section" aria-labelledby="ctx-owe">
-        <h2 id="ctx-owe" className="label">You owe {first}</h2>
-        <Rows rows={owed} date={date} empty={`Nothing open with ${first}.`} />
-      </section>
-      <section className="ctx-section" aria-labelledby="ctx-notes">
-        <h2 id="ctx-notes" className="label">Recent notes</h2>
-        <Rows rows={notes} date={date} empty="No journal entries mention this person yet." />
+        <h2 id="ctx-owe" className="label">I owe them</h2>
+        <Rows rows={owed} date={date} empty={`Nothing open with ${first}. Link a task or reminder to ${first} to see it here.`} />
         {more && <button className="btn btn--ghost" onClick={onMore}>Load more related work</button>}
       </section>
     </>

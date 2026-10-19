@@ -1,9 +1,7 @@
 import { addStandupItem } from "../services/standup";
 import { weekStart } from "../features/standup/model";
 import { today } from "../features/work/dates";
-import { Journal } from "../features/journal/Journal";
 import { Directory } from "../features/people/Directory";
-import {WorkdayReviews} from "../features/reviews/WorkdayReviews";
 import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { AppClient } from "../platform/supabase";
@@ -12,27 +10,29 @@ import type { Preferences } from "../services/account";
 import { signOut } from "../services/auth";
 import { Editor } from "../features/work/Editor";
 import { Detail } from "../features/work/Detail";
-import type { Kind, WorkItem } from "../features/work/model";
+import type { WorkItem } from "../features/work/model";
 import { Icon, Mark } from "../ui/Icon";
 import { currentMode, fromStoredTheme, hasLocalMode, setMode, themeModes, toStoredTheme } from "../ui/theme";
 import type { ThemeMode } from "../ui/theme";
-import { navigation } from "../ui/navigation";
+import { navigation, pageUrl } from "../ui/navigation";
+import type { PageName } from "../ui/navigation";
 import { Palette } from "../ui/Palette";
 import { WorkList } from "../features/work/WorkList";
 import { WorkDay } from "../features/work/WorkDay";
 import { Capture } from "../features/work/Capture";
 import { ExportPanel } from '../features/export/ExportPanel';
 import { Drafts } from "../features/work/Drafts";
-import { Lab } from "../features/lab/Lab";
 import { listDrafts } from "../platform/drafts";
+import { recordUsage } from "../services/usage";
 
+const CloseDay=lazy(()=>import("../features/close/CloseDay").then(m=>({default:m.CloseDay})))
 const CoraPanel=lazy(()=>import("../features/cora/CoraPanel").then(m=>({default:m.CoraPanel})))
 const CoraConnection=lazy(()=>import("../features/mcp/CoraConnection").then(m=>({default:m.CoraConnection})))
 const HelixPanel=lazy(()=>import("../features/helix/HelixPanel").then(m=>({default:m.HelixPanel})))
 const HelixWork=lazy(()=>import("../features/helix/HelixWork").then(m=>({default:m.HelixWork})))
 const ConnectionPanel=lazy(()=>import("../features/microsoft/ConnectionPanel").then(m=>({default:m.ConnectionPanel})))
 
-const railPages: string[] = ["workspace", "task", "project", "journal", "person"];
+const railPages: string[] = ["workspace", "task", "project", "person"];
 const clockTime = () =>
   new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date());
 function EasternClock() {
@@ -45,10 +45,11 @@ function EasternClock() {
 }
 
 export function Workspace({ client, user }: { client: AppClient; user: User }) {
-  const [page, setPage] = useState<"workspace" | "settings" | "lab" | Kind>(
+  const [page, setPage] = useState<PageName>(
     () => {
+      if (location.pathname === "/close") return "close";
       const requested = new URLSearchParams(location.search).get("page");
-      return [...navigation.map(item => item.page), "reminder", "waiting"].includes(requested ?? "") ? requested as "workspace" | "settings" | "lab" | Kind : "workspace";
+      return [...navigation.map(item => item.page), "reminder", "waiting"].includes((requested ?? "") as PageName) ? requested as PageName : "workspace";
     },
   );
   const [initialConversation] = useState(() => {
@@ -90,6 +91,17 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
     return () => {window.removeEventListener("command:capture", open);window.removeEventListener("command:cora",ask)};
   }, []);
   const [workRevision, setWorkRevision] = useState(0);
+  // Habit metric: one app_open per browser session at most once an hour.
+  useEffect(() => {
+    try {
+      const last = Number(sessionStorage.getItem("cmd-app-open") ?? 0);
+      if (Date.now() - last < 3600000) return;
+      sessionStorage.setItem("cmd-app-open", String(Date.now()));
+    } catch {
+      return;
+    }
+    void recordUsage(client, user.id, "app_open");
+  }, [client, user.id]);
   const [toast, setToast] = useState("");
   async function addToStandup(text: string) {
     try {
@@ -106,17 +118,17 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
   );
   function openRecord(item: Pick<WorkItem, "id">) {
     setRecordId(item.id);
-    history.replaceState(null, "", `/?page=${page}&record=${item.id}`);
+    history.replaceState(null, "", `/?page=${page === "close" ? "workspace" : page}&record=${item.id}`);
   }
   function closeRecord() {
     setRecordId(null);
-    history.replaceState(null, "", page === "workspace" ? "/" : `/?page=${page}`);
+    history.replaceState(null, "", pageUrl(page));
   }
-  function navigate(next: "workspace" | "settings" | "lab" | Kind) {
+  function navigate(next: PageName) {
     setMore(false);
     closeRecord();
     setPage(next);
-    history.replaceState(null, "", next === "workspace" ? "/" : `/?page=${next}`);
+    history.replaceState(null, "", pageUrl(next));
     window.scrollTo({ top: 0 });
     requestAnimationFrame(() =>
       document.querySelector<HTMLElement>("#main h1")?.focus(),
@@ -363,10 +375,10 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           />
         ) : page === "person" ? (
           <Directory client={client} userId={user.id} onOpen={openRecord} revision={workRevision}/>
-        ) : page === "journal" ? (
-          <Journal client={client} userId={user.id} onOpen={openRecord} onCapture={() => setCapture(true)} revision={workRevision} />
-        ) : page === "lab" ? (
-          <Lab client={client} userId={user.id} onOpen={openRecord} />
+        ) : page === "close" ? (
+          <Suspense fallback={<p role="status">Opening Close the Day…</p>}>
+            <CloseDay client={client} userId={user.id} onChanged={() => setWorkRevision((v) => v + 1)} onNavigate={navigate} />
+          </Suspense>
         ) : page !== "workspace" && page !== "settings" ? (
           <WorkList
             key={`${page}-${workRevision}`}
@@ -418,7 +430,6 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
                 <Suspense fallback={<p role="status">Loading connections…</p>}><ConnectionPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading Helix…</p>}><HelixPanel client={client} /></Suspense>
                 <Suspense fallback={<p role="status">Loading connected apps…</p>}><CoraConnection client={client}/></Suspense>
-                <WorkdayReviews client={client} settings/>
                 <ExportPanel client={client} />
               <Drafts userId={user.id} />
                 <section className="settings-panel">
@@ -476,7 +487,8 @@ export function Workspace({ client, user }: { client: AppClient; user: User }) {
           onSaved={() => {
             setCapture(false);
             setWorkRevision((v) => v + 1);
-            navigate("journal");
+            setToast("Saved to your Inbox");
+            window.setTimeout(() => setToast(""), 4000);
           }}
         />
       )}

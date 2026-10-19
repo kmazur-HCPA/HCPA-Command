@@ -31,11 +31,14 @@ export function FlaggedMail({
   revision,
   onCount,
   onChanged,
+  onCaptured,
 }: {
   client: AppClient;
   revision: number;
   onCount: (count: number | null) => void;
   onChanged: () => void;
+  // Lets Close the Day count each conversion or dismissal as it happens.
+  onCaptured?: (action: "task" | "reminder" | "waiting" | "dismissed") => void;
 }) {
   const [data, setData] = useState<Flagged | null>(null),
     [error, setError] = useState(""),
@@ -43,7 +46,7 @@ export function FlaggedMail({
     [notice, setNotice] = useState(""),
     [converting, setConverting] = useState<{
       message: FlaggedMessage;
-      kind: "task" | "reminder";
+      kind: "task" | "reminder" | "waiting";
     } | null>(null),
     [showDismissed, setShowDismissed] = useState(false),
     [undo, setUndo] = useState<FlaggedMessage | null>(null),
@@ -96,6 +99,7 @@ export function FlaggedMail({
     setError("");
     try {
       await captureFlagged(client, message, "dismissed");
+      onCaptured?.("dismissed");
       setUndo(message);
       window.clearTimeout(undoTimer.current);
       undoTimer.current = window.setTimeout(() => setUndo(null), 10000);
@@ -169,6 +173,13 @@ export function FlaggedMail({
               onClick={() => setConverting({ message: m, kind: "reminder" })}
             >
               Reminder
+            </button>
+            <button
+              aria-label={`Track ${m.subject} as Waiting On`}
+              disabled={!!busy}
+              onClick={() => setConverting({ message: m, kind: "waiting" })}
+            >
+              Waiting
             </button>
             <button
               aria-label={`Dismiss ${m.subject}`}
@@ -267,7 +278,8 @@ export function FlaggedMail({
           onClose={() => setConverting(null)}
           onSaved={(kind) => {
             setConverting(null);
-            setNotice(`Saved ${kind}. It’s no longer on this list.`);
+            setNotice(`Saved ${kind === "waiting" ? "Waiting On item" : kind}. It’s no longer on this list.`);
+            onCaptured?.(kind);
             onChanged();
             void load(true);
           }}
@@ -286,9 +298,9 @@ function ConvertDialog({
 }: {
   client: AppClient;
   message: FlaggedMessage;
-  kind: "task" | "reminder";
+  kind: "task" | "reminder" | "waiting";
   onClose: () => void;
-  onSaved: (kind: string) => void;
+  onSaved: (kind: "task" | "reminder" | "waiting") => void;
 }) {
   const [title, setTitle] = useState(taskTitle(message.subject)),
     [due, setDue] = useState(message.flag_due ?? ""),
@@ -338,7 +350,7 @@ function ConvertDialog({
       <form onSubmit={(e) => void save(e)}>
         <div className="dialog-heading">
           <h2 id="convert-title">
-            {kind === "task" ? "Make a task" : "Make a reminder"}
+            {kind === "task" ? "Make a task" : kind === "waiting" ? "Track as Waiting On" : "Make a reminder"}
           </h2>
           <button type="button" aria-label="Close" disabled={busy} onClick={onClose}>
             ×
@@ -356,7 +368,7 @@ function ConvertDialog({
           />
         </label>
         <label>
-          {kind === "task" ? "Due date (optional)" : "Remind me on"}
+          {kind === "task" ? "Due date (optional)" : kind === "waiting" ? "Follow up on (optional)" : "Remind me on"}
           <input
             type="date"
             required={kind === "reminder"}

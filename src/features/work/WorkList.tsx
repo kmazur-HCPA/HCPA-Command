@@ -14,7 +14,6 @@ import {
   labels,
   priorities,
   statuses,
-  entryTypes,
 } from "./model";
 import { displayDate } from "./dates";
 import { Detail } from "./Detail";
@@ -22,7 +21,6 @@ import { TaskMetadata } from "./TaskMetadata";
 import { Editor } from "./Editor";
 import { Icon } from "../../ui/Icon";
 
-const newLabel: Partial<Record<Kind, string>> = { library: "item", use_case: "use case", program: "program note" };
 type Project = Awaited<ReturnType<typeof projectDirectory>>[number];
 export function WorkList({
   client,
@@ -47,8 +45,6 @@ export function WorkList({
     [status, setStatus] = useState(kind === "task" ? "__open" : ""),
     [priority, setPriority] = useState(""),
     [archived, setArchived] = useState(false);
-  const [entryType, setEntryType] = useState(""),
-    [tag, setTag] = useState("");
   const [offset, setOffset] = useState(0),
     [more, setMore] = useState(false),
     [revision, setRevision] = useState(0),
@@ -79,8 +75,6 @@ export function WorkList({
                 priority,
                 archived,
                 offset: i * 50,
-                entryType,
-                tag,
               }),
             ),
           ),
@@ -111,8 +105,6 @@ export function WorkList({
     archived,
     offset,
     revision,
-    entryType,
-    tag,
     externalRevision,
   ]);
   function refresh() {
@@ -235,12 +227,9 @@ export function WorkList({
                     .join(" · ") || "No role or organization yet"
                 ) : (
                   <>
-                    {kind === "journal"
-                      ? displayDate(null, item.created_at).split(",")[0]
-                      : `${effectiveStatus(item, now)} · ${displayDate(item.due_date, item.remind_at)}`}
+                    {`${effectiveStatus(item, now)} · ${displayDate(item.due_date, item.remind_at)}`}
                     {item.status === "Snoozed" &&
                       ` · Snoozed until ${displayDate(null, item.snoozed_until)}`}
-                    {kind === "journal" && ` · ${item.entry_type}`}
                   </>
                 )}
               </p>}
@@ -313,7 +302,11 @@ export function WorkList({
       })}
     </ul>
   );
-  const filtered = !!(search || priority || tag || entryType || archived || (status && status !== "__open"));
+  // Proposed projects sit in their own collapsed group below Active and On Hold.
+  const splitProposed = kind === "project" && status !== "Proposed";
+  const proposedRows = splitProposed ? rows.filter((row) => row.status === "Proposed") : [];
+  const mainRows = splitProposed ? rows.filter((row) => row.status !== "Proposed") : rows;
+  const filtered = !!(search || priority || archived || (status && status !== "__open"));
   const GroupHeading = embedded ? "h3" : "h2";
   const groups =
     kind === "task"
@@ -356,7 +349,7 @@ export function WorkList({
             <h1 tabIndex={-1}>{labels[kind]}</h1>
           </div>
           <button className="btn btn--primary" onClick={() => setEditor("new")}>
-            <Icon name="plus" /> New {newLabel[kind] ?? kind}
+            <Icon name="plus" /> New {kind}
           </button>
         </div>
       )}
@@ -417,36 +410,6 @@ export function WorkList({
               <option value="false">Current</option>
               <option value="true">Archived</option>
             </select>
-          </label>
-        </div>
-      )}
-      {kind === "journal" && (
-        <div className="filters filter-row">
-          <label>
-            <span className="visually-hidden">Filter entry type</span>
-            <select
-              value={entryType}
-              onChange={(e) => {
-                setEntryType(e.target.value);
-                setOffset(0);
-              }}
-            >
-              <option value="">All entry types</option>
-              {entryTypes.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="visually-hidden">Filter tag</span>
-            <input
-              value={tag}
-              onChange={(e) => {
-                setTag(e.target.value);
-                setOffset(0);
-              }}
-              placeholder="Exact tag"
-            />
           </label>
         </div>
       )}
@@ -511,7 +474,16 @@ export function WorkList({
                 {renderRows(group.items)}
               </section>
             ))
-          : renderRows(rows)}
+          : renderRows(mainRows)}
+        {proposedRows.length > 0 && (
+          <details className="proposed-group" open={status === "Proposed"}>
+            <summary>
+              Proposed <span>{proposedRows.length}</span>
+            </summary>
+            <p className="small muted">Ideas not yet committed to. Change a project's status to Active to start it.</p>
+            {renderRows(proposedRows)}
+          </details>
+        )}
         {more && (
           <button
             className="load-more"

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
-import { briefInstructions } from "../../../../src/features/reviews/brief";
 
 // One-click routines in Claude's prompt menu. They only tell Claude which of
 // Command's tools to use; the tools themselves enforce every boundary.
@@ -12,15 +11,15 @@ const evidence =
 
 export function registerPrompts(server: McpServer) {
   server.registerPrompt(
-    "command_brief",
+    "close_day",
     {
-      title: "Command Brief",
+      title: "Close the day",
       description:
-        "Kevin's compact current-state check-in from live Command work and calendar.",
+        "End-of-day tidy-up: what got done, what is still open, what is stale, flagged mail, and tomorrow's first item.",
     },
     () =>
       user(
-        `Give me my Command Brief. Read get_day_snapshot for Command work and get_outlook_calendar for today's meetings, and get_workday_reviews for the previous brief. ${evidence}\n\n${briefInstructions}`,
+        `Close my day. Call get_day_close and show me, in this order: Done today (a short list), Still open, Stale (with the proposed action for each), Flagged mail, and which open tasks could be tomorrow's first item. Keep it scannable, not an inventory. Then let me choose. Change nothing until I confirm specific choices in this chat; a proposal is not a confirmation. Apply what I confirm with one apply_day_close call (finish=true on the last call) and tell me only what the returned receipt says was saved. ${evidence}`,
       ),
   );
   server.registerPrompt(
@@ -48,14 +47,14 @@ export function registerPrompts(server: McpServer) {
     },
     () =>
       user(
-        `Run my weekly review. Start with get_day_snapshot, then page any list that has_more. Cover: overdue work, projects with no recent update, Waiting On items older than a week, and next week's calendar pressure points (get_outlook_calendar). Suggest changes; do not make them. Offer quick_update only for clear completions or date changes I confirm here, and use prepare_record for everything else. ${evidence}`,
+        `Run my weekly review. Start with get_day_snapshot, then page any list that has_more. Cover: overdue work, projects with no recent update, Proposed projects still waiting for a decision, Waiting On items older than a week, and next week's calendar pressure points (get_outlook_calendar). Suggest changes; do not make them. Offer quick_update only for clear completions or date changes I confirm here, and use prepare_record for everything else. ${evidence}`,
       ),
   );
   server.registerPrompt(
     "capture",
     {
       title: "Capture notes",
-      description: "Turn loose notes into tasks, reminders and journal entries.",
+      description: "Turn loose notes into tasks, reminders, people, projects and Waiting On items.",
       argsSchema: z.object({
         notes: z.string().max(4000).describe("The notes to capture"),
       }),
